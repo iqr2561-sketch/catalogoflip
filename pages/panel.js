@@ -230,6 +230,27 @@ export default function PanelDeControl() {
     }
   };
 
+  const handleTestDb = async () => {
+    try {
+      setMessage(null);
+      setError(null);
+
+      const res = await fetch('/api/db-check');
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || 'Error desconocido');
+      }
+
+      setMessage(
+        `Conexión a la base de datos OK en ${data.durationMs ?? '?'} ms.`
+      );
+    } catch (err) {
+      console.error('Error al probar la conexión a la BD:', err);
+      setError('No se pudo conectar a la base de datos. Revisa las variables de entorno y los logs.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -268,13 +289,22 @@ export default function PanelDeControl() {
                 </p>
               )}
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleTestDb}
+                className="px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
+              >
+                Probar conexión BD
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
           </header>
 
           {message && (
