@@ -273,6 +273,31 @@ export default function FlipbookCatalog({
             const rightPageClass =
               flipDirection === 'next' ? 'page-flip-next' : '';
 
+            const handleClickLeftPage = () => {
+              if (isDouble && leftIndex > 0) {
+                handlePrevPage();
+              }
+            };
+
+            const handleClickRightPage = () => {
+              if (isDouble && rightIndex !== null && rightIndex < images.length - 1) {
+                handleNextPage();
+              }
+            };
+
+            const handleClickSinglePage = (event) => {
+              if (!images.length) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const clickX = event.clientX - rect.left;
+              const isRightSide = clickX > rect.width / 2;
+
+              if (isRightSide && currentPage < images.length - 1) {
+                handleNextPage();
+              } else if (!isRightSide && currentPage > 0) {
+                handlePrevPage();
+              }
+            };
+
             return (
           <div
             ref={flipbookRef}
@@ -289,7 +314,8 @@ export default function FlipbookCatalog({
               <>
                 {images[leftIndex] && (
                   <div
-                    className={`w-1/2 h-full bg-white flex items-center justify-center ${leftPageClass}`}
+                    className={`w-1/2 h-full bg-white flex items-center justify-center ${leftPageClass} cursor-pointer`}
+                    onClick={handleClickLeftPage}
                   >
                     <img
                       src={images[leftIndex]}
@@ -300,7 +326,8 @@ export default function FlipbookCatalog({
                 )}
                 {rightIndex !== null && rightIndex < images.length && images[rightIndex] && (
                   <div
-                    className={`w-1/2 h-full bg-white flex items-center justify-center border-l border-gray-200 ${rightPageClass}`}
+                    className={`w-1/2 h-full bg-white flex items-center justify-center border-l border-gray-200 ${rightPageClass} cursor-pointer`}
+                    onClick={handleClickRightPage}
                   >
                     <img
                       src={images[rightIndex]}
@@ -315,7 +342,8 @@ export default function FlipbookCatalog({
                 <div
                   className={`w-full h-full bg-white flex items-center justify-center ${
                     flipDirection ? (flipDirection === 'next' ? 'page-flip-next' : 'page-flip-prev') : ''
-                  }`}
+                  } cursor-pointer`}
+                  onClick={handleClickSinglePage}
                 >
                   <img
                     src={images[currentPage]}
