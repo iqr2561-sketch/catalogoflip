@@ -1,0 +1,182 @@
+{
+  "pdf": "/api/catalogo",
+  "whatsappNumber": "573001234567",
+  "hotspots": [
+    {
+      "enabled": true,
+      "page": 1,
+      "idProducto": "p001",
+      "x": 20,
+      "y": 30,
+      "width": 15,
+      "height": 20
+    },
+    {
+      "enabled": true,
+      "page": 1,
+      "idProducto": "p002",
+      "x": 60,
+      "y": 40,
+      "width": 15,
+      "height": 20
+    },
+    {
+      "enabled": true,
+      "page": 2,
+      "idProducto": "p005",
+      "x": 30,
+      "y": 50,
+      "width": 15,
+      "height": 20
+    },
+    {
+      "enabled": true,
+      "page": 4,
+      "idProducto": "p001",
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p007",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p008",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p009",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p010",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p011",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    },
+    {
+      "page": 1,
+      "idProducto": "p012",
+      "enabled": false,
+      "x": 50,
+      "y": 50,
+      "width": 20,
+      "height": 20
+    }
+  ],
+  "productos": [
+    {
+      "id": "p001",
+      "nombre": "Aura Pura",
+      "precio": 45000,
+      "imagen": "/productos/aura.jpg",
+      "descripcion": "Fragancia premium sin género con notas de bergamota, jazmín y sándalo. Duración de hasta 8 horas. Ideal para uso diario y ocasiones especiales."
+    },
+    {
+      "id": "p002",
+      "nombre": "Essence Élégant",
+      "precio": 52000,
+      "imagen": "/productos/essence.jpg",
+      "descripcion": "Perfume de lujo con esencia floral y cítrica. Presentación elegante de 100ml. Perfecto para regalar o para uso personal."
+    },
+    {
+      "id": "p003",
+      "nombre": "Nuit Mystique",
+      "precio": 48000,
+      "imagen": "/productos/nuit.jpg",
+      "descripcion": "Fragancia nocturna con notas de vainilla, ámbar y rosa. Envase de diseño exclusivo. Duración prolongada."
+    },
+    {
+      "id": "p004",
+      "nombre": "Nuevo producto",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p005",
+      "nombre": "demo",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p006",
+      "nombre": "Nuevo producto",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p007",
+      "nombre": "Nuevo producto p007",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p008",
+      "nombre": "Nuevo producto p008",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p009",
+      "nombre": "Nuevo producto p009",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p010",
+      "nombre": "Nuevo producto p010",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p011",
+      "nombre": "Nuevo producto p011",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    },
+    {
+      "id": "p012",
+      "nombre": "Nuevo producto p012",
+      "precio": 0,
+      "imagen": "",
+      "descripcion": ""
+    }
+  ]
+}

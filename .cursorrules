@@ -1,0 +1,101 @@
+# Reglas de Cursor para Proyectos Next.js + React
+
+## 🎯 Estructura de Proyecto
+
+### Archivos de Documentación
+- Siempre crear README.md con instrucciones claras
+- Crear SETUP.md para configuración detallada
+- Crear TESTING.md para guías de prueba
+- Crear PRODUCTION_CHECKLIST.md para checklist de producción
+- Crear UX_IMPROVEMENTS.md para mejoras de UX
+
+### Seguridad
+- Siempre incluir .gitignore apropiado
+- Nunca hardcodear tokens o credenciales
+- Crear SECURITY.md con guías de seguridad
+- Documentar vulnerabilidades conocidas
+
+### Configuración
+- Incluir scripts útiles en package.json (check, audit, etc.)
+- Configurar Tailwind CSS apropiadamente
+- Incluir configuración de Next.js optimizada
+
+## 📋 Checklist Inicial
+
+Al crear un nuevo proyecto, siempre incluir:
+
+1. **Estructura Base**
+   - [ ] package.json con dependencias actualizadas
+   - [ ] next.config.js
+   - [ ] tailwind.config.js
+   - [ ] .gitignore
+   - [ ] .gitattributes
+
+2. **Documentación**
+   - [ ] README.md
+   - [ ] SETUP.md
+   - [ ] TESTING.md
+   - [ ] PRODUCTION_CHECKLIST.md
+   - [ ] UX_IMPROVEMENTS.md
+
+3. **Seguridad**
+   - [ ] Verificar dependencias con npm audit
+   - [ ] Documentar vulnerabilidades conocidas
+   - [ ] Configurar variables de entorno
+
+4. **Scripts Útiles**
+   - [ ] npm run check (verificación de setup)
+   - [ ] npm run audit (verificación de seguridad)
+   - [ ] npm run build (verificar build)
+
+## 🎨 Mejores Prácticas
+
+### Código
+- Usar TypeScript cuando sea posible
+- Componentes funcionales con hooks
+- Separar lógica de presentación
+- Comentarios claros en código complejo
+
+### UX
+- Siempre incluir estados de carga
+- Manejar errores apropiadamente
+- Feedback visual en todas las interacciones
+- Diseño responsive desde el inicio
+
+### Performance
+- Optimizar imágenes
+- Lazy loading cuando sea apropiado
+- Code splitting
+- Revisar bundle size
+
+## 🔄 Flujo de Trabajo
+
+1. **Setup Inicial**
+   - Crear estructura base
+   - Configurar dependencias
+   - Crear documentación inicial
+
+2. **Desarrollo**
+   - Implementar features
+   - Probar localmente
+   - Actualizar documentación
+
+3. **Pre-Producción**
+   - Revisar PRODUCTION_CHECKLIST.md
+   - Corregir problemas de seguridad
+   - Optimizar performance
+   - Probar en diferentes dispositivos
+
+4. **Producción**
+   - Desplegar
+   - Monitorear
+   - Mantener actualizado
+
+## 📝 Notas Importantes
+
+- Siempre mantener documentación actualizada
+- Revisar dependencias regularmente
+- Probar en diferentes navegadores
+- Considerar accesibilidad desde el inicio
+- Mantener código limpio y comentado
+
