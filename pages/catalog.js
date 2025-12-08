@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import FlipbookCatalog from '../components/FlipbookCatalog';
 import Cart from '../components/Cart';
+import ConfigButton from '../components/ConfigButton';
 import { pdfToImages } from '../lib/pdfToImages';
 import catalogData from '../data/catalog.json';
 
@@ -163,17 +163,8 @@ export default function CatalogPage() {
       </Head>
 
       <main className="relative">
-        {/* Acceso al panel de control */}
-        <div className="fixed top-4 right-4 z-40">
-          <Link href="/panel" legacyBehavior>
-            <a className="px-4 py-2 rounded-full bg-white/90 border border-primary-200 text-primary-700 text-xs font-semibold shadow-md hover:shadow-lg hover:bg-primary-50 transition-all duration-200 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-600 text-white text-[10px] font-bold">
-                ⚙
-              </span>
-              Panel de control
-            </a>
-          </Link>
-        </div>
+        {/* Botón de configuración siempre visible (abre modal de acceso al panel) */}
+        <ConfigButton />
 
         <FlipbookCatalog
           images={images}
