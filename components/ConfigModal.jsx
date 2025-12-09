@@ -94,10 +94,17 @@ export default function ConfigModal({ isOpen, onClose }) {
         body: formData,
       });
 
-      const data = await res.json();
+      // Intentar parsear como JSON, si falla mostrar el texto de error
+      let data;
+      try {
+        const text = await res.text();
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error('Error al procesar la respuesta del servidor. Verifica que el servidor esté funcionando correctamente.');
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || 'Error al subir el PDF');
+        throw new Error(data.error || data.details || 'Error al subir el PDF');
       }
 
       setError(null);

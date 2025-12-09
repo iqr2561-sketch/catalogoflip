@@ -92,11 +92,19 @@ export default async function handler(req, res) {
     let serverInfo = {};
     let serverVersion = 'unknown';
     try {
-      serverInfo = await adminDb.serverStatus();
-      serverVersion = serverInfo?.version || 'unknown';
+      // Intentar obtener versión de otra forma si serverStatus no está permitido
+      const buildInfo = await adminDb.command({ buildInfo: 1 });
+      serverVersion = buildInfo?.version || 'unknown';
       logs.push(`[${new Date().toISOString()}] Información del servidor obtenida`);
     } catch (err) {
-      logs.push(`[${new Date().toISOString()}] Advertencia: No se pudo obtener serverStatus: ${err.message}`);
+      // Si buildInfo tampoco funciona, usar una versión por defecto o intentar otra forma
+      try {
+        const connectionInfo = client.topology?.s?.options?.metadata?.server?.version;
+        serverVersion = connectionInfo || 'unknown';
+      } catch (e) {
+        serverVersion = 'unknown';
+      }
+      logs.push(`[${new Date().toISOString()}] Advertencia: No se pudo obtener serverStatus (normal con permisos limitados): ${err.message}`);
     }
 
     // Obtener información de colecciones si hay alguna
