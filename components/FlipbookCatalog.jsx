@@ -104,14 +104,6 @@ export default function FlipbookCatalog({
 
   const toggleZoom = () => {
     setIsZoomed(!isZoomed);
-    if (flipbookRef.current) {
-      if (!isZoomed) {
-        flipbookRef.current.style.transform = 'scale(1.5)';
-        flipbookRef.current.style.transition = 'transform 0.3s ease';
-      } else {
-        flipbookRef.current.style.transform = 'scale(1)';
-      }
-    }
   };
 
   // Asegurar que la página actual sea válida cuando cambian imágenes o modo de vista
@@ -346,58 +338,74 @@ export default function FlipbookCatalog({
         </div>
       </div>
 
-      {/* Contenedor del flipbook */}
+      {/* Contenedor del flipbook con zoom controlado */}
       <div className="relative flex justify-center" style={{ perspective: '1200px' }}>
-        <div className="relative bg-gray-300/60 rounded-2xl p-4 shadow-inner">
-          {(() => {
-            const isDouble = !isMobile && viewMode === 'double';
-            const baseIndex = isDouble ? currentPage - (currentPage % 2) : currentPage;
-            const leftIndex = baseIndex;
-            const rightIndex = isDouble ? baseIndex + 1 : null;
-
-            // Clases de animación por dirección y lado
-            const leftPageClass =
-              flipDirection === 'prev' ? 'page-flip-prev' : '';
-            const rightPageClass =
-              flipDirection === 'next' ? 'page-flip-next' : '';
-
-            const handleClickLeftPage = () => {
-              if (isDouble && leftIndex > 0) {
-                handlePrevPage();
-              }
-            };
-
-            const handleClickRightPage = () => {
-              if (isDouble && rightIndex !== null && rightIndex < images.length - 1) {
-                handleNextPage();
-              }
-            };
-
-            const handleClickSinglePage = (event) => {
-              if (!images.length) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              const clickX = event.clientX - rect.left;
-              const isRightSide = clickX > rect.width / 2;
-
-              if (isRightSide && currentPage < images.length - 1) {
-                handleNextPage();
-              } else if (!isRightSide && currentPage > 0) {
-                handlePrevPage();
-              }
-            };
-
-            return (
+        <div 
+          className="relative bg-gray-300/60 rounded-2xl p-4 shadow-inner overflow-hidden"
+          style={{
+            width: isZoomed ? `${containerSize.width * 1.5}px` : `${containerSize.width}px`,
+            height: isZoomed ? `${containerSize.height * 1.5}px` : `${containerSize.height}px`,
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            transition: 'width 0.3s ease, height 0.3s ease',
+          }}
+        >
           <div
-            ref={flipbookRef}
-            className="flipbook-container flex bg-white shadow-2xl rounded-lg overflow-hidden"
+            className="relative w-full h-full overflow-auto"
             style={{
-              position: 'relative',
-              width: `${containerSize.width}px`,
-              height: `${containerSize.height}px`,
-              maxWidth: '100vw',
-              maxHeight: '100vh',
+              scrollbarWidth: 'thin',
             }}
           >
+            {(() => {
+              const isDouble = !isMobile && viewMode === 'double';
+              const baseIndex = isDouble ? currentPage - (currentPage % 2) : currentPage;
+              const leftIndex = baseIndex;
+              const rightIndex = isDouble ? baseIndex + 1 : null;
+
+              // Clases de animación por dirección y lado
+              const leftPageClass =
+                flipDirection === 'prev' ? 'page-flip-prev' : '';
+              const rightPageClass =
+                flipDirection === 'next' ? 'page-flip-next' : '';
+
+              const handleClickLeftPage = () => {
+                if (isDouble && leftIndex > 0) {
+                  handlePrevPage();
+                }
+              };
+
+              const handleClickRightPage = () => {
+                if (isDouble && rightIndex !== null && rightIndex < images.length - 1) {
+                  handleNextPage();
+                }
+              };
+
+              const handleClickSinglePage = (event) => {
+                if (!images.length) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const isRightSide = clickX > rect.width / 2;
+
+                if (isRightSide && currentPage < images.length - 1) {
+                  handleNextPage();
+                } else if (!isRightSide && currentPage > 0) {
+                  handlePrevPage();
+                }
+              };
+
+              return (
+                <div
+                  ref={flipbookRef}
+                  className="flipbook-container flex bg-white shadow-2xl rounded-lg overflow-hidden mx-auto"
+                  style={{
+                    position: 'relative',
+                    width: `${containerSize.width}px`,
+                    height: `${containerSize.height}px`,
+                    transform: isZoomed ? 'scale(1.5)' : 'scale(1)',
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.3s ease',
+                  }}
+                >
             {isDouble ? (
               <>
                 {images[leftIndex] && (
@@ -441,41 +449,41 @@ export default function FlipbookCatalog({
                 </div>
               )
             )}
-          </div>
+                {/* Hotspots superpuestos - sobre el flipbook */}
+                {pageDimensions.width > 0 && (
+                  <div
+                    className="absolute top-0 left-0 pointer-events-none"
+                    style={{
+                      width: pageDimensions.width || 600,
+                      height: pageDimensions.height || 800,
+                    }}
+                  >
+                    {currentPageHotspots.map((hotspot, index) => {
+                      const producto = currentPageProducts[index];
+                      // Si no hay producto, no renderizar el hotspot
+                      if (!producto) {
+                        console.warn(`Hotspot sin producto en página ${hotspot.page}:`, hotspot);
+                        return null;
+                      }
+
+                      return (
+                        <div key={`${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
+                          <Hotspot
+                            hotspot={hotspot}
+                            producto={producto}
+                            onHotspotClick={handleHotspotClick}
+                            pageWidth={pageDimensions.width || 600}
+                            pageHeight={pageDimensions.height || 800}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })()}
-
-          {/* Hotspots superpuestos - sobre el flipbook */}
-          {pageDimensions.width > 0 && (
-            <div
-              className="absolute top-0 left-0 pointer-events-none"
-              style={{
-                width: pageDimensions.width || 600,
-                height: pageDimensions.height || 800,
-              }}
-            >
-              {currentPageHotspots.map((hotspot, index) => {
-                const producto = currentPageProducts[index];
-                // Si no hay producto, no renderizar el hotspot
-                if (!producto) {
-                  console.warn(`Hotspot sin producto en página ${hotspot.page}:`, hotspot);
-                  return null;
-                }
-
-                return (
-                  <div key={`${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
-                    <Hotspot
-                      hotspot={hotspot}
-                      producto={producto}
-                      onHotspotClick={handleHotspotClick}
-                      pageWidth={pageDimensions.width || 600}
-                      pageHeight={pageDimensions.height || 800}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 

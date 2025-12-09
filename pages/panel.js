@@ -10,10 +10,11 @@ export default function PanelDeControl() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'hotspots'
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion'
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -395,47 +396,6 @@ export default function PanelDeControl() {
 
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-          {/* Configuración General */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 p-6 md:p-8 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-gray-900">Configuración General</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Número de WhatsApp para Pedidos
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600 font-medium text-base">+</span>
-                  <input
-                    type="text"
-                    className="flex-1 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white px-3 py-2.5 font-medium transition-all hover:border-primary-300"
-                    placeholder="573001234567"
-                    value={config.whatsappNumber || ''}
-                    onChange={(e) => {
-                      setConfig((prev) => ({
-                        ...prev,
-                        whatsappNumber: e.target.value.replace(/\D/g, ''), // Solo números
-                      }));
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  Número sin el símbolo +. Se usará para enviar pedidos desde el carrito.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Tabs */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-2 py-2 flex gap-2 text-sm font-medium">
             <button
@@ -451,14 +411,25 @@ export default function PanelDeControl() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('hotspots')}
+              onClick={() => setActiveTab('marcadores')}
               className={`px-4 py-2 rounded-xl transition-colors ${
-                activeTab === 'hotspots'
+                activeTab === 'marcadores'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'bg-transparent text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Hotspots
+              Marcadores
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('configuracion')}
+              className={`px-4 py-2 rounded-xl transition-colors ${
+                activeTab === 'configuracion'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Configuración
             </button>
           </div>
 
@@ -470,58 +441,107 @@ export default function PanelDeControl() {
               Edita el precio y la descripción que se muestran en el modal de cada producto.
             </p>
 
-            {/* Paginación de productos */}
-            {config.productos.length > itemsPerPage && (
-              <div className="flex items-center justify-between mb-4 px-2">
-                <p className="text-xs text-gray-500">
-                  Mostrando {((productosPage - 1) * itemsPerPage) + 1} - {Math.min(productosPage * itemsPerPage, config.productos.length)} de {config.productos.length} productos
-                </p>
-                <div className="flex items-center gap-2">
+            {/* Paginación y selector de vista */}
+            <div className="flex items-center justify-between mb-4 px-2 flex-wrap gap-3">
+              <p className="text-xs text-gray-500">
+                {config.productos.length > itemsPerPage && (
+                  <>Mostrando {((productosPage - 1) * itemsPerPage) + 1} - {Math.min(productosPage * itemsPerPage, config.productos.length)} de {config.productos.length} productos</>
+                )}
+                {config.productos.length <= itemsPerPage && (
+                  <>{config.productos.length} productos</>
+                )}
+              </p>
+              <div className="flex items-center gap-3">
+                {/* Selector de vista */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                   <button
                     type="button"
-                    onClick={() => setProductosPage(p => Math.max(1, p - 1))}
-                    disabled={productosPage === 1}
-                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      viewMode === 'grid'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Vista de cuadrícula"
                   >
-                    ← Anterior
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
                   </button>
-                  <span className="text-sm text-gray-600">
-                    Página {productosPage} de {Math.ceil(config.productos.length / itemsPerPage)}
-                  </span>
                   <button
                     type="button"
-                    onClick={() => setProductosPage(p => Math.min(Math.ceil(config.productos.length / itemsPerPage), p + 1))}
-                    disabled={productosPage >= Math.ceil(config.productos.length / itemsPerPage)}
-                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Vista de lista"
                   >
-                    Siguiente →
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
                   </button>
                 </div>
+                {/* Paginación */}
+                {config.productos.length > itemsPerPage && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProductosPage(p => Math.max(1, p - 1))}
+                      disabled={productosPage === 1}
+                      className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      Página {productosPage} de {Math.ceil(config.productos.length / itemsPerPage)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setProductosPage(p => Math.min(Math.ceil(config.productos.length / itemsPerPage), p + 1))}
+                      disabled={productosPage >= Math.ceil(config.productos.length / itemsPerPage)}
+                      className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
-            <div className="grid gap-5 md:gap-6 md:grid-cols-2 mb-4">
+            <div className={viewMode === 'grid' ? 'grid gap-5 md:gap-6 md:grid-cols-2 mb-4' : 'flex flex-col gap-4 mb-4'}>
               {config.productos
                 .slice((productosPage - 1) * itemsPerPage, productosPage * itemsPerPage)
                 .map((producto) => (
                 <div
                   key={producto.id}
-                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 shadow-sm hover:shadow-lg transition-all duration-200"
+                  className={`relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm hover:shadow-md transition-all duration-200 ${
+                    viewMode === 'list' ? 'flex flex-row' : ''
+                  }`}
+                  style={{
+                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+                  }}
                 >
                   {/* banda lateral */}
                   <div className="absolute inset-y-0 left-0 w-1 bg-primary-500/80" />
 
-                  <div className="relative p-4 md:p-5 flex flex-col gap-4">
+                  <div className={`relative p-4 md:p-5 flex flex-col gap-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
                     {/* encabezado */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 text-primary-700 text-xs font-semibold">
-                          {producto.id}
-                        </span>
+                      <div className="flex flex-col gap-2 min-w-0 flex-1">
+                        {/* ID separado del nombre */}
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 text-[10px] font-mono font-semibold border border-primary-200">
+                            {producto.id.substring(0, 8)}
+                          </span>
+                        </div>
+                        {/* Nombre del producto */}
                         <input
                           type="text"
-                          className="w-full max-w-xs border-0 bg-transparent px-0 py-0 text-base md:text-lg font-semibold text-gray-900 focus:ring-0"
+                          className="w-full border-0 bg-transparent px-0 py-0 text-base md:text-lg font-semibold text-gray-900 focus:ring-0 placeholder-gray-400"
                           value={producto.nombre}
+                          placeholder="Nombre del producto"
                           onChange={(e) =>
                             handleProductoChange(producto.id, 'nombre', e.target.value)
                           }
@@ -550,8 +570,8 @@ export default function PanelDeControl() {
                     </div>
 
                     {/* cuerpo */}
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start">
+                    <div className={viewMode === 'list' ? 'grid grid-cols-3 gap-4 items-start' : 'grid grid-cols-1 gap-4'}>
+                      <div className={viewMode === 'list' ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start'}>
                         <div>
                           <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
                             Precio (COP)
@@ -698,12 +718,12 @@ export default function PanelDeControl() {
           </section>
           )}
 
-          {/* Sección hotspots */}
-          {activeTab === 'hotspots' && (
+          {/* Sección marcadores (puntos de compra interactivos) */}
+          {activeTab === 'marcadores' && (
           <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Hotspots</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Marcadores</h2>
             <p className="text-gray-600 text-sm mb-6">
-              Activa o desactiva los puntos clicables en cada página del catálogo.
+              Activa o desactiva los puntos de compra interactivos en cada página del catálogo.
             </p>
 
             {/* Paginación de hotspots */}
