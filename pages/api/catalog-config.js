@@ -255,24 +255,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(data.hotspots)) data.hotspots = [];
       if (!Array.isArray(data.productos)) data.productos = [];
       
-      // Crear al menos un hotspot por página si no existe ninguno para esa página
-      if (numPages) {
-        const firstProductId = data.productos[0]?.id || '';
-        for (let page = 1; page <= numPages; page++) {
-          const tieneHotspot = data.hotspots.some((h) => h.page === page);
-          if (!tieneHotspot) {
-            data.hotspots.push({
-              page,
-              idProducto: firstProductId,
-              enabled: false,
-              x: 50,
-              y: 50,
-              width: 20,
-              height: 20,
-            });
-          }
-        }
-      }
+      // NO crear hotspots automáticamente - solo mostrar los que están en la BD
       
       res.status(200).json(data);
     } catch (error) {

@@ -334,30 +334,37 @@ export default function PanelDeControl() {
         <title>Panel de Control - Catálogo Interactivo</title>
       </Head>
       <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Header fijo con animación */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white/98 backdrop-blur-md border-b border-gray-200 shadow-lg animate-slideDown">
+          <div className="max-w-6xl mx-auto px-4 py-3">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">
-                  Panel de Control
-                </h1>
-                <p className="text-gray-600 mt-1 text-sm">
-                  Activa/desactiva hotspots y ajusta precios y descripciones de productos.
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                    Panel de Control
+                  </h1>
+                  {typeof config?.numPages === 'number' && config.numPages > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary-50 border border-primary-200">
+                      <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-primary-700">
+                        <span className="text-primary-600">{config.numPages}</span> páginas disponibles
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-600 mt-1 text-xs md:text-sm">
+                  Gestiona productos, marcadores y configuración del catálogo.
                 </p>
-                {typeof config.numPages === 'number' && config.numPages > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    <span className="font-semibold text-primary-600">{config.numPages}</span> páginas detectadas en el catálogo
-                  </p>
-                )}
               </div>
-              <div className="flex flex-wrap gap-3 shrink-0">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => router.push('/catalog')}
-                  className="px-4 py-2 rounded-xl border border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50 hover:bg-primary-100 transition-colors flex items-center gap-2"
+                  className="px-3 py-1.5 rounded-lg border border-primary-300 text-primary-700 text-xs md:text-sm font-semibold bg-primary-50 hover:bg-primary-100 transition-colors flex items-center gap-1.5"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
@@ -366,21 +373,24 @@ export default function PanelDeControl() {
                 <button
                   type="button"
                   onClick={handleTestDb}
-                  className="px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                  className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-700 text-xs md:text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
                 >
-                  Probar conexión BD
+                  Probar BD
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                 >
-                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                  {saving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </div>
           </div>
         </div>
+        
+        {/* Espaciador para el header fijo */}
+        <div className="h-20 md:h-24"></div>
 
         {/* Toast notifications */}
         <Toast
@@ -510,14 +520,14 @@ export default function PanelDeControl() {
               </div>
             </div>
 
-            <div className={viewMode === 'grid' ? 'grid gap-5 md:gap-6 md:grid-cols-2 mb-4' : 'flex flex-col gap-4 mb-4'}>
+            <div className={viewMode === 'grid' ? 'grid gap-5 md:gap-6 md:grid-cols-2 mb-4' : 'flex flex-col gap-2 mb-4'}>
               {config.productos
                 .slice((productosPage - 1) * itemsPerPage, productosPage * itemsPerPage)
                 .map((producto) => (
                 <div
                   key={producto.id}
-                  className={`relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm hover:shadow-md transition-all duration-200 ${
-                    viewMode === 'list' ? 'flex flex-row' : ''
+                  className={`relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm hover:shadow-md transition-all duration-200 ${
+                    viewMode === 'list' ? 'flex flex-row items-center gap-4 py-3 px-4' : 'p-4 md:p-5'
                   }`}
                   style={{
                     boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
@@ -526,20 +536,28 @@ export default function PanelDeControl() {
                   {/* banda lateral */}
                   <div className="absolute inset-y-0 left-0 w-1 bg-primary-500/80" />
 
-                  <div className={`relative p-4 md:p-5 flex flex-col gap-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+                  <div className={`relative flex ${viewMode === 'list' ? 'flex-row items-center gap-4 flex-1' : 'flex-col gap-4'}`}>
                     {/* encabezado */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex flex-col gap-2 min-w-0 flex-1">
+                    <div className={`flex ${viewMode === 'list' ? 'items-center gap-3 flex-1' : 'items-start justify-between gap-3'}`}>
+                      <div className={`flex ${viewMode === 'list' ? 'items-center gap-3 flex-1' : 'flex-col gap-2'} min-w-0 flex-1`}>
                         {/* ID separado del nombre */}
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 text-[10px] font-mono font-semibold border border-primary-200">
+                        {viewMode === 'list' ? (
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 text-[10px] font-mono font-semibold border border-primary-200 shrink-0">
                             {producto.id.substring(0, 8)}
                           </span>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 text-[10px] font-mono font-semibold border border-primary-200">
+                              {producto.id.substring(0, 8)}
+                            </span>
+                          </div>
+                        )}
                         {/* Nombre del producto */}
                         <input
                           type="text"
-                          className="w-full border-0 bg-transparent px-0 py-0 text-base md:text-lg font-semibold text-gray-900 focus:ring-0 placeholder-gray-400"
+                          className={`w-full border-0 bg-transparent px-0 py-0 font-semibold text-gray-900 focus:ring-0 placeholder-gray-400 ${
+                            viewMode === 'list' ? 'text-sm' : 'text-base md:text-lg'
+                          }`}
                           value={producto.nombre}
                           placeholder="Nombre del producto"
                           onChange={(e) =>
@@ -547,42 +565,44 @@ export default function PanelDeControl() {
                           }
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProducto(producto.id)}
-                        className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50"
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      {viewMode === 'grid' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProducto(producto.id)}
+                          className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 shrink-0"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                        Eliminar
-                      </button>
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                          Eliminar
+                        </button>
+                      )}
                     </div>
 
                     {/* cuerpo */}
-                    <div className={viewMode === 'list' ? 'grid grid-cols-3 gap-4 items-start' : 'grid grid-cols-1 gap-4'}>
-                      <div className={viewMode === 'list' ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start'}>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
-                            Precio (COP)
+                    {viewMode === 'list' ? (
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-32">
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                            Precio
                           </label>
                           <div className="relative">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm font-medium">
+                            <span className="absolute inset-y-0 left-2 flex items-center text-gray-500 text-xs font-medium">
                               $
                             </span>
                             <input
                               type="number"
-                              className="w-full pl-7 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium transition-all hover:border-primary-300"
+                              className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white font-medium"
                               value={producto.precio || ''}
                               onChange={(e) =>
                                 handleProductoChange(producto.id, 'precio', e.target.value)
@@ -591,24 +611,64 @@ export default function PanelDeControl() {
                             />
                           </div>
                         </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
-                            Descripción corta
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                            Descripción
                           </label>
-                          <textarea
-                            rows={3}
-                            className="w-full rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm resize-y bg-white px-3 py-2.5 transition-all hover:border-primary-300"
-                            value={producto.descripcion || ''}
+                          <input
+                            type="text"
+                            className="w-full rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white px-2 py-1.5"
+                            value={(producto.descripcion || '').substring(0, 60)}
                             onChange={(e) =>
                               handleProductoChange(producto.id, 'descripcion', e.target.value)
                             }
-                            placeholder="Descripción del producto..."
+                            placeholder="Descripción..."
                           />
                         </div>
                       </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
+                              Precio (COP)
+                            </label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm font-medium">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                className="w-full pl-7 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium transition-all hover:border-primary-300"
+                                value={producto.precio || ''}
+                                onChange={(e) =>
+                                  handleProductoChange(producto.id, 'precio', e.target.value)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
 
-                      {/* Campo de página - Mejorado */}
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
+                              Descripción corta
+                            </label>
+                            <textarea
+                              rows={3}
+                              className="w-full rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm resize-y bg-white px-3 py-2.5 transition-all hover:border-primary-300"
+                              value={producto.descripcion || ''}
+                              onChange={(e) =>
+                                handleProductoChange(producto.id, 'descripcion', e.target.value)
+                              }
+                              placeholder="Descripción del producto..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Campo de página - Mejorado */}
+                    {viewMode === 'grid' && (
                       <div className="mt-2">
                         <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
                           Página del Catálogo
@@ -680,7 +740,30 @@ export default function PanelDeControl() {
                           })()}
                         </p>
                       </div>
-                    </div>
+                    )}
+                    
+                    {/* Botón eliminar en vista lista */}
+                    {viewMode === 'list' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProducto(producto.id)}
+                        className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 shrink-0"
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
