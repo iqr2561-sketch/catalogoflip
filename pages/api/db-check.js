@@ -1,10 +1,11 @@
 import { Pool } from 'pg';
 
 // Usar solo la conexión directa, NO branches automáticos
+// Prioridad: DATABASE_URL > POSTGRES_URL (Prisma es solo fallback silencioso)
 const connectionString =
   process.env.DATABASE_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
   process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
   '';
 
 // Pool reutilizable para conexiones eficientes
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
   if (!connectionString) {
     return res.status(500).json({
       ok: false,
-      error: 'DATABASE_URL / POSTGRES_PRISMA_URL no está configurada en las variables de entorno.',
+      error: 'DATABASE_URL no está configurada en las variables de entorno.',
       hint: 'Configura DATABASE_URL en Vercel → Settings → Environment Variables',
     });
   }

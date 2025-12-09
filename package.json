@@ -11,7 +11,7 @@
     "prepare": "node scripts/check-setup.js"
   },
   "dependencies": {
-    "next": "^14.2.18",
+    "next": "^14.2.33",
     "page-flip": "^1.0.0",
     "pdfjs-dist": "^4.10.38",
     "pg": "^8.16.3",
