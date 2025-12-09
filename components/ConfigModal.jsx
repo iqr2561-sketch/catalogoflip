@@ -3,120 +3,28 @@ import { useRouter } from 'next/router';
 
 export default function ConfigModal({ isOpen, onClose }) {
   const router = useRouter();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('1234');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'pdf' | 'database'
-  const [dbTesting, setDbTesting] = useState(false);
-  const [dbResult, setDbResult] = useState(null);
-  const [dbLogs, setDbLogs] = useState([]);
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfUploading, setPdfUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setIsSubmitting(true);
 
     // Nota: esto NO es seguridad real, solo un bloqueo básico de panel.
+    // Simular un pequeño delay para mejor UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     if (username === 'admin' && password === '1234') {
       onClose();
       router.push('/panel');
     } else {
       setError('Usuario o contraseña incorrectos.');
-    }
-  };
-
-  const handleTestDatabase = async () => {
-    setDbTesting(true);
-    setDbResult(null);
-    setDbLogs([]);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/db-check');
-      const data = await res.json();
-
-      if (data.logs) {
-        setDbLogs(data.logs);
-      }
-
-      if (!res.ok || !data.ok) {
-        setDbResult({
-          success: false,
-          error: data.error || 'Error desconocido',
-          details: data.details || data.errorName || '',
-          hint: data.hint || '',
-        });
-      } else {
-        setDbResult({
-          success: true,
-          duration: data.durationMs,
-          database: data.database,
-          serverVersion: data.serverVersion,
-          databases: data.databases || [],
-          collections: data.collections || [],
-          timestamp: data.timestamp,
-        });
-      }
-    } catch (err) {
-      setDbLogs([`[${new Date().toISOString()}] ERROR: ${err.message}`]);
-      setDbResult({
-        success: false,
-        error: 'Error al conectar con el servidor',
-        details: err.message,
-      });
-    } finally {
-      setDbTesting(false);
-    }
-  };
-
-  const handlePdfUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      setError('Por favor, selecciona un archivo PDF válido.');
-      return;
-    }
-
-    setPdfUploading(true);
-    setError(null);
-    setPdfFile(file);
-
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      const res = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      });
-
-      // Intentar parsear como JSON, si falla mostrar el texto de error
-      let data;
-      try {
-        const text = await res.text();
-        data = JSON.parse(text);
-      } catch (parseError) {
-        throw new Error('Error al procesar la respuesta del servidor. Verifica que el servidor esté funcionando correctamente.');
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || data.details || 'Error al subir el PDF');
-      }
-
-      setError(null);
-      // Recargar la página después de un momento para que se actualice el catálogo
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (err) {
-      setError('Error al subir el archivo PDF: ' + err.message);
-      setPdfFile(null);
-    } finally {
-      setPdfUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -128,256 +36,120 @@ export default function ConfigModal({ isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-900/60 via-gray-800/50 to-gray-900/60 backdrop-blur-md"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-2xl mx-4 max-h-[90vh] rounded-2xl bg-gradient-to-br from-white to-gray-50 shadow-2xl border border-gray-200 animate-slideUp overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Configuración</h2>
-            <p className="text-xs text-gray-500">
-              Acceso al panel de control y configuración del catálogo.
+      <div className="relative w-full max-w-md mx-4 rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20 animate-slideUp overflow-hidden">
+        {/* Decorative gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-purple-500/5 pointer-events-none"></div>
+        
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100/80 hover:bg-gray-200/80 text-gray-600 hover:text-gray-900 transition-all duration-200 z-10"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="relative px-8 py-10">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg mb-4">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Acceso al Panel</h2>
+            <p className="text-sm text-gray-500">
+              Ingresa tus credenciales para acceder al panel de control
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-lg leading-none">×</span>
-          </button>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 px-6 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('login')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'login'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Panel
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('pdf')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'pdf'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('database')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'database'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Base de Datos
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {/* Tab: Login */}
-          {activeTab === 'login' && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  Usuario
-                </label>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Username field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Usuario
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500 bg-white/80"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-200 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                   placeholder="admin"
+                  required
+                  autoFocus
                 />
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  Contraseña
-                </label>
+            {/* Password field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Contraseña
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500 bg-white/80"
-                  placeholder="1234"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-200 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  placeholder="••••"
+                  required
                 />
               </div>
-
-              {error && (
-                <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                  {error}
-                </p>
-              )}
-
-              <div className="pt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all"
-                >
-                  Entrar al panel
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Tab: PDF */}
-          {activeTab === 'pdf' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  Cargar Catálogo PDF
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors">
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handlePdfUpload}
-                    disabled={pdfUploading}
-                    className="hidden"
-                    id="pdf-upload"
-                  />
-                  <label
-                    htmlFor="pdf-upload"
-                    className="cursor-pointer flex flex-col items-center gap-2"
-                  >
-                    <span className="text-4xl">📄</span>
-                    <span className="text-sm font-semibold text-gray-700">
-                      {pdfFile ? pdfFile.name : 'Haz clic para seleccionar PDF'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {pdfUploading ? 'Procesando...' : 'Selecciona un archivo PDF'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {pdfFile && (
-                <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700">
-                  ✓ Archivo seleccionado: {pdfFile.name} ({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
-
-              {error && (
-                <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                  {error}
-                </p>
-              )}
             </div>
-          )}
 
-          {/* Tab: Database */}
-          {activeTab === 'database' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">Prueba de Conexión</h3>
-                  <p className="text-xs text-gray-500">Verifica la conexión con MongoDB Atlas</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleTestDatabase}
-                  disabled={dbTesting}
-                  className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                >
-                  {dbTesting ? (
-                    <>
-                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
-                      Probando...
-                    </>
-                  ) : (
-                    <>
-                      <span>🔌</span>
-                      Probar Conexión
-                    </>
-                  )}
-                </button>
+            {/* Error message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 animate-fadeIn">
+                <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
+            )}
 
-              {dbResult && (
-                <div
-                  className={`rounded-xl px-4 py-3 border ${
-                    dbResult.success
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
-                  }`}
-                >
-                  {dbResult.success ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
-                        <span>✓</span>
-                        <span>Conexión exitosa</span>
-                      </div>
-                      <div className="text-xs text-green-600 space-y-1">
-                        <p>⏱️ Duración: {dbResult.duration}ms</p>
-                        <p>🗄️ Base de datos: {dbResult.database || 'default'}</p>
-                        <p>🔧 Versión del servidor: {dbResult.serverVersion}</p>
-                        {dbResult.databases && dbResult.databases.length > 0 && (
-                          <p>📚 Bases de datos: {dbResult.databases.join(', ')}</p>
-                        )}
-                        {dbResult.collections && dbResult.collections.length > 0 && (
-                          <p>📦 Colecciones: {dbResult.collections.join(', ')}</p>
-                        )}
-                        <p>🕐 Timestamp: {new Date(dbResult.timestamp).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
-                        <span>✗</span>
-                        <span>Error de conexión</span>
-                      </div>
-                      <div className="text-xs text-red-600 space-y-1">
-                        <p><strong>Error:</strong> {dbResult.error}</p>
-                        {dbResult.details && <p><strong>Detalles:</strong> {dbResult.details}</p>}
-                        {dbResult.hint && <p><strong>Hint:</strong> {dbResult.hint}</p>}
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span>
+                  <span>Verificando...</span>
+                </>
+              ) : (
+                <>
+                  <span>Ingresar</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </>
               )}
+            </button>
+          </form>
 
-              {dbLogs.length > 0 && (
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Logs de Conexión
-                  </label>
-                  <div className="bg-gray-900 text-green-400 rounded-xl p-4 font-mono text-xs max-h-64 overflow-y-auto">
-                    {dbLogs.map((log, idx) => (
-                      <div key={idx} className="mb-1">
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
-          <p className="text-[10px] text-gray-400">
-            Este acceso es solo para control interno del catálogo. Para seguridad real se recomienda
-            implementar autenticación de usuarios.
+          {/* Footer note */}
+          <p className="mt-6 text-center text-xs text-gray-400">
+            Acceso restringido al panel de administración
           </p>
         </div>
       </div>

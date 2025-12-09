@@ -15,6 +15,8 @@ export default function PanelDeControl() {
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfUploading, setPdfUploading] = useState(false);
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -289,24 +291,56 @@ export default function PanelDeControl() {
     }
   };
 
-  const handleTestDb = async () => {
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Por favor, selecciona un archivo PDF válido.');
+      return;
+    }
+
+    setPdfUploading(true);
+    setError(null);
+    setMessage(null);
+    setPdfFile(file);
+
     try {
-      setMessage(null);
-      setError(null);
+      const formData = new FormData();
+      formData.append('pdf', file);
 
-      const res = await fetch('/api/db-check');
-      const data = await res.json();
+      const res = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (!res.ok || !data.ok) {
-        throw new Error(data?.error || 'Error desconocido');
+      let data;
+      try {
+        const text = await res.text();
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error('Error al procesar la respuesta del servidor.');
       }
 
-      setMessage(
-        `Conexión a la base de datos OK en ${data.durationMs ?? '?'} ms.`
-      );
+      if (!res.ok) {
+        throw new Error(data.error || data.details || 'Error al subir el PDF');
+      }
+
+      setMessage('PDF cargado exitosamente. El catálogo se actualizará en breve.');
+      setPdfFile(null);
+      
+      // Recargar la configuración para obtener el nuevo número de páginas
+      setTimeout(async () => {
+        const res = await fetch('/api/catalog-config');
+        const newConfig = await res.json();
+        setConfig(newConfig);
+        setMessage('Catálogo actualizado correctamente.');
+      }, 2000);
     } catch (err) {
-      console.error('Error al probar la conexión a la BD:', err);
-      setError('No se pudo conectar a la base de datos. Revisa las variables de entorno y los logs.');
+      setError('Error al subir el archivo PDF: ' + err.message);
+      setPdfFile(null);
+    } finally {
+      setPdfUploading(false);
     }
   };
 
@@ -369,13 +403,6 @@ export default function PanelDeControl() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                   Ver Catálogo
-                </button>
-                <button
-                  type="button"
-                  onClick={handleTestDb}
-                  className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-700 text-xs md:text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                >
-                  Probar BD
                 </button>
                 <button
                   onClick={handleSave}
@@ -799,6 +826,90 @@ export default function PanelDeControl() {
               </div>
             </div>
           </section>
+          )}
+
+          {/* Sección Configuración */}
+          {activeTab === 'configuracion' && (
+            <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Configuración General</h2>
+              </div>
+              <div className="space-y-6">
+                {/* Cargar PDF */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Cargar Catálogo PDF
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors bg-white">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfUpload}
+                      disabled={pdfUploading}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label
+                      htmlFor="pdf-upload"
+                      className="cursor-pointer flex flex-col items-center gap-3"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-700 block">
+                          {pdfFile ? pdfFile.name : 'Haz clic para seleccionar PDF'}
+                        </span>
+                        <span className="text-xs text-gray-500 block mt-1">
+                          {pdfUploading ? 'Procesando...' : 'Selecciona un archivo PDF para actualizar el catálogo'}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                  {pdfFile && !pdfUploading && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+                      ✓ Archivo seleccionado: {pdfFile.name} ({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </div>
+                  )}
+                </div>
+
+                {/* WhatsApp Number */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Número de WhatsApp para Pedidos
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium text-base">+</span>
+                    <input
+                      type="text"
+                      className="flex-1 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white px-4 py-3 font-medium transition-all hover:border-primary-300"
+                      placeholder="573001234567"
+                      value={config.whatsappNumber || ''}
+                      onChange={(e) => {
+                        setConfig((prev) => ({
+                          ...prev,
+                          whatsappNumber: e.target.value.replace(/\D/g, ''), // Solo números
+                        }));
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    Número sin el símbolo +. Se usará para enviar pedidos desde el carrito.
+                  </p>
+                </div>
+              </div>
+            </section>
           )}
 
           {/* Sección marcadores (puntos de compra interactivos) */}
