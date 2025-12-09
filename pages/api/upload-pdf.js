@@ -188,12 +188,27 @@ export default async function handler(req, res) {
             uploadStream.on('error', reject);
           });
           
+          // Marcar que las imágenes necesitan regenerarse
+          // El cliente las generará y las guardará en la primera carga
+          await db.collection('catalogs').updateOne(
+            { isMain: true },
+            { 
+              $set: { 
+                imagesGenerated: false,
+                pdfUpdatedAt: new Date(),
+              },
+              $setOnInsert: { isMain: true }
+            },
+            { upsert: true }
+          );
+          
           return res.status(200).json({
             ok: true,
-            message: 'PDF cargado exitosamente en MongoDB',
+            message: 'PDF cargado exitosamente. Las imágenes se generarán automáticamente.',
             filename: 'catalogo.pdf',
             size: pdfPart.data.length,
             storedIn: 'MongoDB GridFS',
+            imagesWillGenerate: true,
           });
         }
       } catch (mongoError) {

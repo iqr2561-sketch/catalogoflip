@@ -35,30 +35,76 @@ export default function CatalogPage() {
     loadCatalogConfig();
   }, []);
 
-  // Cargar PDF cuando tengamos la configuración
+  // Cargar imágenes del catálogo
   useEffect(() => {
     if (!catalogConfig) return;
 
-    const loadPDF = async () => {
+    const loadImages = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Usar la URL del PDF de la configuración
-        const pdfUrl = catalogConfig.pdf || '/api/catalogo';
+        const numPages = catalogConfig.numPages || 1;
         
-        // Convertir PDF a imágenes
+        // Intentar cargar imágenes pre-generadas desde el servidor
+        const imageUrls = [];
+        let allImagesExist = true;
+        
+        for (let page = 1; page <= numPages; page++) {
+          try {
+            const response = await fetch(`/api/pdf-images?page=${page}`);
+            if (response.ok) {
+              // Si la imagen existe, usar la URL del servidor
+              imageUrls.push(`/api/pdf-images?page=${page}`);
+            } else {
+              allImagesExist = false;
+              break;
+            }
+          } catch (e) {
+            allImagesExist = false;
+            break;
+          }
+        }
+        
+        if (allImagesExist && imageUrls.length > 0) {
+          // Cargar imágenes desde URLs (más rápido)
+          setImages(imageUrls);
+          setLoading(false);
+          return;
+        }
+        
+        // Si no existen imágenes pre-generadas, convertir PDF (solo primera vez)
+        console.log('Imágenes no encontradas, convirtiendo PDF...');
+        const pdfUrl = catalogConfig.pdf || '/api/catalogo';
         const pdfImages = await pdfToImages(pdfUrl);
         setImages(pdfImages);
+        
+        // Guardar las imágenes en el servidor para próximas cargas
+        try {
+          await fetch('/api/generate-images', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              images: pdfImages,
+              pageNumbers: Array.from({ length: pdfImages.length }, (_, i) => i + 1),
+            }),
+          });
+          console.log('Imágenes guardadas en el servidor para próximas cargas');
+        } catch (saveError) {
+          console.warn('No se pudieron guardar las imágenes en el servidor:', saveError);
+          // Continuar sin error, las imágenes ya están cargadas
+        }
       } catch (err) {
-        console.error('Error al cargar el PDF:', err);
+        console.error('Error al cargar el catálogo:', err);
         setError('Error al cargar el catálogo. Por favor, asegúrate de que el archivo PDF existe.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadPDF();
+    loadImages();
   }, [catalogConfig]);
 
   const handleFileUpload = async (event) => {

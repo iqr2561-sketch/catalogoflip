@@ -1,16 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useCartStore from '../store/cartStore';
 
-export default function Cart() {
+export default function Cart({ whatsappNumber = null }) {
   const productos = useCartStore((state) => state.productos);
   const eliminarProducto = useCartStore((state) => state.eliminarProducto);
   const actualizarCantidad = useCartStore((state) => state.actualizarCantidad);
   const limpiarCarrito = useCartStore((state) => state.limpiarCarrito);
   const getTotal = useCartStore((state) => state.getTotal);
   const [isOpen, setIsOpen] = useState(false);
+  const [whatsappNum, setWhatsappNum] = useState(whatsappNumber);
+
+  // Cargar número de WhatsApp desde la configuración si no se pasa como prop
+  useEffect(() => {
+    if (!whatsappNum) {
+      fetch('/api/catalog-config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.whatsappNumber) {
+            setWhatsappNum(data.whatsappNumber);
+          }
+        })
+        .catch(err => console.error('Error al cargar WhatsApp:', err));
+    }
+  }, [whatsappNum]);
 
   const total = getTotal();
   const itemCount = productos.reduce((sum, p) => sum + (p.cantidad || 1), 0);
+
+  const handleCheckout = () => {
+    if (!whatsappNum) {
+      alert('No se ha configurado un número de WhatsApp. Por favor, configúralo en el panel de control.');
+      return;
+    }
+
+    // Construir mensaje de WhatsApp
+    let mensaje = '🛒 *Pedido del Catálogo*\n\n';
+    productos.forEach((producto, index) => {
+      const subtotal = (producto.precio || 0) * (producto.cantidad || 1);
+      mensaje += `${index + 1}. *${producto.nombre}*\n`;
+      mensaje += `   Cantidad: ${producto.cantidad || 1}\n`;
+      mensaje += `   Precio unitario: $${(producto.precio || 0).toLocaleString()}\n`;
+      mensaje += `   Subtotal: $${subtotal.toLocaleString()}\n\n`;
+    });
+    mensaje += `💰 *Total: $${total.toLocaleString()}*\n\n`;
+    mensaje += 'Gracias por tu pedido! 🎉';
+
+    // Codificar el mensaje para URL
+    const mensajeEncoded = encodeURIComponent(mensaje);
+    
+    // Formatear número de WhatsApp (eliminar caracteres no numéricos excepto +)
+    const numeroLimpio = whatsappNum.replace(/[^\d+]/g, '');
+    
+    // Abrir WhatsApp Web/App
+    const whatsappUrl = `https://wa.me/${numeroLimpio}?text=${mensajeEncoded}`;
+    window.open(whatsappUrl, '_blank');
+    
+    // Limpiar carrito después de enviar
+    limpiarCarrito();
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -80,13 +128,14 @@ export default function Cart() {
                   <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {productos.map((producto) => (
                     <div
                       key={producto.id}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                     >
-                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {/* Imagen más pequeña en móvil */}
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                         {producto.imagen ? (
                           <img
                             src={producto.imagen}
@@ -94,77 +143,86 @@ export default function Cart() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-2xl">📦</span>
+                          <span className="text-xl md:text-2xl">📦</span>
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate">
+                      {/* Información del producto - mejorada para móvil */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <h3 className="font-semibold text-gray-900 text-sm md:text-base line-clamp-2">
                           {producto.nombre}
                         </h3>
-                        <p className="text-primary-600 font-bold">
-                          ${producto.precio.toLocaleString()}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <p className="text-primary-600 font-bold text-sm md:text-base">
+                            ${producto.precio.toLocaleString()}
+                          </p>
+                          {/* Cantidad visible y separada del nombre */}
+                          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-gray-200">
+                            <button
+                              onClick={() =>
+                                actualizarCantidad(
+                                  producto.id,
+                                  Math.max(1, (producto.cantidad || 1) - 1)
+                                )
+                              }
+                              className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            >
+                              <svg
+                                className="w-3 h-3 md:w-4 md:h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M20 12H4"
+                                />
+                              </svg>
+                            </button>
+                            <span className="w-6 text-center font-semibold text-sm md:text-base">
+                              {producto.cantidad || 1}
+                            </span>
+                            <button
+                              onClick={() =>
+                                actualizarCantidad(
+                                  producto.id,
+                                  (producto.cantidad || 1) + 1
+                                )
+                              }
+                              className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            >
+                              <svg
+                                className="w-3 h-3 md:w-4 md:h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 4v16m8-8H4"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        {/* Subtotal */}
+                        <p className="text-xs text-gray-500">
+                          Subtotal: ${((producto.precio || 0) * (producto.cantidad || 1)).toLocaleString()}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() =>
-                            actualizarCantidad(
-                              producto.id,
-                              (producto.cantidad || 1) - 1
-                            )
-                          }
-                          className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M20 12H4"
-                            />
-                          </svg>
-                        </button>
-                        <span className="w-8 text-center font-semibold">
-                          {producto.cantidad || 1}
-                        </span>
-                        <button
-                          onClick={() =>
-                            actualizarCantidad(
-                              producto.id,
-                              (producto.cantidad || 1) + 1
-                            )
-                          }
-                          className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-
+                      {/* Botón eliminar */}
                       <button
                         onClick={() => eliminarProducto(producto.id)}
-                        className="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors"
+                        className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                        aria-label="Eliminar producto"
                       >
                         <svg
-                          className="w-5 h-5"
+                          className="w-4 h-4 md:w-5 md:h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -200,13 +258,14 @@ export default function Cart() {
                     Limpiar
                   </button>
                   <button
-                    onClick={() => {
-                      // Aquí puedes agregar la lógica de checkout
-                      alert('Funcionalidad de checkout en desarrollo');
-                    }}
-                    className="flex-1 py-3 px-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl transition-all"
+                    onClick={handleCheckout}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                   >
-                    Finalizar Compra
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                    Enviar por WhatsApp
                   </button>
                 </div>
               </div>

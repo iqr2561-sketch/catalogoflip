@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Toast from '../components/Toast';
 
 export default function PanelDeControl() {
+  const router = useRouter();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -273,10 +276,13 @@ export default function PanelDeControl() {
         throw new Error('Error HTTP ' + res.status);
       }
 
-      setMessage('Cambios guardados correctamente. Si no los ves en el catálogo, recarga la página.');
+      setMessage('Cambios guardados correctamente');
+      // Limpiar mensaje después de 4 segundos
+      setTimeout(() => setMessage(null), 4000);
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       setError('No se pudieron guardar los cambios. Revisa la consola para más detalles.');
+      setTimeout(() => setError(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -326,50 +332,68 @@ export default function PanelDeControl() {
       <Head>
         <title>Panel de Control - Catálogo Interactivo</title>
       </Head>
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-10">
-        <div className="max-w-6xl mx-auto px-4 space-y-8">
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Panel de Control</h1>
-              <p className="text-gray-600 mt-1">
-                Activa/desactiva hotspots y ajusta precios y descripciones de productos.
-              </p>
-              {typeof config.numPages === 'number' && (
-                <p className="text-xs text-gray-500 mt-1">
-                  PDF detectado con <span className="font-semibold">{config.numPages}</span> páginas.
-                  Se crea al menos un hotspot por página automáticamente.
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header fijo */}
+        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">
+                  Panel de Control
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm">
+                  Activa/desactiva hotspots y ajusta precios y descripciones de productos.
                 </p>
-              )}
+                {typeof config.numPages === 'number' && config.numPages > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    <span className="font-semibold text-primary-600">{config.numPages}</span> páginas detectadas en el catálogo
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => router.push('/catalog')}
+                  className="px-4 py-2 rounded-xl border border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50 hover:bg-primary-100 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Ver Catálogo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestDb}
+                  className="px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  Probar conexión BD
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={handleTestDb}
-                className="px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 transition-colors"
-              >
-                Probar conexión BD
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </header>
+          </div>
+        </div>
 
-          {message && (
-            <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm">
-              {message}
-            </div>
-          )}
+        {/* Toast notifications */}
+        <Toast
+          message={message}
+          type="success"
+          onClose={() => setMessage(null)}
+        />
+        <Toast
+          message={error}
+          type="error"
+          onClose={() => setError(null)}
+        />
 
-          {error && (
-            <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm">
-              {error}
-            </div>
-          )}
+        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
           {/* Tabs */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-2 py-2 flex gap-2 text-sm font-medium">
@@ -537,13 +561,16 @@ export default function PanelDeControl() {
                             }
                           >
                             <option value="">Sin página asignada</option>
-                            {Array.from({ length: config.numPages || 1 }, (_, i) => i + 1).map(
-                              (pageNum) => (
-                                <option key={pageNum} value={pageNum}>
-                                  Página {pageNum}
-                                </option>
-                              )
-                            )}
+                            {(() => {
+                              const numPages = config.numPages && config.numPages > 0 ? config.numPages : 1;
+                              return Array.from({ length: numPages }, (_, i) => i + 1).map(
+                                (pageNum) => (
+                                  <option key={pageNum} value={pageNum}>
+                                    Página {pageNum}
+                                  </option>
+                                )
+                              );
+                            })()}
                           </select>
                           {(() => {
                             const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
