@@ -395,6 +395,36 @@ export default function PanelDeControl() {
 
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
+          {/* Configuración General */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Configuración General</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Número de WhatsApp para Pedidos
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">+</span>
+                  <input
+                    type="text"
+                    className="flex-1 rounded-lg border border-gray-200 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white/80 px-3 py-2"
+                    placeholder="573001234567"
+                    value={config.whatsappNumber || ''}
+                    onChange={(e) => {
+                      setConfig((prev) => ({
+                        ...prev,
+                        whatsappNumber: e.target.value.replace(/\D/g, ''), // Solo números
+                      }));
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Número sin el símbolo +. Se usará para enviar pedidos desde el carrito.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Tabs */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-2 py-2 flex gap-2 text-sm font-medium">
             <button
