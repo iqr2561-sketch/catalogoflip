@@ -1,29 +1,30 @@
-import { Pool } from 'pg';
+import { MongoClient } from 'mongodb';
 
-// Usar solo la conexión directa, NO branches automáticos
-// Prioridad: DATABASE_URL > POSTGRES_URL (Prisma es solo fallback silencioso)
-const connectionString =
+// Usar MongoDB Atlas - conexión directa
+const mongoUri =
+  process.env.MONGODB_URI ||
   process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
   '';
 
-// Pool reutilizable para conexiones eficientes
-let pool = null;
+// Cliente reutilizable para conexiones eficientes
+let client = null;
+let clientPromise = null;
 
-function getPool() {
-  if (!pool && connectionString) {
-    pool = new Pool({
-      connectionString,
-      ssl: connectionString.includes('sslmode=require') || connectionString.includes('ssl=true')
-        ? { rejectUnauthorized: false }
-        : false,
-      max: 1, // Limitar conexiones en serverless
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-    });
+function getMongoClient() {
+  if (!mongoUri) {
+    return null;
   }
-  return pool;
+
+  if (!clientPromise) {
+    client = new MongoClient(mongoUri, {
+      maxPoolSize: 1, // Limitar conexiones en serverless
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    });
+    clientPromise = client.connect();
+  }
+
+  return clientPromise;
 }
 
 export default async function handler(req, res) {
@@ -32,43 +33,50 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Método no permitido' });
   }
 
-  if (!connectionString) {
+  if (!mongoUri) {
     return res.status(500).json({
       ok: false,
-      error: 'DATABASE_URL no está configurada en las variables de entorno.',
-      hint: 'Configura DATABASE_URL en Vercel → Settings → Environment Variables',
+      error: 'MONGODB_URI no está configurada en las variables de entorno.',
+      hint: 'Configura MONGODB_URI en Vercel → Settings → Environment Variables',
     });
   }
 
-  const dbPool = getPool();
-  if (!dbPool) {
+  const clientPromise = getMongoClient();
+  if (!clientPromise) {
     return res.status(500).json({
       ok: false,
-      error: 'No se pudo inicializar el pool de conexiones.',
+      error: 'No se pudo inicializar el cliente de MongoDB.',
     });
   }
 
   try {
     const start = Date.now();
-    const result = await dbPool.query('SELECT 1 as ok, NOW() as timestamp');
+    const client = await clientPromise;
+    
+    // Probar la conexión ejecutando un comando simple
+    const result = await client.db().admin().ping();
     const duration = Date.now() - start;
+
+    // Obtener información de la base de datos
+    const dbName = client.db().databaseName;
+    const serverInfo = await client.db().admin().serverStatus();
 
     return res.status(200).json({
       ok: true,
-      dbOk: result.rows[0]?.ok === 1,
+      dbOk: result.ok === 1,
       durationMs: duration,
-      timestamp: result.rows[0]?.timestamp,
-      connectionType: 'direct', // Confirmamos que NO usamos branches automáticos
+      timestamp: new Date().toISOString(),
+      connectionType: 'direct',
+      database: dbName,
+      serverVersion: serverInfo?.version || 'unknown',
     });
   } catch (error) {
-    console.error('Error en prueba de conexión a BD:', error);
+    console.error('Error en prueba de conexión a MongoDB:', error);
     return res.status(500).json({
       ok: false,
-      error: 'No se pudo conectar a la base de datos. Revisa las variables de entorno y los logs.',
+      error: 'No se pudo conectar a MongoDB Atlas. Revisa las variables de entorno y los logs.',
       details: error.message,
-      hint: 'Verifica que DATABASE_URL apunte a tu base de datos principal (no a un branch automático)',
+      hint: 'Verifica que MONGODB_URI apunte a tu cluster de MongoDB Atlas correctamente',
     });
   }
 }
-
-

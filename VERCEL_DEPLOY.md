@@ -20,13 +20,13 @@ Este proyecto **NO necesita** que Vercel cree branches automáticos de la base d
 En **Vercel → Settings → Environment Variables**, asegúrate de tener:
 
 ```env
-DATABASE_URL=postgresql://neondb_owner:npg_Qfte2Ed3RgmM@ep-plain-block-ad4bm2ui-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+MONGODB_URI=mongodb+srv://Vercel-Admin-flipbook:JIx6cz5uQJNVVQ9d@flipbook.jmai5zo.mongodb.net/?retryWrites=true&w=majority
 ```
 
 **Importante:**
-- ✅ Usa la URL de la base de datos **principal** (la que termina en `-pooler`)
-- ✅ NO uses URLs de branches automáticos
-- ✅ Asegúrate de que `sslmode=require` esté incluido
+- ✅ Usa la URI completa de MongoDB Atlas con el formato `mongodb+srv://...`
+- ✅ Asegúrate de que tu IP esté en la whitelist de MongoDB Atlas (o usa `0.0.0.0/0` para permitir todas)
+- ✅ La URI debe incluir `retryWrites=true&w=majority` para mejor confiabilidad
 
 #### 3. Verificar Configuración del Proyecto
 
@@ -56,7 +56,9 @@ Una vez que el deployment esté en estado **Ready**:
      "dbOk": true,
      "durationMs": 42,
      "timestamp": "2024-...",
-     "connectionType": "direct"
+     "connectionType": "direct",
+     "database": "nombre_db",
+     "serverVersion": "7.x.x"
    }
    ```
 3. Visita `/catalog` → Debe cargar el catálogo
@@ -75,31 +77,42 @@ Una vez que el deployment esté en estado **Ready**:
 3. Asegúrate de que solo uses `DATABASE_URL` con la conexión directa
 4. Haz un nuevo deploy
 
-#### Error: "Module not found: Can't resolve 'pg'"
+#### Error: "Module not found: Can't resolve 'mongodb'"
 
-**Causa**: La dependencia `pg` no está instalada.
+**Causa**: La dependencia `mongodb` no está instalada.
 
 **Solución**: Ya está resuelto en el código. Si persiste:
 ```bash
-npm install pg
+npm install mongodb
 git add package.json package-lock.json
-git commit -m "Asegura dependencia pg"
+git commit -m "Asegura dependencia mongodb"
 git push origin main
 ```
 
-#### Error: "DATABASE_URL no está configurada"
+#### Error: "MONGODB_URI no está configurada"
 
 **Causa**: La variable de entorno no está configurada en Vercel.
 
 **Solución**:
 1. Ve a **Settings → Environment Variables**
-2. Añade `DATABASE_URL` con el valor correcto
+2. Añade `MONGODB_URI` con el valor correcto (URI completa de MongoDB Atlas)
 3. Guarda y haz un **Redeploy**
+
+#### Error: "MongoServerError: IP not whitelisted"
+
+**Causa**: La IP de Vercel no está en la whitelist de MongoDB Atlas.
+
+**Solución**:
+1. Ve a MongoDB Atlas → Network Access
+2. Añade `0.0.0.0/0` para permitir todas las IPs (o las IPs específicas de Vercel)
+3. Espera unos minutos para que se aplique el cambio
 
 ### 📝 Notas
 
-- Este proyecto usa conexión **directa** a la base de datos principal
+- Este proyecto usa **MongoDB Atlas** como base de datos
+- La conexión es **directa** usando la URI de MongoDB Atlas
 - **NO** necesitas branches automáticos por deployment
 - La configuración está en `vercel.json` para evitar integraciones automáticas
 - El endpoint `/api/db-check` confirma que la conexión es directa (`connectionType: "direct"`)
+- Asegúrate de configurar la whitelist de IPs en MongoDB Atlas para permitir conexiones desde Vercel
 

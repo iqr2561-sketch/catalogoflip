@@ -3,18 +3,18 @@
 Crea un archivo `.env.local` en la raíz del proyecto con estas variables:
 
 ```env
-# Base de Datos Neon (PostgreSQL)
-# IMPORTANTE: Usa la URL de la base de datos PRINCIPAL (no branches automáticos)
-# La URL debe terminar en -pooler y tener sslmode=require
-DATABASE_URL=postgresql://usuario:password@host-pooler.region.aws.neon.tech/nombredb?sslmode=require
+# Base de Datos MongoDB Atlas
+# IMPORTANTE: Usa la URI de conexión completa de MongoDB Atlas
+# Formato: mongodb+srv://usuario:password@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/?retryWrites=true&w=majority
 ```
 
 ## ⚠️ Importante
 
 - El archivo `.env.local` **NO se sube a Git** (está en `.gitignore`)
 - En **Vercel**, configura estas variables en **Settings → Environment Variables**
-- Usa la URL de la base de datos **principal**, NO branches automáticos
-- La URL debe incluir `sslmode=require` para conexiones seguras
+- Usa la URI completa de MongoDB Atlas con el formato `mongodb+srv://...`
+- Asegúrate de que tu IP esté en la whitelist de MongoDB Atlas (o usa `0.0.0.0/0` para permitir todas)
 
 ## 🔒 Seguridad
 
