@@ -542,55 +542,60 @@ export default function PanelDeControl() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start">
                         <div>
-                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">
+                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
                             Precio (COP)
                           </label>
                           <div className="relative">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 text-xs">
+                            <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm font-medium">
                               $
                             </span>
                             <input
                               type="number"
-                              className="w-full pl-6 pr-3 py-2 rounded-lg border border-gray-200 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white/80"
-                              value={producto.precio}
+                              className="w-full pl-7 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium transition-all hover:border-primary-300"
+                              value={producto.precio || ''}
                               onChange={(e) =>
                                 handleProductoChange(producto.id, 'precio', e.target.value)
                               }
+                              placeholder="0"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">
+                          <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
                             Descripción corta
                           </label>
                           <textarea
-                            rows={2}
-                            className="w-full rounded-lg border border-gray-200 focus:ring-primary-500 focus:border-primary-500 text-sm resize-y bg-white/80"
+                            rows={3}
+                            className="w-full rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm resize-y bg-white px-3 py-2.5 transition-all hover:border-primary-300"
                             value={producto.descripcion || ''}
                             onChange={(e) =>
                               handleProductoChange(producto.id, 'descripcion', e.target.value)
                             }
+                            placeholder="Descripción del producto..."
                           />
                         </div>
                       </div>
 
-                      {/* Campo de página */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">
+                      {/* Campo de página - Mejorado */}
+                      <div className="mt-2">
+                        <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
                           Página del Catálogo
                         </label>
                         <div className="flex items-center gap-2">
                           <select
-                            className="flex-1 rounded-lg border border-gray-200 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white/80 px-3 py-2"
+                            className="flex-1 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white px-3 py-2.5 font-medium text-gray-700 transition-all hover:border-primary-300"
                             value={
-                              config.hotspots.find((h) => h.idProducto === producto.id)?.page || ''
+                              (() => {
+                                const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
+                                return hotspot?.page || '';
+                              })()
                             }
                             onChange={(e) =>
                               handleProductoChange(producto.id, 'page', e.target.value)
                             }
                           >
-                            <option value="">Sin página asignada</option>
+                            <option value="">-- Sin página asignada --</option>
                             {(() => {
                               const numPages = config.numPages && config.numPages > 0 ? config.numPages : 1;
                               return Array.from({ length: numPages }, (_, i) => i + 1).map(
@@ -606,9 +611,9 @@ export default function PanelDeControl() {
                             const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
                             if (hotspot?.enabled && hotspot?.page) {
                               return (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-100 text-green-700 text-xs font-semibold whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-bold whitespace-nowrap shadow-sm">
                                   <svg
-                                    className="w-3 h-3"
+                                    className="w-3.5 h-3.5"
                                     fill="currentColor"
                                     viewBox="0 0 20 20"
                                   >
@@ -625,13 +630,22 @@ export default function PanelDeControl() {
                             return null;
                           })()}
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-500 mt-1.5 px-1">
                           {(() => {
                             const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
                             if (hotspot?.page) {
-                              return `El hotspot aparecerá en la página ${hotspot.page} del catálogo`;
+                              return (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+                                  Hotspot visible en página {hotspot.page}
+                                </span>
+                              );
                             }
-                            return 'Selecciona una página para mostrar el hotspot en el catálogo';
+                            return (
+                              <span className="text-gray-400 italic">
+                                Selecciona una página para activar el hotspot
+                              </span>
+                            );
                           })()}
                         </p>
                       </div>
