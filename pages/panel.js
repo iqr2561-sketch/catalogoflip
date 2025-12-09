@@ -9,6 +9,10 @@ export default function PanelDeControl() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'hotspots'
   const [bulkCount, setBulkCount] = useState(1);
+  const [productosPage, setProductosPage] = useState(1);
+  const [hotspotsPage, setHotspotsPage] = useState(1);
+  const itemsPerPage = 10; // Productos por página
+  const hotspotsPerPage = 15; // Hotspots por página
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -353,8 +357,40 @@ export default function PanelDeControl() {
               Edita el precio y la descripción que se muestran en el modal de cada producto.
             </p>
 
+            {/* Paginación de productos */}
+            {config.productos.length > itemsPerPage && (
+              <div className="flex items-center justify-between mb-4 px-2">
+                <p className="text-xs text-gray-500">
+                  Mostrando {((productosPage - 1) * itemsPerPage) + 1} - {Math.min(productosPage * itemsPerPage, config.productos.length)} de {config.productos.length} productos
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setProductosPage(p => Math.max(1, p - 1))}
+                    disabled={productosPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Página {productosPage} de {Math.ceil(config.productos.length / itemsPerPage)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setProductosPage(p => Math.min(Math.ceil(config.productos.length / itemsPerPage), p + 1))}
+                    disabled={productosPage >= Math.ceil(config.productos.length / itemsPerPage)}
+                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-5 md:gap-6 md:grid-cols-2 mb-4">
-              {config.productos.map((producto) => (
+              {config.productos
+                .slice((productosPage - 1) * itemsPerPage, productosPage * itemsPerPage)
+                .map((producto) => (
                 <div
                   key={producto.id}
                   className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 shadow-sm hover:shadow-lg transition-all duration-200"
@@ -482,6 +518,36 @@ export default function PanelDeControl() {
               Activa o desactiva los puntos clicables en cada página del catálogo.
             </p>
 
+            {/* Paginación de hotspots */}
+            {config.hotspots.length > hotspotsPerPage && (
+              <div className="flex items-center justify-between mb-4 px-2">
+                <p className="text-xs text-gray-500">
+                  Mostrando {((hotspotsPage - 1) * hotspotsPerPage) + 1} - {Math.min(hotspotsPage * hotspotsPerPage, config.hotspots.length)} de {config.hotspots.length} hotspots
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHotspotsPage(p => Math.max(1, p - 1))}
+                    disabled={hotspotsPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Página {hotspotsPage} de {Math.ceil(config.hotspots.length / hotspotsPerPage)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHotspotsPage(p => Math.min(Math.ceil(config.hotspots.length / hotspotsPerPage), p + 1))}
+                    disabled={hotspotsPage >= Math.ceil(config.hotspots.length / hotspotsPerPage)}
+                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto mb-4">
               <table className="min-w-full text-sm align-middle">
                 <thead>
@@ -495,7 +561,10 @@ export default function PanelDeControl() {
                   </tr>
                 </thead>
                 <tbody>
-                  {config.hotspots.map((h, index) => {
+                  {config.hotspots
+                    .slice((hotspotsPage - 1) * hotspotsPerPage, hotspotsPage * hotspotsPerPage)
+                    .map((h, index) => {
+                      const globalIndex = (hotspotsPage - 1) * hotspotsPerPage + index;
                     const producto = config.productos.find((p) => p.id === h.idProducto);
                     return (
                       <tr key={`${h.page}-${h.idProducto}-${index}`} className="border-b border-gray-100">
@@ -505,7 +574,7 @@ export default function PanelDeControl() {
                               type="checkbox"
                               className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                               checked={h.enabled !== false}
-                              onChange={(e) => handleHotspotToggle(index, e.target.checked)}
+                              onChange={(e) => handleHotspotToggle(globalIndex, e.target.checked)}
                             />
                             <span className="text-xs text-gray-600">Visible</span>
                           </label>
@@ -517,14 +586,14 @@ export default function PanelDeControl() {
                             max={config.numPages || undefined}
                             className="w-16 px-2 py-1 rounded-md border border-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500"
                             value={h.page}
-                            onChange={(e) => handleHotspotPageChange(index, e.target.value)}
+                            onChange={(e) => handleHotspotPageChange(globalIndex, e.target.value)}
                           />
                         </td>
                         <td className="py-2 pr-4 text-gray-800">
                           <select
                             className="min-w-[140px] px-2 py-1 rounded-md border border-gray-200 text-xs bg-white focus:ring-primary-500 focus:border-primary-500"
                             value={h.idProducto || ''}
-                            onChange={(e) => handleHotspotProductChange(index, e.target.value)}
+                            onChange={(e) => handleHotspotProductChange(globalIndex, e.target.value)}
                           >
                             <option value="">Sin producto</option>
                             {config.productos.map((p) => (
@@ -545,7 +614,7 @@ export default function PanelDeControl() {
                                 className="w-16 px-2 py-1 rounded-md border border-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500"
                                 value={h.x}
                                 onChange={(e) =>
-                                  handleHotspotFieldChange(index, 'x', e.target.value)
+                                  handleHotspotFieldChange(globalIndex, 'x', e.target.value)
                                 }
                               />
                             </div>
@@ -558,7 +627,7 @@ export default function PanelDeControl() {
                                 className="w-16 px-2 py-1 rounded-md border border-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500"
                                 value={h.y}
                                 onChange={(e) =>
-                                  handleHotspotFieldChange(index, 'y', e.target.value)
+                                  handleHotspotFieldChange(globalIndex, 'y', e.target.value)
                                 }
                               />
                             </div>
@@ -575,7 +644,7 @@ export default function PanelDeControl() {
                                 className="w-16 px-2 py-1 rounded-md border border-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500"
                                 value={h.width}
                                 onChange={(e) =>
-                                  handleHotspotFieldChange(index, 'width', e.target.value)
+                                  handleHotspotFieldChange(globalIndex, 'width', e.target.value)
                                 }
                               />
                             </div>
@@ -588,7 +657,7 @@ export default function PanelDeControl() {
                                 className="w-16 px-2 py-1 rounded-md border border-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500"
                                 value={h.height}
                                 onChange={(e) =>
-                                  handleHotspotFieldChange(index, 'height', e.target.value)
+                                  handleHotspotFieldChange(globalIndex, 'height', e.target.value)
                                 }
                               />
                             </div>

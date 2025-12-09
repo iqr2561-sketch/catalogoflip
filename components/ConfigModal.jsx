@@ -83,15 +83,31 @@ export default function ConfigModal({ isOpen, onClose }) {
 
     setPdfUploading(true);
     setError(null);
+    setPdfFile(file);
 
     try {
-      // Aquí podrías subir el PDF a un servidor o almacenarlo
-      // Por ahora solo mostramos que se seleccionó
-      setPdfFile(file);
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      const res = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al subir el PDF');
+      }
+
       setError(null);
-      // TODO: Implementar subida real del PDF
+      // Recargar la página después de un momento para que se actualice el catálogo
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err) {
-      setError('Error al procesar el archivo PDF: ' + err.message);
+      setError('Error al subir el archivo PDF: ' + err.message);
+      setPdfFile(null);
     } finally {
       setPdfUploading(false);
     }
