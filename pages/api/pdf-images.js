@@ -51,10 +51,17 @@ export default async function handler(req, res) {
         if (clientPromise) {
           const client = await clientPromise;
           const db = client.db();
-          const bucket = new GridFSBucket(db, { bucketName: 'pdfImages' });
+          // Intentar ambos nombres de bucket para compatibilidad
+          let bucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
+          let filename = `catalogo_page_${pageNum}.png`;
+          let files = await bucket.find({ filename }).toArray();
           
-          const filename = `page-${pageNum}.png`;
-          const files = await bucket.find({ filename }).toArray();
+          // Si no se encuentra, intentar con el nombre antiguo
+          if (files.length === 0) {
+            bucket = new GridFSBucket(db, { bucketName: 'pdfImages' });
+            filename = `page-${pageNum}.png`;
+            files = await bucket.find({ filename }).toArray();
+          }
           
           if (files.length > 0) {
             const file = files[0];

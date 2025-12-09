@@ -1,4 +1,5 @@
 import { MongoClient, GridFSBucket } from 'mongodb';
+import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 
@@ -54,11 +55,11 @@ export default async function handler(req, res) {
         if (clientPromise) {
           const client = await clientPromise;
           const db = client.db();
-          const bucket = new GridFSBucket(db, { bucketName: 'pdfImages' });
+          const bucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
           
           // Eliminar imágenes anteriores
           try {
-            const existingFiles = await bucket.find({}).toArray();
+            const existingFiles = await bucket.find({ filename: { $regex: /^catalogo_page_/ } }).toArray();
             for (const file of existingFiles) {
               await bucket.delete(file._id);
             }
@@ -72,15 +73,16 @@ export default async function handler(req, res) {
             const imageData = images[i];
             
             // Convertir dataURL a buffer
-            const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
+            const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
             
-            const filename = `page-${pageNum}.png`;
+            const filename = `catalogo_page_${pageNum}.png`;
             const uploadStream = bucket.openUploadStream(filename, {
               contentType: 'image/png',
             });
             
-            uploadStream.end(buffer);
+            const readable = Readable.from([buffer]);
+            readable.pipe(uploadStream);
             
             await new Promise((resolve, reject) => {
               uploadStream.on('finish', resolve);

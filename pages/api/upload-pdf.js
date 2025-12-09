@@ -188,28 +188,92 @@ export default async function handler(req, res) {
             uploadStream.on('error', reject);
           });
           
-          // Marcar que las imágenes necesitan regenerarse
-          // El cliente las generará y las guardará en la primera carga
-          await db.collection('catalogs').updateOne(
-            { isMain: true },
-            { 
-              $set: { 
-                imagesGenerated: false,
-                pdfUpdatedAt: new Date(),
+          // Generar imágenes automáticamente en el servidor
+          try {
+            console.log('Generando imágenes del PDF en el servidor...');
+            const images = await pdfToImagesServer(pdfPart.data, 2.0);
+            
+            // Guardar imágenes en GridFS
+            const imagesBucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
+            
+            // Eliminar imágenes antiguas
+            try {
+              const existingImages = await imagesBucket.find({ filename: { $regex: /^catalogo_page_/ } }).toArray();
+              for (const file of existingImages) {
+                await imagesBucket.delete(file._id);
+              }
+            } catch (e) {
+              console.warn('No se pudieron eliminar imágenes antiguas:', e);
+            }
+            
+            // Guardar nuevas imágenes
+            for (const image of images) {
+              const filename = `catalogo_page_${image.pageNum}.png`;
+              const uploadStream = imagesBucket.openUploadStream(filename, {
+                contentType: 'image/png',
+              });
+              
+              const readable = Readable.from([image.buffer]);
+              readable.pipe(uploadStream);
+              
+              await new Promise((resolve, reject) => {
+                uploadStream.on('finish', resolve);
+                uploadStream.on('error', reject);
+              });
+            }
+            
+            // Actualizar configuración con número de páginas e imágenes generadas
+            await db.collection('catalogs').updateOne(
+              { isMain: true },
+              { 
+                $set: { 
+                  imagesGenerated: true,
+                  imagesGeneratedAt: new Date(),
+                  numPages: images.length,
+                  pdfUpdatedAt: new Date(),
+                },
+                $setOnInsert: { isMain: true }
               },
-              $setOnInsert: { isMain: true }
-            },
-            { upsert: true }
-          );
-          
-          return res.status(200).json({
-            ok: true,
-            message: 'PDF cargado exitosamente. Las imágenes se generarán automáticamente.',
-            filename: 'catalogo.pdf',
-            size: pdfPart.data.length,
-            storedIn: 'MongoDB GridFS',
-            imagesWillGenerate: true,
-          });
+              { upsert: true }
+            );
+            
+            console.log(`✓ ${images.length} imágenes generadas y guardadas exitosamente`);
+            
+            return res.status(200).json({
+              ok: true,
+              message: `PDF cargado exitosamente. ${images.length} imágenes generadas automáticamente.`,
+              filename: 'catalogo.pdf',
+              size: pdfPart.data.length,
+              storedIn: 'MongoDB GridFS',
+              imagesGenerated: true,
+              numPages: images.length,
+            });
+          } catch (imageError) {
+            console.error('Error al generar imágenes:', imageError);
+            // Continuar aunque falle la generación de imágenes
+            // El cliente las generará en la primera carga
+            await db.collection('catalogs').updateOne(
+              { isMain: true },
+              { 
+                $set: { 
+                  imagesGenerated: false,
+                  pdfUpdatedAt: new Date(),
+                },
+                $setOnInsert: { isMain: true }
+              },
+              { upsert: true }
+            );
+            
+            return res.status(200).json({
+              ok: true,
+              message: 'PDF cargado exitosamente. Las imágenes se generarán en la primera carga.',
+              filename: 'catalogo.pdf',
+              size: pdfPart.data.length,
+              storedIn: 'MongoDB GridFS',
+              imagesGenerated: false,
+              warning: 'No se pudieron generar imágenes automáticamente. Se generarán en la primera carga.',
+            });
+          }
         }
       } catch (mongoError) {
         console.error('Error al guardar en MongoDB:', mongoError);

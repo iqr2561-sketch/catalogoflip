@@ -47,34 +47,44 @@ export default function CatalogPage() {
         const numPages = catalogConfig.numPages || 1;
         
         // Intentar cargar imágenes pre-generadas desde el servidor
-        const imageUrls = [];
-        let allImagesExist = true;
+        // Verificar primero si las imágenes están generadas
+        const checkImagesResponse = await fetch('/api/catalog-config');
+        const configData = await checkImagesResponse.ok ? await checkImagesResponse.json() : null;
+        const imagesGenerated = configData?.imagesGenerated || false;
         
-        for (let page = 1; page <= numPages; page++) {
-          try {
-            const response = await fetch(`/api/pdf-images?page=${page}`);
-            if (response.ok) {
-              // Si la imagen existe, usar la URL del servidor
-              imageUrls.push(`/api/pdf-images?page=${page}`);
-            } else {
-              allImagesExist = false;
-              break;
-            }
-          } catch (e) {
-            allImagesExist = false;
-            break;
+        if (imagesGenerated && numPages > 0) {
+          // Las imágenes ya están generadas, cargarlas directamente
+          const imageUrls = [];
+          let allImagesExist = true;
+          
+          // Cargar todas las imágenes en paralelo para mayor velocidad
+          const imagePromises = [];
+          for (let page = 1; page <= numPages; page++) {
+            imagePromises.push(
+              fetch(`/api/pdf-images?page=${page}`)
+                .then(response => {
+                  if (response.ok) {
+                    return `/api/pdf-images?page=${page}`;
+                  }
+                  return null;
+                })
+                .catch(() => null)
+            );
+          }
+          
+          const results = await Promise.all(imagePromises);
+          const validUrls = results.filter(url => url !== null);
+          
+          if (validUrls.length === numPages) {
+            // Todas las imágenes existen, cargarlas
+            setImages(validUrls);
+            setLoading(false);
+            return;
           }
         }
         
-        if (allImagesExist && imageUrls.length > 0) {
-          // Cargar imágenes desde URLs (más rápido)
-          setImages(imageUrls);
-          setLoading(false);
-          return;
-        }
-        
-        // Si no existen imágenes pre-generadas, convertir PDF (solo primera vez)
-        console.log('Imágenes no encontradas, convirtiendo PDF...');
+        // Si no existen imágenes pre-generadas, convertir PDF (solo como fallback)
+        console.log('Imágenes no encontradas o no generadas, convirtiendo PDF en cliente...');
         const pdfUrl = catalogConfig.pdf || '/api/catalogo';
         const pdfImages = await pdfToImages(pdfUrl);
         setImages(pdfImages);
@@ -140,7 +150,7 @@ export default function CatalogPage() {
               Cargando catálogo...
             </p>
             <p className="text-gray-500 text-sm mt-2">
-              Convirtiendo PDF a imágenes
+              {images.length > 0 ? 'Cargando imágenes...' : 'Convirtiendo PDF a imágenes...'}
             </p>
           </div>
         </div>
