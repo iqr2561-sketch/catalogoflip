@@ -253,7 +253,7 @@ export default function CatalogPage() {
             whatsappNumber={catalogConfig.whatsappNumber || null}
           />
         )}
-        <Cart />
+        <Cart whatsappNumber={catalogConfig?.whatsappNumber || null} />
       </main>
     </>
   );
