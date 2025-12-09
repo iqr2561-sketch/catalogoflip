@@ -16,12 +16,20 @@ function getMongoClient() {
   }
 
   if (!clientPromise) {
-    client = new MongoClient(mongoUri, {
-      maxPoolSize: 1, // Limitar conexiones en serverless
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-    clientPromise = client.connect();
+    try {
+      client = new MongoClient(mongoUri, {
+        maxPoolSize: 1, // Limitar conexiones en serverless
+        serverSelectionTimeoutMS: 15000, // Aumentado para dar más tiempo
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 15000,
+        retryWrites: true,
+        w: 'majority',
+      });
+      clientPromise = client.connect();
+    } catch (err) {
+      console.error('Error al crear cliente MongoDB:', err);
+      throw err;
+    }
   }
 
   return clientPromise;
@@ -34,10 +42,15 @@ export default async function handler(req, res) {
   }
 
   if (!mongoUri) {
+    const envVars = Object.keys(process.env).filter(key => 
+      key.includes('MONGO') || key.includes('DATABASE')
+    );
     return res.status(500).json({
       ok: false,
       error: 'MONGODB_URI no está configurada en las variables de entorno.',
       hint: 'Configura MONGODB_URI en Vercel → Settings → Environment Variables',
+      availableEnvVars: envVars.length > 0 ? envVars : 'Ninguna variable relacionada encontrada',
+      logs: [`[${new Date().toISOString()}] MONGODB_URI no configurada`],
     });
   }
 

@@ -57,6 +57,7 @@ export default function CatalogPage() {
           <title>Catálogo Interactivo - Cargando...</title>
         </Head>
         <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <ConfigButton />
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600 mb-4"></div>
             <p className="text-gray-700 text-lg font-semibold">
@@ -78,13 +79,14 @@ export default function CatalogPage() {
           <title>Error - Catálogo Interactivo</title>
         </Head>
         <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <ConfigButton />
           <div className="text-center max-w-md mx-4">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el catálogo</h1>
             <p className="text-gray-600 mb-4">{error}</p>
             <p className="text-gray-600 text-sm mb-6">
               Si el archivo <code>public/catalogo.pdf</code> no existe o no es accesible, puedes cargar un PDF manualmente
-              desde tu equipo para visualizarlo como flipbook.
+              desde tu equipo para visualizarlo como flipbook. También puedes usar el botón de <strong>Configuración</strong> arriba a la derecha.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <label className="inline-block cursor-pointer">
@@ -119,6 +121,7 @@ export default function CatalogPage() {
           <title>Catálogo vacío - Catálogo Interactivo</title>
         </Head>
         <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <ConfigButton />
           <div className="text-center max-w-md mx-4">
             <div className="text-5xl mb-4">📄</div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">No se pudieron generar páginas del catálogo</h1>
@@ -127,7 +130,7 @@ export default function CatalogPage() {
               archivo PDF o con el conversor.
             </p>
             <p className="text-gray-600 text-sm mb-6">
-              Prueba a cargar un PDF diferente desde tu equipo o recarga la página.
+              Prueba a cargar un PDF diferente desde tu equipo o usa el botón de <strong>Configuración</strong> arriba a la derecha.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <label className="inline-block cursor-pointer">
