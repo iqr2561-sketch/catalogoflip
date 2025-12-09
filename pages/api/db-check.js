@@ -50,33 +50,89 @@ export default async function handler(req, res) {
   }
 
   try {
+    const logs = [];
     const start = Date.now();
+    
+    logs.push(`[${new Date().toISOString()}] Iniciando conexión a MongoDB...`);
+    logs.push(`[${new Date().toISOString()}] URI configurada: ${mongoUri.substring(0, 30)}...`);
+    
     const client = await clientPromise;
+    logs.push(`[${new Date().toISOString()}] Cliente MongoDB conectado exitosamente`);
     
     // Probar la conexión ejecutando un comando simple
+    logs.push(`[${new Date().toISOString()}] Ejecutando ping()...`);
     const result = await client.db().admin().ping();
-    const duration = Date.now() - start;
+    const pingDuration = Date.now() - start;
+    logs.push(`[${new Date().toISOString()}] Ping exitoso (${pingDuration}ms)`);
 
     // Obtener información de la base de datos
-    const dbName = client.db().databaseName;
-    const serverInfo = await client.db().admin().serverStatus();
+    logs.push(`[${new Date().toISOString()}] Obteniendo información del servidor...`);
+    const db = client.db();
+    const dbName = db.databaseName;
+    
+    // Listar bases de datos disponibles
+    const adminDb = client.db().admin();
+    const dbList = await adminDb.listDatabases();
+    const databases = dbList.databases.map(db => db.name);
+    
+    // Obtener información del servidor
+    let serverInfo = {};
+    let serverVersion = 'unknown';
+    try {
+      serverInfo = await adminDb.serverStatus();
+      serverVersion = serverInfo?.version || 'unknown';
+      logs.push(`[${new Date().toISOString()}] Información del servidor obtenida`);
+    } catch (err) {
+      logs.push(`[${new Date().toISOString()}] Advertencia: No se pudo obtener serverStatus: ${err.message}`);
+    }
+
+    // Obtener información de colecciones si hay alguna
+    let collections = [];
+    try {
+      collections = await db.listCollections().toArray();
+      logs.push(`[${new Date().toISOString()}] Colecciones encontradas: ${collections.length}`);
+    } catch (err) {
+      logs.push(`[${new Date().toISOString()}] Advertencia: No se pudo listar colecciones: ${err.message}`);
+    }
+
+    const totalDuration = Date.now() - start;
+    logs.push(`[${new Date().toISOString()}] Prueba completada en ${totalDuration}ms`);
 
     return res.status(200).json({
       ok: true,
       dbOk: result.ok === 1,
-      durationMs: duration,
+      durationMs: totalDuration,
       timestamp: new Date().toISOString(),
       connectionType: 'direct',
-      database: dbName,
-      serverVersion: serverInfo?.version || 'unknown',
+      database: dbName || 'default',
+      serverVersion,
+      databases: databases || [],
+      collections: collections.map(c => c.name) || [],
+      logs,
+      details: {
+        uriConfigured: !!mongoUri,
+        uriLength: mongoUri.length,
+        connectionPoolSize: 1,
+        pingResult: result,
+      },
     });
   } catch (error) {
+    const errorLogs = [];
+    errorLogs.push(`[${new Date().toISOString()}] ERROR: ${error.name || 'UnknownError'}`);
+    errorLogs.push(`[${new Date().toISOString()}] Mensaje: ${error.message}`);
+    if (error.stack) {
+      errorLogs.push(`[${new Date().toISOString()}] Stack: ${error.stack.split('\n').slice(0, 3).join(' ')}`);
+    }
+    
     console.error('Error en prueba de conexión a MongoDB:', error);
+    
     return res.status(500).json({
       ok: false,
       error: 'No se pudo conectar a MongoDB Atlas. Revisa las variables de entorno y los logs.',
+      errorName: error.name || 'UnknownError',
       details: error.message,
-      hint: 'Verifica que MONGODB_URI apunte a tu cluster de MongoDB Atlas correctamente',
+      logs: errorLogs,
+      hint: 'Verifica que MONGODB_URI apunte a tu cluster de MongoDB Atlas correctamente y que tu IP esté en la whitelist',
     });
   }
 }
