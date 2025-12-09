@@ -24,13 +24,15 @@ export default function handler(req, res) {
     }
 
     if (!workerPath) {
-      console.warn('Worker de PDF.js no encontrado en node_modules, usando CDN como fallback');
-      // Si no encontramos el worker, redirigir a CDN
+      console.warn('Worker de PDF.js no encontrado en node_modules, usando unpkg CDN como fallback');
+      // Si no encontramos el worker, usar unpkg que es más confiable
       const pdfjsPackage = require('pdfjs-dist/package.json');
       const pdfjsVersion = pdfjsPackage.version || '4.10.38';
-      const cdnUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+      const cdnUrl = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
       
+      // Redirigir al CDN (el navegador lo cargará directamente)
       res.setHeader('Location', cdnUrl);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
       res.status(307).end();
       return;
     }
@@ -59,10 +61,13 @@ export default function handler(req, res) {
     try {
       const pdfjsPackage = require('pdfjs-dist/package.json');
       const pdfjsVersion = pdfjsPackage.version || '4.10.38';
-      const cdnUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+      const cdnUrl = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
       
+      // Redirigir al CDN
       res.setHeader('Location', cdnUrl);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
       res.status(307).end();
+      return;
     } catch (fallbackError) {
       res.status(500).json({
         error: 'No se pudo cargar el worker de PDF.js',

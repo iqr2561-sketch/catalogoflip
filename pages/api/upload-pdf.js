@@ -29,29 +29,62 @@ function getMongoClient() {
   return clientPromise;
 }
 
-// Función para parsear multipart/form-data
+// Función para parsear multipart/form-data de forma más robusta
 function parseMultipartFormData(buffer, boundary) {
   const parts = [];
-  const partsArray = buffer.split(`--${boundary}`);
+  
+  // Convertir buffer a string binario para parsing
+  const bufferStr = buffer.toString('binary');
+  const boundaryStr = `--${boundary}`;
+  const partsArray = bufferStr.split(boundaryStr);
   
   for (let i = 1; i < partsArray.length - 1; i++) {
-    const part = partsArray[i];
+    const part = partsArray[i].trim();
+    if (!part) continue;
+    
+    // Buscar el separador de headers y body
     const headerEnd = part.indexOf('\r\n\r\n');
-    if (headerEnd === -1) continue;
+    if (headerEnd === -1) {
+      // Intentar con solo \n\n
+      const altHeaderEnd = part.indexOf('\n\n');
+      if (altHeaderEnd === -1) continue;
+      
+      const headers = part.substring(0, altHeaderEnd);
+      const body = part.substring(altHeaderEnd + 2);
+      
+      const contentDisposition = headers.match(/Content-Disposition:.*name=["']([^"']+)["']/);
+      const contentType = headers.match(/Content-Type:\s*([^\r\n]+)/);
+      const filenameMatch = headers.match(/filename=["']([^"']+)["']/);
+      
+      if (contentDisposition) {
+        // Convertir body a buffer correctamente
+        const bodyBuffer = Buffer.from(body.replace(/\r\n$/, ''), 'binary');
+        parts.push({
+          name: contentDisposition[1],
+          data: bodyBuffer,
+          contentType: contentType ? contentType[1].trim() : 'application/octet-stream',
+          filename: filenameMatch ? filenameMatch[1] : null,
+        });
+      }
+      continue;
+    }
     
     const headers = part.substring(0, headerEnd);
     const body = part.substring(headerEnd + 4);
-    // Remover el \r\n final
-    const cleanBody = body.replace(/\r\n$/, '');
     
-    const contentDisposition = headers.match(/Content-Disposition:.*name="([^"]+)"/);
+    // Remover el \r\n final si existe
+    const cleanBody = body.replace(/\r\n$/, '').replace(/\n$/, '');
+    
+    const contentDisposition = headers.match(/Content-Disposition:.*name=["']([^"']+)["']/);
     const contentType = headers.match(/Content-Type:\s*([^\r\n]+)/);
-    const filenameMatch = headers.match(/filename="([^"]+)"/);
+    const filenameMatch = headers.match(/filename=["']([^"']+)["']/);
     
     if (contentDisposition) {
+      // Convertir body a buffer correctamente
+      const bodyBuffer = Buffer.from(cleanBody, 'binary');
       parts.push({
         name: contentDisposition[1],
-        data: Buffer.from(cleanBody, 'binary'),
+        data: bodyBuffer,
         contentType: contentType ? contentType[1].trim() : 'application/octet-stream',
         filename: filenameMatch ? filenameMatch[1] : null,
       });
@@ -74,28 +107,45 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Verificar Content-Type
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'Content-Type debe ser multipart/form-data.' });
+    }
+    
     // Leer el body completo
     const chunks = [];
     for await (const chunk of req) {
       chunks.push(chunk);
     }
+    
+    if (chunks.length === 0) {
+      return res.status(400).json({ error: 'No se recibió ningún dato.' });
+    }
+    
     const buffer = Buffer.concat(chunks);
     
     // Obtener el boundary del Content-Type
-    const contentType = req.headers['content-type'] || '';
-    const boundaryMatch = contentType.match(/boundary=(.+)$/);
+    const boundaryMatch = contentType.match(/boundary=([^;]+)/);
     
     if (!boundaryMatch) {
-      return res.status(400).json({ error: 'No se pudo parsear el formulario multipart.' });
+      return res.status(400).json({ error: 'No se pudo encontrar el boundary en Content-Type.' });
     }
     
-    const boundary = boundaryMatch[1];
-    const parts = parseMultipartFormData(buffer.toString('binary'), boundary);
+    const boundary = boundaryMatch[1].trim();
+    const parts = parseMultipartFormData(buffer, boundary);
+    
+    if (parts.length === 0) {
+      return res.status(400).json({ error: 'No se pudo parsear ningún campo del formulario.' });
+    }
     
     const pdfPart = parts.find(p => p.name === 'pdf');
     
     if (!pdfPart) {
-      return res.status(400).json({ error: 'No se proporcionó ningún archivo PDF.' });
+      return res.status(400).json({ 
+        error: 'No se proporcionó ningún archivo PDF.',
+        receivedFields: parts.map(p => p.name),
+      });
     }
     
     // Verificar que sea PDF
