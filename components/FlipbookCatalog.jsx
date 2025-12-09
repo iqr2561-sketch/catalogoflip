@@ -29,6 +29,11 @@ export default function FlipbookCatalog({
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
 
+      // Forzar vista de una sola página en móvil
+      if (mobile && viewMode === 'double') {
+        setViewMode('single');
+      }
+
       const pageAspect = 3 / 4; // relación de aspecto aproximada del PDF (ancho / alto)
       const pages = !mobile && viewMode === 'double' ? 2 : 1;
 
@@ -152,130 +157,193 @@ export default function FlipbookCatalog({
   return (
     <div className="relative w-full flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
       {/* Controles de navegación */}
-      <div className="mb-6 flex flex-wrap items-center gap-4 justify-center">
-        <button
-          onClick={handlePrevPage}
-          disabled={currentPage === 0}
-          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-            currentPage === 0
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-          }`}
-        >
-          <svg
-            className="w-5 h-5 inline-block mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Anterior
-        </button>
-
-        {/* Selector de modo de vista */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Vista:</span>
+      <div className="mb-4 md:mb-6 w-full max-w-4xl mx-auto px-4">
+        {/* Controles principales - Desktop */}
+        <div className="hidden md:flex flex-wrap items-center gap-4 justify-center">
           <button
-            type="button"
-            onClick={() => setViewMode('single')}
-            className={`px-3 py-2 text-sm rounded-lg border ${
-              viewMode === 'single'
-                ? 'bg-primary-600 text-white border-primary-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            onClick={handlePrevPage}
+            disabled={currentPage === 0}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              currentPage === 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
             }`}
           >
-            Una página
+            <svg
+              className="w-5 h-5 inline-block"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
           </button>
+
+          {/* Selector de modo de vista - Solo desktop */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Vista:</span>
+            <button
+              type="button"
+              onClick={() => setViewMode('single')}
+              className={`px-3 py-2 text-sm rounded-lg border ${
+                viewMode === 'single'
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Una página
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('double')}
+              className={`px-3 py-2 text-sm rounded-lg border ${
+                viewMode === 'double'
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Dos páginas
+            </button>
+          </div>
+
+          <div className="px-6 py-3 bg-white rounded-xl shadow-lg">
+            <span className="text-gray-700 font-semibold">
+              Página {currentPage + 1} de {images.length}
+            </span>
+          </div>
+
           <button
-            type="button"
-            onClick={() => setViewMode('double')}
-            className={`px-3 py-2 text-sm rounded-lg border ${
-              viewMode === 'double'
-                ? 'bg-primary-600 text-white border-primary-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            onClick={handleNextPage}
+            disabled={currentPage === images.length - 1}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              currentPage === images.length - 1
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
             }`}
           >
-            Dos páginas
+            <svg
+              className="w-5 h-5 inline-block"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
           </button>
         </div>
 
-        <div className="px-6 py-3 bg-white rounded-xl shadow-lg">
-          <span className="text-gray-700 font-semibold">
-            Página {currentPage + 1} de {images.length}
-          </span>
+        {/* Controles móviles - Compactos */}
+        <div className="md:hidden flex items-center justify-between gap-3">
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 0}
+            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+              currentPage === 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg active:scale-95'
+            }`}
+            aria-label="Página anterior"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          <div className="flex-1 px-4 py-2 bg-white rounded-xl shadow-md text-center">
+            <span className="text-gray-700 font-semibold text-sm">
+              {currentPage + 1} / {images.length}
+            </span>
+          </div>
+
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === images.length - 1}
+            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+              currentPage === images.length - 1
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg active:scale-95'
+            }`}
+            aria-label="Página siguiente"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
         </div>
 
-        <button
-          onClick={handleNextPage}
-          disabled={currentPage === images.length - 1}
-          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-            currentPage === images.length - 1
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-          }`}
-        >
-          Siguiente
-          <svg
-            className="w-5 h-5 inline-block ml-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Botón de zoom - Solo desktop */}
+        <div className="hidden md:block">
+          <button
+            onClick={toggleZoom}
+            className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-
-        <button
-          onClick={toggleZoom}
-          className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          {isZoomed ? (
-            <>
-              <svg
-                className="w-5 h-5 inline-block mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
-                />
-              </svg>
-              Alejar
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-5 h-5 inline-block mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
-                />
-              </svg>
-              Acercar
-            </>
-          )}
-        </button>
+            {isZoomed ? (
+              <>
+                <svg
+                  className="w-5 h-5 inline-block mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
+                  />
+                </svg>
+                Alejar
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5 inline-block mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                  />
+                </svg>
+                Acercar
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Contenedor del flipbook */}

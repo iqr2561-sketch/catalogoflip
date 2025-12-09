@@ -41,9 +41,8 @@ export default function PanelDeControl() {
   }, []);
 
   const handleProductoChange = (id, field, value) => {
-    setConfig((prev) => ({
-      ...prev,
-      productos: prev.productos.map((p) =>
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
         p.id === id
           ? {
               ...p,
@@ -52,11 +51,60 @@ export default function PanelDeControl() {
                   ? Number.isNaN(parseInt(value, 10))
                     ? 0
                     : parseInt(value, 10)
+                  : field === 'page'
+                  ? Number.isNaN(parseInt(value, 10))
+                    ? 1
+                    : Math.max(1, Math.min(prev.numPages || 1, parseInt(value, 10)))
                   : value,
             }
           : p
-      ),
-    }));
+      );
+
+      // Si se cambió la página, crear o actualizar el hotspot
+      if (field === 'page') {
+        const pageNum = Number.isNaN(parseInt(value, 10))
+          ? 1
+          : Math.max(1, Math.min(prev.numPages || 1, parseInt(value, 10)));
+
+        // Buscar si ya existe un hotspot para este producto
+        const existingHotspotIndex = prev.hotspots.findIndex(
+          (h) => h.idProducto === id
+        );
+
+        let updatedHotspots = [...prev.hotspots];
+
+        if (existingHotspotIndex >= 0) {
+          // Actualizar el hotspot existente
+          updatedHotspots[existingHotspotIndex] = {
+            ...updatedHotspots[existingHotspotIndex],
+            page: pageNum,
+            enabled: true, // Habilitar automáticamente cuando se asigna página
+          };
+        } else {
+          // Crear un nuevo hotspot
+          updatedHotspots.push({
+            page: pageNum,
+            idProducto: id,
+            enabled: true,
+            x: 50,
+            y: 50,
+            width: 20,
+            height: 20,
+          });
+        }
+
+        return {
+          ...prev,
+          productos: updatedProductos,
+          hotspots: updatedHotspots,
+        };
+      }
+
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
   };
 
   const handleBulkAddProductos = (cantidad) => {
@@ -471,6 +519,64 @@ export default function PanelDeControl() {
                             }
                           />
                         </div>
+                      </div>
+
+                      {/* Campo de página */}
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">
+                          Página del Catálogo
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="flex-1 rounded-lg border border-gray-200 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white/80 px-3 py-2"
+                            value={
+                              config.hotspots.find((h) => h.idProducto === producto.id)?.page || ''
+                            }
+                            onChange={(e) =>
+                              handleProductoChange(producto.id, 'page', e.target.value)
+                            }
+                          >
+                            <option value="">Sin página asignada</option>
+                            {Array.from({ length: config.numPages || 1 }, (_, i) => i + 1).map(
+                              (pageNum) => (
+                                <option key={pageNum} value={pageNum}>
+                                  Página {pageNum}
+                                </option>
+                              )
+                            )}
+                          </select>
+                          {(() => {
+                            const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
+                            if (hotspot?.enabled && hotspot?.page) {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-100 text-green-700 text-xs font-semibold whitespace-nowrap">
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Visible
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {(() => {
+                            const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
+                            if (hotspot?.page) {
+                              return `El hotspot aparecerá en la página ${hotspot.page} del catálogo`;
+                            }
+                            return 'Selecciona una página para mostrar el hotspot en el catálogo';
+                          })()}
+                        </p>
                       </div>
                     </div>
                   </div>
