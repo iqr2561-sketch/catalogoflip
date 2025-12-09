@@ -123,11 +123,31 @@ export default function FlipbookCatalog({
     return () => clearTimeout(timeoutId);
   }, [flipDirection]);
 
-  // Obtener hotspots de la página actual
-  const currentPageHotspots = hotspots.filter((h) => h.page === currentPage + 1);
-  const currentPageProducts = currentPageHotspots.map((hotspot) =>
-    productos.find((p) => p.id === hotspot.idProducto)
-  );
+  // Obtener hotspots de la página actual (solo los habilitados)
+  const currentPageHotspots = hotspots.filter((h) => {
+    const pageMatch = h.page === currentPage + 1;
+    const isEnabled = h.enabled !== false;
+    return pageMatch && isEnabled;
+  });
+  
+  // Mapear productos a hotspots
+  const currentPageProducts = currentPageHotspots.map((hotspot) => {
+    const producto = productos.find((p) => {
+      // Comparar IDs como strings para evitar problemas de tipo
+      return String(p.id) === String(hotspot.idProducto);
+    });
+    
+    // Debug: mostrar si no se encuentra el producto
+    if (!producto && hotspot.idProducto) {
+      console.warn(`Producto no encontrado para hotspot:`, {
+        hotspotId: hotspot.idProducto,
+        productosDisponibles: productos.map(p => p.id),
+        page: hotspot.page,
+      });
+    }
+    
+    return producto;
+  }).filter(Boolean); // Eliminar productos no encontrados
 
   return (
     <div className="relative w-full flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
@@ -368,7 +388,11 @@ export default function FlipbookCatalog({
             >
               {currentPageHotspots.map((hotspot, index) => {
                 const producto = currentPageProducts[index];
-                if (!producto) return null;
+                // Si no hay producto, no renderizar el hotspot
+                if (!producto) {
+                  console.warn(`Hotspot sin producto en página ${hotspot.page}:`, hotspot);
+                  return null;
+                }
 
                 return (
                   <div key={`${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">

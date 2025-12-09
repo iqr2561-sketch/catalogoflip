@@ -4,21 +4,51 @@ import FlipbookCatalog from '../components/FlipbookCatalog';
 import Cart from '../components/Cart';
 import ConfigButton from '../components/ConfigButton';
 import { pdfToImages } from '../lib/pdfToImages';
-import catalogData from '../data/catalog.json';
+import catalogData from '../data/catalog.json'; // Fallback
 
 export default function CatalogPage() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [catalogConfig, setCatalogConfig] = useState(null);
 
+  // Cargar configuración del catálogo desde la API (MongoDB o JSON)
   useEffect(() => {
+    const loadCatalogConfig = async () => {
+      try {
+        const response = await fetch('/api/catalog-config');
+        if (response.ok) {
+          const data = await response.json();
+          setCatalogConfig(data);
+        } else {
+          // Si falla la API, usar datos del JSON estático
+          console.warn('No se pudo cargar desde API, usando JSON estático');
+          setCatalogConfig(catalogData);
+        }
+      } catch (err) {
+        console.error('Error al cargar configuración:', err);
+        // Fallback a JSON estático
+        setCatalogConfig(catalogData);
+      }
+    };
+
+    loadCatalogConfig();
+  }, []);
+
+  // Cargar PDF cuando tengamos la configuración
+  useEffect(() => {
+    if (!catalogConfig) return;
+
     const loadPDF = async () => {
       try {
         setLoading(true);
         setError(null);
         
+        // Usar la URL del PDF de la configuración
+        const pdfUrl = catalogConfig.pdf || '/api/catalogo';
+        
         // Convertir PDF a imágenes
-        const pdfImages = await pdfToImages(catalogData.pdf);
+        const pdfImages = await pdfToImages(pdfUrl);
         setImages(pdfImages);
       } catch (err) {
         console.error('Error al cargar el PDF:', err);
@@ -29,7 +59,7 @@ export default function CatalogPage() {
     };
 
     loadPDF();
-  }, []);
+  }, [catalogConfig]);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files && event.target.files[0];
@@ -169,12 +199,14 @@ export default function CatalogPage() {
         {/* Botón de configuración siempre visible (abre modal de acceso al panel) */}
         <ConfigButton />
 
-        <FlipbookCatalog
-          images={images}
-          hotspots={catalogData.hotspots}
-          productos={catalogData.productos}
-          whatsappNumber={catalogData.whatsappNumber || null}
-        />
+        {catalogConfig && (
+          <FlipbookCatalog
+            images={images}
+            hotspots={catalogConfig.hotspots || []}
+            productos={catalogConfig.productos || []}
+            whatsappNumber={catalogConfig.whatsappNumber || null}
+          />
+        )}
         <Cart />
       </main>
     </>

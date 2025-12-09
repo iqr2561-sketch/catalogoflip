@@ -145,6 +145,7 @@ async function saveToMongoDB(data) {
     const catalogId = catalog._id.toString();
     
     // Guardar productos
+    let productIdMap = {}; // Mapa de IDs antiguos a nuevos ObjectIds de MongoDB
     if (Array.isArray(data.productos)) {
       // Eliminar productos antiguos
       await productsCollection.deleteMany({ catalogId });
@@ -159,7 +160,17 @@ async function saveToMongoDB(data) {
           descripcion: p.descripcion || '',
           createdAt: new Date(),
         }));
-        await productsCollection.insertMany(productsToInsert);
+        const insertResult = await productsCollection.insertMany(productsToInsert);
+        
+        // Crear mapa de IDs antiguos a nuevos ObjectIds
+        // Usamos el orden de inserción para mapear
+        data.productos.forEach((p, idx) => {
+          const oldId = p.id || '';
+          const newId = insertResult.insertedIds[idx];
+          if (oldId && newId) {
+            productIdMap[oldId] = newId;
+          }
+        });
       }
     }
     
@@ -170,24 +181,43 @@ async function saveToMongoDB(data) {
       
       // Insertar nuevos hotspots
       if (data.hotspots.length > 0) {
-        // Obtener productos para mapear IDs
+        // Obtener productos para mapear IDs (por si no hay mapeo previo)
         const productos = await productsCollection.find({ catalogId }).toArray();
-        const productMap = {};
-        productos.forEach((p, idx) => {
-          productMap[data.productos?.[idx]?.id || p._id.toString()] = p._id;
+        
+        const hotspotsToInsert = data.hotspots.map(h => {
+          // Intentar mapear el ID del producto
+          let productId = null;
+          const oldProductId = h.idProducto || '';
+          
+          // Primero intentar usar el mapa de IDs
+          if (oldProductId && productIdMap[oldProductId]) {
+            productId = productIdMap[oldProductId];
+          } else if (oldProductId) {
+            // Si no está en el mapa, buscar por ID string
+            const producto = productos.find(p => p._id.toString() === oldProductId);
+            if (producto) {
+              productId = producto._id;
+            }
+          }
+          
+          // Si aún no hay producto, usar el primero disponible
+          if (!productId && productos.length > 0) {
+            productId = productos[0]._id;
+          }
+          
+          return {
+            catalogId,
+            page: h.page || 1,
+            productId: productId,
+            enabled: h.enabled !== false,
+            x: h.x || 50,
+            y: h.y || 50,
+            width: h.width || 20,
+            height: h.height || 20,
+            createdAt: new Date(),
+          };
         });
         
-        const hotspotsToInsert = data.hotspots.map(h => ({
-          catalogId,
-          page: h.page || 1,
-          productId: productMap[h.idProducto] || productos[0]?._id || null,
-          enabled: h.enabled !== false,
-          x: h.x || 50,
-          y: h.y || 50,
-          width: h.width || 20,
-          height: h.height || 20,
-          createdAt: new Date(),
-        }));
         await hotspotsCollection.insertMany(hotspotsToInsert);
       }
     }
