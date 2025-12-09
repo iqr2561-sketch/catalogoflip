@@ -829,7 +829,7 @@ export default function PanelDeControl() {
           )}
 
           {/* Sección Configuración */}
-          {activeTab === 'configuracion' && (
+          {activeTab === 'configuracion' && config && (
             <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
@@ -892,7 +892,7 @@ export default function PanelDeControl() {
                       type="text"
                       className="flex-1 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white px-4 py-3 font-medium transition-all hover:border-primary-300"
                       placeholder="573001234567"
-                      value={config.whatsappNumber || ''}
+                      value={config?.whatsappNumber || ''}
                       onChange={(e) => {
                         setConfig((prev) => ({
                           ...prev,
