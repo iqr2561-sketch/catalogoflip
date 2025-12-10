@@ -64,11 +64,17 @@ export default function CatalogPage() {
               fetch(`/api/pdf-images?page=${page}`)
                 .then(response => {
                   if (response.ok) {
+                    console.log(`[catalog] Imagen de página ${page} cargada exitosamente`);
                     return `/api/pdf-images?page=${page}`;
+                  } else {
+                    console.error(`[catalog] Error al cargar imagen de página ${page}: HTTP ${response.status}`);
+                    return null;
                   }
+                })
+                .catch((err) => {
+                  console.error(`[catalog] Error al cargar imagen de página ${page}:`, err);
                   return null;
                 })
-                .catch(() => null)
             );
           }
           
@@ -84,14 +90,22 @@ export default function CatalogPage() {
         }
         
         // Si no existen imágenes pre-generadas, convertir PDF (solo como fallback)
-        console.log('Imágenes no encontradas o no generadas, convirtiendo PDF en cliente...');
+        console.warn('[catalog] Imágenes no encontradas o no generadas, convirtiendo PDF en cliente...');
+        console.log('[catalog] Configuración:', {
+          imagesGenerated,
+          numPages,
+          validUrlsCount: validUrls?.length || 0,
+        });
         const pdfUrl = catalogConfig.pdf || '/api/catalogo';
+        console.log('[catalog] Intentando cargar PDF desde:', pdfUrl);
         const pdfImages = await pdfToImages(pdfUrl);
+        console.log(`[catalog] PDF convertido exitosamente: ${pdfImages.length} imágenes generadas`);
         setImages(pdfImages);
         
         // Guardar las imágenes en el servidor para próximas cargas
         try {
-          await fetch('/api/generate-images', {
+          console.log('[catalog] Guardando imágenes en el servidor...');
+          const saveResponse = await fetch('/api/generate-images', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -101,9 +115,22 @@ export default function CatalogPage() {
               pageNumbers: Array.from({ length: pdfImages.length }, (_, i) => i + 1),
             }),
           });
-          console.log('Imágenes guardadas en el servidor para próximas cargas');
+          
+          if (saveResponse.ok) {
+            const saveData = await saveResponse.json();
+            console.log('[catalog] Imágenes guardadas en el servidor exitosamente:', saveData);
+          } else {
+            const errorData = await saveResponse.json().catch(() => ({ error: 'Error desconocido' }));
+            console.error('[catalog] Error al guardar imágenes en el servidor:', {
+              status: saveResponse.status,
+              data: errorData,
+            });
+          }
         } catch (saveError) {
-          console.warn('No se pudieron guardar las imágenes en el servidor:', saveError);
+          console.error('[catalog] Error al guardar las imágenes en el servidor:', {
+            message: saveError.message,
+            stack: saveError.stack,
+          });
           // Continuar sin error, las imágenes ya están cargadas
         }
       } catch (err) {

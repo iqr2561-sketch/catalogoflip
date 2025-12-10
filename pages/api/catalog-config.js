@@ -50,11 +50,18 @@ async function getPdfPageCount() {
 }
 
 async function getFromMongoDB() {
-  if (!mongoUri) return null;
+  if (!mongoUri) {
+    console.warn('[catalog-config] MONGODB_URI no configurada');
+    return null;
+  }
   
   try {
+    console.log('[catalog-config] Intentando leer desde MongoDB...');
     const clientPromise = getMongoClient();
-    if (!clientPromise) return null;
+    if (!clientPromise) {
+      console.warn('[catalog-config] No se pudo crear cliente MongoDB');
+      return null;
+    }
     
     const client = await clientPromise;
     const db = client.db();
@@ -65,7 +72,12 @@ async function getFromMongoDB() {
                     await catalogCollection.findOne() ||
                     null;
     
-    if (!catalog) return null;
+    if (!catalog) {
+      console.warn('[catalog-config] No se encontró catálogo en MongoDB');
+      return null;
+    }
+    
+    console.log('[catalog-config] Catálogo encontrado, obteniendo productos y hotspots...');
     
     // Obtener productos y hotspots desde sus colecciones
     const productsCollection = db.collection('products');
@@ -73,6 +85,8 @@ async function getFromMongoDB() {
     
     const productos = await productsCollection.find({ catalogId: catalog._id.toString() }).toArray();
     const hotspots = await hotspotsCollection.find({ catalogId: catalog._id.toString() }).toArray();
+    
+    console.log(`[catalog-config] Datos obtenidos: ${productos.length} productos, ${hotspots.length} hotspots`);
     
     // Convertir ObjectId a string y formatear
     return {
@@ -97,17 +111,28 @@ async function getFromMongoDB() {
       })),
     };
   } catch (error) {
-    console.error('Error al leer desde MongoDB:', error);
+    console.error('[catalog-config] Error al leer desde MongoDB:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return null;
   }
 }
 
 async function saveToMongoDB(data) {
-  if (!mongoUri) return false;
+  if (!mongoUri) {
+    console.warn('[catalog-config] MONGODB_URI no configurada, no se puede guardar en MongoDB');
+    return false;
+  }
   
   try {
+    console.log('[catalog-config] Intentando guardar en MongoDB...');
     const clientPromise = getMongoClient();
-    if (!clientPromise) return false;
+    if (!clientPromise) {
+      console.warn('[catalog-config] No se pudo crear cliente MongoDB');
+      return false;
+    }
     
     const client = await clientPromise;
     const db = client.db();
@@ -222,9 +247,14 @@ async function saveToMongoDB(data) {
       }
     }
     
+    console.log('[catalog-config] Datos guardados exitosamente en MongoDB');
     return true;
   } catch (error) {
-    console.error('Error al guardar en MongoDB:', error);
+    console.error('[catalog-config] Error al guardar en MongoDB:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return false;
   }
 }
@@ -259,8 +289,16 @@ export default async function handler(req, res) {
       
       res.status(200).json(data);
     } catch (error) {
-      console.error('Error al leer configuración:', error);
-      res.status(500).json({ error: 'No se pudo leer la configuración del catálogo.', details: error.message });
+      console.error('[catalog-config] Error al leer configuración:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+      res.status(500).json({ 
+        error: 'No se pudo leer la configuración del catálogo.', 
+        details: error.message,
+        hint: 'Verifica la conexión a MongoDB y los logs del servidor',
+      });
     }
     return;
   }
@@ -290,10 +328,15 @@ export default async function handler(req, res) {
       
       res.status(200).json({ ok: true, savedToMongo });
     } catch (error) {
-      console.error('Error al guardar configuración:', error);
+      console.error('[catalog-config] Error al guardar configuración:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       res.status(500).json({ 
         error: 'No se pudo guardar la configuración del catálogo.',
         details: error.message,
+        hint: 'Verifica la conexión a MongoDB y los logs del servidor',
       });
     }
     return;

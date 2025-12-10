@@ -191,25 +191,35 @@ export default async function handler(req, res) {
           
           // Generar imágenes automáticamente en el servidor
           try {
-            console.log('Generando imágenes del PDF en el servidor...');
+            console.log('[upload-pdf] Iniciando generación de imágenes del PDF en el servidor...');
+            console.log('[upload-pdf] Tamaño del PDF:', pdfPart.data.length, 'bytes');
             const images = await pdfToImagesServer(pdfPart.data, 2.0);
+            console.log(`[upload-pdf] ${images.length} imágenes generadas exitosamente`);
             
             // Guardar imágenes en GridFS
             const imagesBucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
             
             // Eliminar imágenes antiguas
             try {
+              console.log('[upload-pdf] Eliminando imágenes antiguas...');
               const existingImages = await imagesBucket.find({ filename: { $regex: /^catalogo_page_/ } }).toArray();
+              console.log(`[upload-pdf] Encontradas ${existingImages.length} imágenes antiguas para eliminar`);
               for (const file of existingImages) {
                 await imagesBucket.delete(file._id);
               }
+              console.log('[upload-pdf] Imágenes antiguas eliminadas');
             } catch (e) {
-              console.warn('No se pudieron eliminar imágenes antiguas:', e);
+              console.error('[upload-pdf] Error al eliminar imágenes antiguas:', {
+                message: e.message,
+                stack: e.stack,
+              });
             }
             
             // Guardar nuevas imágenes
+            console.log('[upload-pdf] Guardando nuevas imágenes en GridFS...');
             for (const image of images) {
               const filename = `catalogo_page_${image.pageNum}.png`;
+              console.log(`[upload-pdf] Guardando ${filename} (${image.buffer.length} bytes)...`);
               const uploadStream = imagesBucket.openUploadStream(filename, {
                 contentType: 'image/png',
               });
@@ -218,12 +228,22 @@ export default async function handler(req, res) {
               readable.pipe(uploadStream);
               
               await new Promise((resolve, reject) => {
-                uploadStream.on('finish', resolve);
-                uploadStream.on('error', reject);
+                uploadStream.on('finish', () => {
+                  console.log(`[upload-pdf] ✓ ${filename} guardada exitosamente`);
+                  resolve();
+                });
+                uploadStream.on('error', (err) => {
+                  console.error(`[upload-pdf] Error al guardar ${filename}:`, {
+                    message: err.message,
+                    stack: err.stack,
+                  });
+                  reject(err);
+                });
               });
             }
             
             // Actualizar configuración con número de páginas e imágenes generadas
+            console.log('[upload-pdf] Actualizando configuración en base de datos...');
             await db.collection('catalogs').updateOne(
               { isMain: true },
               { 
@@ -238,7 +258,7 @@ export default async function handler(req, res) {
               { upsert: true }
             );
             
-            console.log(`✓ ${images.length} imágenes generadas y guardadas exitosamente`);
+            console.log(`[upload-pdf] ✓ Proceso completado: ${images.length} imágenes generadas y guardadas exitosamente`);
             
             return res.status(200).json({
               ok: true,
@@ -250,20 +270,29 @@ export default async function handler(req, res) {
               numPages: images.length,
             });
           } catch (imageError) {
-            console.error('Error al generar imágenes:', imageError);
+            console.error('[upload-pdf] Error crítico al generar imágenes:', {
+              message: imageError.message,
+              stack: imageError.stack,
+              name: imageError.name,
+            });
             // Continuar aunque falle la generación de imágenes
             // El cliente las generará en la primera carga
-            await db.collection('catalogs').updateOne(
-              { isMain: true },
-              { 
-                $set: { 
-                  imagesGenerated: false,
-                  pdfUpdatedAt: new Date(),
+            try {
+              await db.collection('catalogs').updateOne(
+                { isMain: true },
+                { 
+                  $set: { 
+                    imagesGenerated: false,
+                    pdfUpdatedAt: new Date(),
+                    imageGenerationError: imageError.message,
+                  },
+                  $setOnInsert: { isMain: true }
                 },
-                $setOnInsert: { isMain: true }
-              },
-              { upsert: true }
-            );
+                { upsert: true }
+              );
+            } catch (dbError) {
+              console.error('[upload-pdf] Error al actualizar configuración después de fallo:', dbError);
+            }
             
             return res.status(200).json({
               ok: true,
@@ -273,6 +302,7 @@ export default async function handler(req, res) {
               storedIn: 'MongoDB GridFS',
               imagesGenerated: false,
               warning: 'No se pudieron generar imágenes automáticamente. Se generarán en la primera carga.',
+              error: imageError.message,
             });
           }
         }

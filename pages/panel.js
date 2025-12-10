@@ -19,6 +19,8 @@ export default function PanelDeControl() {
   const [pdfUploading, setPdfUploading] = useState(false);
   const [catalogImages, setCatalogImages] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [dbTesting, setDbTesting] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState(null);
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -382,6 +384,35 @@ export default function PanelDeControl() {
       setPdfFile(null);
     } finally {
       setPdfUploading(false);
+    }
+  };
+
+  const handleTestDatabase = async () => {
+    setDbTesting(true);
+    setDbTestResult(null);
+    setError(null);
+    
+    try {
+      const res = await fetch('/api/db-check');
+      const data = await res.json();
+      setDbTestResult(data);
+      
+      if (!data.ok) {
+        setError(data.error || 'Error al conectar con la base de datos');
+      } else {
+        setMessage('Conexión a la base de datos exitosa');
+      }
+    } catch (err) {
+      console.error('Error al probar conexión:', err);
+      setDbTestResult({
+        ok: false,
+        error: 'Error al probar la conexión',
+        details: err.message,
+        logs: [`[${new Date().toISOString()}] Error: ${err.message}`],
+      });
+      setError('No se pudo probar la conexión a la base de datos');
+    } finally {
+      setDbTesting(false);
     }
   };
 
@@ -959,6 +990,111 @@ export default function PanelDeControl() {
                     </svg>
                     Número sin el símbolo +. Se usará para enviar pedidos desde el carrito.
                   </p>
+                </div>
+
+                {/* Prueba de Base de Datos */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Prueba de Conexión a Base de Datos
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleTestDatabase}
+                    disabled={dbTesting}
+                    className="w-full md:w-auto px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {dbTesting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Probando conexión...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Probar Conexión
+                      </>
+                    )}
+                  </button>
+
+                  {dbTestResult && (
+                    <div className={`mt-4 rounded-lg p-4 border-2 ${
+                      dbTestResult.ok 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                          dbTestResult.ok ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {dbTestResult.ok ? (
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`font-semibold text-sm mb-1 ${
+                            dbTestResult.ok ? 'text-green-800' : 'text-red-800'
+                          }`}>
+                            {dbTestResult.ok ? 'Conexión Exitosa' : 'Error de Conexión'}
+                          </h3>
+                          {dbTestResult.ok && (
+                            <div className="text-xs text-green-700 space-y-1 mb-3">
+                              <p>Base de datos: <span className="font-mono">{dbTestResult.database || 'N/A'}</span></p>
+                              <p>Versión del servidor: <span className="font-mono">{dbTestResult.serverVersion || 'N/A'}</span></p>
+                              <p>Duración: <span className="font-mono">{dbTestResult.durationMs}ms</span></p>
+                              {dbTestResult.collections && dbTestResult.collections.length > 0 && (
+                                <p>Colecciones: <span className="font-mono">{dbTestResult.collections.length}</span></p>
+                              )}
+                            </div>
+                          )}
+                          {!dbTestResult.ok && (
+                            <div className="text-xs text-red-700 space-y-1 mb-3">
+                              <p><strong>Error:</strong> {dbTestResult.error || 'Error desconocido'}</p>
+                              {dbTestResult.details && (
+                                <p><strong>Detalles:</strong> {dbTestResult.details}</p>
+                              )}
+                              {dbTestResult.hint && (
+                                <p className="text-red-600 italic">{dbTestResult.hint}</p>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Logs */}
+                          {dbTestResult.logs && dbTestResult.logs.length > 0 && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const logsText = dbTestResult.logs.join('\n');
+                                  navigator.clipboard.writeText(logsText);
+                                  setMessage('Logs copiados al portapapeles');
+                                  setTimeout(() => setMessage(null), 2000);
+                                }}
+                                className="text-xs text-gray-600 hover:text-gray-800 mb-2 flex items-center gap-1"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Copiar logs
+                              </button>
+                              <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-md max-h-64 overflow-y-auto">
+                                {dbTestResult.logs.map((log, idx) => (
+                                  <div key={idx} className="mb-1">{log}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

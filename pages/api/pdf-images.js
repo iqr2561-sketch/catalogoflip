@@ -65,6 +65,7 @@ export default async function handler(req, res) {
           
           if (files.length > 0) {
             const file = files[0];
+            console.log(`[pdf-images] Imagen encontrada en GridFS: ${filename} (página ${pageNum}, tamaño: ${file.length} bytes)`);
             res.writeHead(200, {
               'Content-Type': 'image/png',
               'Content-Length': file.length,
@@ -72,12 +73,21 @@ export default async function handler(req, res) {
             });
             
             const downloadStream = bucket.openDownloadStreamByName(filename);
+            downloadStream.on('error', (streamError) => {
+              console.error(`[pdf-images] Error al descargar desde GridFS (página ${pageNum}):`, streamError);
+            });
             downloadStream.pipe(res);
             return;
+          } else {
+            console.warn(`[pdf-images] Imagen no encontrada en GridFS: ${filename} (página ${pageNum})`);
           }
         }
       } catch (mongoError) {
-        console.warn('No se pudo leer desde MongoDB GridFS:', mongoError.message);
+        console.error(`[pdf-images] Error al leer desde MongoDB GridFS (página ${pageNum}):`, {
+          message: mongoError.message,
+          stack: mongoError.stack,
+          page: pageNum,
+        });
       }
     }
     
@@ -85,27 +95,46 @@ export default async function handler(req, res) {
     const imagePath = path.join(process.cwd(), 'public', 'pdf-images', `page-${pageNum}.png`);
     
     if (fs.existsSync(imagePath)) {
-      const stat = fs.statSync(imagePath);
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Content-Length': stat.size,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      });
-      
-      const stream = fs.createReadStream(imagePath);
-      stream.pipe(res);
-      return;
+      try {
+        const stat = fs.statSync(imagePath);
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Content-Length': stat.size,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        });
+        
+        const stream = fs.createReadStream(imagePath);
+        stream.on('error', (streamError) => {
+          console.error(`[pdf-images] Error al leer archivo del sistema de archivos (página ${pageNum}):`, streamError);
+        });
+        stream.pipe(res);
+        return;
+      } catch (fsError) {
+        console.error(`[pdf-images] Error al acceder al archivo del sistema de archivos (página ${pageNum}):`, {
+          message: fsError.message,
+          path: imagePath,
+        });
+      }
+    } else {
+      console.warn(`[pdf-images] Imagen no encontrada en sistema de archivos: ${imagePath} (página ${pageNum})`);
     }
     
+    console.error(`[pdf-images] Imagen de página ${pageNum} no encontrada en ninguna ubicación`);
     res.status(404).json({ 
       error: `Imagen de página ${pageNum} no encontrada.`,
       hint: 'Las imágenes se generan automáticamente al subir el PDF.',
+      page: pageNum,
     });
   } catch (error) {
-    console.error('Error al servir imagen:', error);
+    console.error(`[pdf-images] Error crítico al servir imagen (página ${pageNum}):`, {
+      message: error.message,
+      stack: error.stack,
+      page: pageNum,
+    });
     res.status(500).json({ 
       error: 'Error al servir la imagen.',
       details: error.message,
+      page: pageNum,
     });
   }
 }
