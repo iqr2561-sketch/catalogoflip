@@ -3,6 +3,7 @@ import Head from 'next/head';
 import FlipbookCatalog from '../components/FlipbookCatalog';
 import Cart from '../components/Cart';
 import ConfigButton from '../components/ConfigButton';
+import ErrorDisplay from '../components/ErrorDisplay';
 import { pdfToImages } from '../lib/pdfToImages';
 import catalogData from '../data/catalog.json'; // Fallback
 
@@ -221,16 +222,61 @@ export default function CatalogPage() {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
+    const errorLogs = [];
+    
     try {
       setLoading(true);
       setError(null);
 
+      // Validar tipo de archivo
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        throw new Error('El archivo seleccionado no es un PDF válido');
+      }
+
+      // Validar tamaño (máximo 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        throw new Error(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 50MB`);
+      }
+
+      if (file.size === 0) {
+        throw new Error('El archivo está vacío');
+      }
+
+      console.log(`[catalog] Cargando PDF desde archivo: ${file.name} (${file.size} bytes)`);
+      
       const arrayBuffer = await file.arrayBuffer();
+      
+      // Validar que el buffer comience con %PDF
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const header = String.fromCharCode(...uint8Array.slice(0, 4));
+      if (header !== '%PDF') {
+        throw new Error('El archivo no parece ser un PDF válido. El formato del archivo es incorrecto.');
+      }
+
       const pdfImages = await pdfToImages(arrayBuffer);
+      
+      if (!pdfImages || pdfImages.length === 0) {
+        throw new Error('No se pudieron generar imágenes del PDF. El archivo puede estar corrupto.');
+      }
+      
+      console.log(`[catalog] ✓ PDF cargado exitosamente: ${pdfImages.length} imágenes generadas`);
       setImages(pdfImages);
     } catch (err) {
-      console.error('Error al cargar el PDF desde archivo:', err);
-      setError('No se pudo cargar el archivo PDF seleccionado. Por favor, intenta con otro archivo.');
+      const errorDetails = {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+        logs: errorLogs,
+        timestamp: new Date().toISOString(),
+      };
+      console.error('[catalog] Error al cargar el PDF desde archivo:', errorDetails);
+      
+      const enhancedError = new Error(err.message);
+      enhancedError.originalError = err;
+      enhancedError.logs = errorLogs;
+      enhancedError.stack = err.stack;
+      setError(enhancedError);
     } finally {
       setLoading(false);
     }
@@ -264,37 +310,15 @@ export default function CatalogPage() {
         <Head>
           <title>Error - Catálogo Interactivo</title>
         </Head>
-        <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-          <ConfigButton />
-          <div className="text-center max-w-md mx-4">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el catálogo</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <p className="text-gray-600 text-sm mb-6">
-              Si el archivo <code>public/catalogo.pdf</code> no existe o no es accesible, puedes cargar un PDF manualmente
-              desde tu equipo para visualizarlo como flipbook. También puedes usar el botón de <strong>Configuración</strong> arriba a la derecha.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <label className="inline-block cursor-pointer">
-                <span className="px-6 py-3 bg-white border border-primary-600 text-primary-700 font-semibold rounded-xl hover:bg-primary-50 transition-colors inline-block">
-                  Seleccionar PDF
-                </span>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </label>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors"
-              >
-                Reintentar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfigButton />
+        <ErrorDisplay
+          error={error}
+          onRetry={() => {
+            setError(null);
+            window.location.reload();
+          }}
+          onDismiss={() => setError(null)}
+        />
       </>
     );
   }

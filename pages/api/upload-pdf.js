@@ -193,6 +193,23 @@ export default async function handler(req, res) {
           try {
             console.log('[upload-pdf] Iniciando generación de imágenes del PDF en el servidor...');
             console.log('[upload-pdf] Tamaño del PDF:', pdfPart.data.length, 'bytes');
+            
+            // Validar tamaño del PDF antes de procesar
+            const maxSize = 100 * 1024 * 1024; // 100MB
+            if (pdfPart.data.length > maxSize) {
+              throw new Error(`El PDF es demasiado grande (${(pdfPart.data.length / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 100MB`);
+            }
+            
+            if (pdfPart.data.length === 0) {
+              throw new Error('El archivo PDF está vacío');
+            }
+            
+            // Validar que sea un PDF válido
+            const header = pdfPart.data.slice(0, 4).toString();
+            if (header !== '%PDF') {
+              throw new Error('El archivo no es un PDF válido. Debe comenzar con %PDF');
+            }
+            
             const images = await pdfToImagesServer(pdfPart.data, 2.0);
             console.log(`[upload-pdf] ${images.length} imágenes generadas exitosamente`);
             
