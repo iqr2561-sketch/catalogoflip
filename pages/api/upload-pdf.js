@@ -98,6 +98,8 @@ function parseMultipartFormData(buffer, boundary) {
 export const config = {
   api: {
     bodyParser: false,
+    // Aumentar límite de tamaño del body a 10MB
+    responseLimit: '10mb',
   },
 };
 

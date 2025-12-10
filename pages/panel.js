@@ -344,8 +344,19 @@ export default function PanelDeControl() {
       return;
     }
 
-    // Validar tamaño (máximo 100MB)
-    const maxSize = 100 * 1024 * 1024; // 100MB
+    // Validar tamaño - Vercel tiene un límite de 4.5MB para el body
+    const vercelLimit = 4.5 * 1024 * 1024; // 4.5MB (límite de Vercel)
+    const maxSize = 100 * 1024 * 1024; // 100MB (límite teórico)
+    
+    if (file.size > vercelLimit) {
+      setError(
+        `El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). ` +
+        `El límite de Vercel es 4.5MB. Por favor, comprime el PDF usando una herramienta online ` +
+        `o reduce la calidad del archivo antes de subirlo.`
+      );
+      return;
+    }
+    
     if (file.size > maxSize) {
       setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 100MB`);
       return;
@@ -411,16 +422,45 @@ export default function PanelDeControl() {
           contentType: res.headers.get('content-type'),
           responseText: responseText.substring(0, 500),
         });
-        throw new Error(`Error al procesar la respuesta del servidor (HTTP ${res.status}). El servidor devolvió una respuesta no válida.`);
+        
+        // Manejar errores específicos de Vercel
+        let userFriendlyError;
+        if (res.status === 403) {
+          userFriendlyError = 'El archivo es demasiado grande para subir directamente. El límite de Vercel es 4.5MB. Por favor, comprime el PDF o usa un archivo más pequeño.';
+          if (file.size > 4.5 * 1024 * 1024) {
+            userFriendlyError += ` Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(2)}MB.`;
+          }
+        } else if (res.status === 413) {
+          userFriendlyError = 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB.';
+        } else {
+          userFriendlyError = `Error al procesar la respuesta del servidor (HTTP ${res.status}). ${responseText.substring(0, 100)}`;
+        }
+        
+        throw new Error(userFriendlyError);
       }
 
       // Verificar si hay error en la respuesta
       if (!res.ok) {
-        const errorMsg = data.error || data.details || data.message || `Error HTTP ${res.status}`;
-        errorLogs.push(`[${new Date().toISOString()}] Error del servidor: ${errorMsg}`);
+        let errorMsg;
+        
+        // Manejar errores específicos de Vercel
+        if (res.status === 403) {
+          errorMsg = 'El archivo es demasiado grande para subir directamente. El límite de Vercel es 4.5MB. Por favor, comprime el PDF o usa un archivo más pequeño.';
+          if (file.size > 4.5 * 1024 * 1024) {
+            errorMsg += ` Tu archivo tiene ${(file.size / 1024 / 1024).toFixed(2)}MB.`;
+          }
+        } else if (res.status === 413) {
+          errorMsg = 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB.';
+        } else {
+          errorMsg = data.error || data.details || data.message || `Error HTTP ${res.status}`;
+        }
+        
+        errorLogs.push(`[${new Date().toISOString()}] Error del servidor (HTTP ${res.status}): ${errorMsg}`);
         console.error('[panel] Error del servidor:', {
           status: res.status,
+          statusText: res.statusText,
           data,
+          fileSize: file.size,
         });
         throw new Error(errorMsg);
       }
