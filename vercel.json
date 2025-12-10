@@ -9,12 +9,11 @@
   },
   "functions": {
     "pages/api/**/*.js": {
-      "maxDuration": 60,
-      "memory": 3008
+      "maxDuration": 60
     },
     "pages/api/upload-pdf.js": {
       "maxDuration": 300,
-      "memory": 3008
+      "memory": 2048
     }
   },
   "crons": []
