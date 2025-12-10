@@ -338,8 +338,21 @@ export default function PanelDeControl() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
+    // Validaciones del archivo
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setError('Por favor, selecciona un archivo PDF válido.');
+      return;
+    }
+
+    // Validar tamaño (máximo 100MB)
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+      setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 100MB`);
+      return;
+    }
+
+    if (file.size === 0) {
+      setError('El archivo está vacío. Por favor, selecciona un PDF válido.');
       return;
     }
 
@@ -348,39 +361,111 @@ export default function PanelDeControl() {
     setMessage(null);
     setPdfFile(file);
 
+    const errorLogs = [];
+
     try {
+      console.log(`[panel] Iniciando subida de PDF: ${file.name} (${file.size} bytes)`);
+      
       const formData = new FormData();
       formData.append('pdf', file);
 
-      const res = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      });
+      let res;
+      try {
+        res = await fetch('/api/upload-pdf', {
+          method: 'POST',
+          body: formData,
+        });
+      } catch (fetchError) {
+        const errorMsg = `Error de red al subir el PDF: ${fetchError.message}`;
+        errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+        console.error('[panel]', errorMsg, fetchError);
+        throw new Error(`No se pudo conectar con el servidor. Verifica tu conexión a internet.`);
+      }
 
+      // Obtener el texto de la respuesta primero
+      let responseText;
+      try {
+        responseText = await res.text();
+        console.log(`[panel] Respuesta del servidor (status ${res.status}):`, responseText.substring(0, 200));
+      } catch (textError) {
+        const errorMsg = `Error al leer la respuesta del servidor: ${textError.message}`;
+        errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+        console.error('[panel]', errorMsg, textError);
+        throw new Error(`Error al leer la respuesta del servidor (HTTP ${res.status}).`);
+      }
+
+      // Intentar parsear como JSON
       let data;
       try {
-        const text = await res.text();
-        data = JSON.parse(text);
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('La respuesta del servidor está vacía');
+        }
+        data = JSON.parse(responseText);
       } catch (parseError) {
-        throw new Error('Error al procesar la respuesta del servidor.');
+        const errorMsg = `Error al parsear la respuesta del servidor: ${parseError.message}`;
+        errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+        errorLogs.push(`[${new Date().toISOString()}] Respuesta recibida: ${responseText.substring(0, 500)}`);
+        console.error('[panel]', errorMsg, {
+          status: res.status,
+          statusText: res.statusText,
+          contentType: res.headers.get('content-type'),
+          responseText: responseText.substring(0, 500),
+        });
+        throw new Error(`Error al procesar la respuesta del servidor (HTTP ${res.status}). El servidor devolvió una respuesta no válida.`);
       }
 
+      // Verificar si hay error en la respuesta
       if (!res.ok) {
-        throw new Error(data.error || data.details || 'Error al subir el PDF');
+        const errorMsg = data.error || data.details || data.message || `Error HTTP ${res.status}`;
+        errorLogs.push(`[${new Date().toISOString()}] Error del servidor: ${errorMsg}`);
+        console.error('[panel] Error del servidor:', {
+          status: res.status,
+          data,
+        });
+        throw new Error(errorMsg);
       }
 
-      setMessage('PDF cargado exitosamente. El catálogo se actualizará en breve.');
+      // Verificar que la respuesta tenga el formato esperado
+      if (!data.ok && !data.message) {
+        console.warn('[panel] Respuesta del servidor sin formato esperado:', data);
+      }
+
+      const successMessage = data.message || 'PDF cargado exitosamente';
+      const imagesInfo = data.imagesGenerated 
+        ? ` ${data.numPages || 0} imágenes generadas automáticamente.`
+        : ' Las imágenes se generarán en la primera carga.';
+      
+      setMessage(successMessage + imagesInfo);
       setPdfFile(null);
       
       // Recargar la configuración para obtener el nuevo número de páginas
       setTimeout(async () => {
-        const res = await fetch('/api/catalog-config');
-        const newConfig = await res.json();
-        setConfig(newConfig);
-        setMessage('Catálogo actualizado correctamente.');
+        try {
+          const configRes = await fetch('/api/catalog-config');
+          if (configRes.ok) {
+            const newConfig = await configRes.json();
+            setConfig(newConfig);
+            setMessage(`Catálogo actualizado correctamente. ${newConfig.numPages || 0} páginas detectadas.`);
+          }
+        } catch (configError) {
+          console.error('[panel] Error al recargar configuración:', configError);
+          // No mostrar error al usuario, ya se cargó el PDF exitosamente
+        }
       }, 2000);
     } catch (err) {
-      setError('Error al subir el archivo PDF: ' + err.message);
+      const errorDetails = {
+        message: err.message,
+        name: err.name,
+        logs: errorLogs,
+        timestamp: new Date().toISOString(),
+      };
+      console.error('[panel] Error al subir PDF:', errorDetails);
+      
+      const errorMessage = errorLogs.length > 0 
+        ? `Error al subir el archivo PDF: ${err.message}. Logs: ${errorLogs.join('; ')}`
+        : `Error al subir el archivo PDF: ${err.message}`;
+      
+      setError(errorMessage);
       setPdfFile(null);
     } finally {
       setPdfUploading(false);

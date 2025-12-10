@@ -102,16 +102,25 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  // Asegurar que siempre devolvamos JSON válido
+  const sendJsonResponse = (status, data) => {
+    res.status(status).json(data);
+  };
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: 'Método no permitido' });
+    return sendJsonResponse(405, { error: 'Método no permitido' });
   }
 
   try {
     // Verificar Content-Type
     const contentType = req.headers['content-type'] || '';
     if (!contentType.includes('multipart/form-data')) {
-      return res.status(400).json({ error: 'Content-Type debe ser multipart/form-data.' });
+      console.error('[upload-pdf] Content-Type inválido:', contentType);
+      return sendJsonResponse(400, { 
+        error: 'Content-Type debe ser multipart/form-data.',
+        receivedContentType: contentType,
+      });
     }
     
     // Leer el body completo
@@ -121,40 +130,71 @@ export default async function handler(req, res) {
     }
     
     if (chunks.length === 0) {
-      return res.status(400).json({ error: 'No se recibió ningún dato.' });
+      console.error('[upload-pdf] No se recibieron datos');
+      return sendJsonResponse(400, { error: 'No se recibió ningún dato.' });
     }
     
     const buffer = Buffer.concat(chunks);
+    console.log(`[upload-pdf] Datos recibidos: ${buffer.length} bytes`);
     
     // Obtener el boundary del Content-Type
     const boundaryMatch = contentType.match(/boundary=([^;]+)/);
     
     if (!boundaryMatch) {
-      return res.status(400).json({ error: 'No se pudo encontrar el boundary en Content-Type.' });
+      console.error('[upload-pdf] No se encontró boundary en Content-Type:', contentType);
+      return sendJsonResponse(400, { 
+        error: 'No se pudo encontrar el boundary en Content-Type.',
+        contentType,
+      });
     }
     
     const boundary = boundaryMatch[1].trim();
-    const parts = parseMultipartFormData(buffer, boundary);
+    console.log(`[upload-pdf] Boundary detectado: ${boundary.substring(0, 20)}...`);
+    
+    let parts;
+    try {
+      parts = parseMultipartFormData(buffer, boundary);
+    } catch (parseError) {
+      console.error('[upload-pdf] Error al parsear multipart:', parseError);
+      return sendJsonResponse(400, {
+        error: 'Error al parsear los datos del formulario.',
+        details: parseError.message,
+      });
+    }
     
     if (parts.length === 0) {
-      return res.status(400).json({ error: 'No se pudo parsear ningún campo del formulario.' });
+      console.error('[upload-pdf] No se pudo parsear ningún campo');
+      return sendJsonResponse(400, { 
+        error: 'No se pudo parsear ningún campo del formulario.',
+        bufferSize: buffer.length,
+      });
     }
+    
+    console.log(`[upload-pdf] Campos parseados: ${parts.map(p => p.name).join(', ')}`);
     
     const pdfPart = parts.find(p => p.name === 'pdf');
     
     if (!pdfPart) {
-      return res.status(400).json({ 
+      console.error('[upload-pdf] No se encontró campo PDF. Campos recibidos:', parts.map(p => p.name));
+      return sendJsonResponse(400, { 
         error: 'No se proporcionó ningún archivo PDF.',
         receivedFields: parts.map(p => p.name),
       });
     }
     
+    console.log(`[upload-pdf] PDF encontrado: ${pdfPart.filename || 'sin nombre'} (${pdfPart.data.length} bytes, tipo: ${pdfPart.contentType})`);
+    
     // Verificar que sea PDF
-    const isPdf = pdfPart.contentType.includes('pdf') || 
-                  pdfPart.data.slice(0, 4).toString() === '%PDF';
+    const header = pdfPart.data.slice(0, 4).toString();
+    const isPdf = pdfPart.contentType.includes('pdf') || header === '%PDF';
     
     if (!isPdf) {
-      return res.status(400).json({ error: 'El archivo debe ser un PDF.' });
+      console.error('[upload-pdf] Archivo no es PDF. Header:', header, 'ContentType:', pdfPart.contentType);
+      return sendJsonResponse(400, { 
+        error: 'El archivo debe ser un PDF.',
+        receivedHeader: header,
+        receivedContentType: pdfPart.contentType,
+      });
     }
     
     // Guardar en MongoDB GridFS
@@ -277,7 +317,7 @@ export default async function handler(req, res) {
             
             console.log(`[upload-pdf] ✓ Proceso completado: ${images.length} imágenes generadas y guardadas exitosamente`);
             
-            return res.status(200).json({
+            return sendJsonResponse(200, {
               ok: true,
               message: `PDF cargado exitosamente. ${images.length} imágenes generadas automáticamente.`,
               filename: 'catalogo.pdf',
@@ -311,7 +351,7 @@ export default async function handler(req, res) {
               console.error('[upload-pdf] Error al actualizar configuración después de fallo:', dbError);
             }
             
-            return res.status(200).json({
+            return sendJsonResponse(200, {
               ok: true,
               message: 'PDF cargado exitosamente. Las imágenes se generarán en la primera carga.',
               filename: 'catalogo.pdf',
@@ -345,7 +385,7 @@ export default async function handler(req, res) {
       // Guardar nuevo PDF
       fs.writeFileSync(targetPath, pdfPart.data);
       
-      return res.status(200).json({
+      return sendJsonResponse(200, {
         ok: true,
         message: 'PDF cargado exitosamente',
         filename: 'catalogo.pdf',
@@ -353,18 +393,28 @@ export default async function handler(req, res) {
         storedIn: 'filesystem',
       });
     } catch (fsError) {
-      console.error('Error al guardar en filesystem:', fsError);
-      return res.status(500).json({
+      console.error('[upload-pdf] Error al guardar en filesystem:', {
+        message: fsError.message,
+        stack: fsError.stack,
+      });
+      return sendJsonResponse(500, {
+        ok: false,
         error: 'No se pudo guardar el PDF. MongoDB no disponible y filesystem no accesible.',
         hint: 'Configura MONGODB_URI para guardar en MongoDB GridFS',
         details: fsError.message,
       });
     }
   } catch (error) {
-    console.error('Error al subir PDF:', error);
-    return res.status(500).json({
+    console.error('[upload-pdf] Error crítico al subir PDF:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    });
+    return sendJsonResponse(500, {
+      ok: false,
       error: 'Error al subir el archivo PDF.',
       details: error.message,
+      timestamp: new Date().toISOString(),
     });
   }
 }
