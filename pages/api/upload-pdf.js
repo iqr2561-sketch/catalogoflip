@@ -1,5 +1,6 @@
 import { MongoClient, GridFSBucket } from 'mongodb';
 import { Readable } from 'stream';
+import { pdfToImagesServer } from '../../lib/pdfToImagesServer';
 
 const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL || '';
 

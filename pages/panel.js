@@ -10,13 +10,15 @@ export default function PanelDeControl() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion'
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'catalogo'
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfUploading, setPdfUploading] = useState(false);
+  const [catalogImages, setCatalogImages] = useState([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -45,6 +47,45 @@ export default function PanelDeControl() {
 
     loadConfig();
   }, []);
+
+  // Cargar imágenes del catálogo cuando se activa la pestaña
+  useEffect(() => {
+    if (activeTab === 'catalogo' && config?.numPages) {
+      const loadCatalogImages = async () => {
+        setLoadingCatalog(true);
+        try {
+          const images = [];
+          const numPages = config.numPages || 0;
+          
+          // Cargar cada imagen del catálogo
+          for (let page = 1; page <= numPages; page++) {
+            try {
+              const imageUrl = `/api/pdf-images?page=${page}`;
+              // Verificar que la imagen existe haciendo una petición HEAD
+              const response = await fetch(imageUrl, { method: 'HEAD' });
+              if (response.ok) {
+                images.push({
+                  pageNum: page,
+                  url: imageUrl,
+                });
+              }
+            } catch (err) {
+              console.warn(`No se pudo cargar la imagen de la página ${page}:`, err);
+            }
+          }
+          
+          setCatalogImages(images);
+        } catch (err) {
+          console.error('Error al cargar imágenes del catálogo:', err);
+          setError('No se pudieron cargar las imágenes del catálogo.');
+        } finally {
+          setLoadingCatalog(false);
+        }
+      };
+      
+      loadCatalogImages();
+    }
+  }, [activeTab, config?.numPages]);
 
   const handleProductoChange = (id, field, value) => {
     setConfig((prev) => {
@@ -456,6 +497,17 @@ export default function PanelDeControl() {
               }`}
             >
               Marcadores
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('catalogo')}
+              className={`px-4 py-2 rounded-xl transition-colors ${
+                activeTab === 'catalogo'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Catálogo
             </button>
             <button
               type="button"
@@ -1094,6 +1146,103 @@ export default function PanelDeControl() {
               Añadir hotspot
             </button>
           </section>
+          )}
+
+          {/* Sección Catálogo */}
+          {activeTab === 'catalogo' && (
+            <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Catálogo</h2>
+                  <p className="text-gray-600 text-sm">
+                    Visualiza todas las páginas del catálogo PDF. Las imágenes se generan automáticamente al subir el PDF.
+                  </p>
+                </div>
+                {config?.numPages && (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 border border-primary-200">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-primary-700">
+                      {config.numPages} {config.numPages === 1 ? 'página' : 'páginas'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {loadingCatalog ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                    <p className="text-gray-600 text-sm">Cargando imágenes del catálogo...</p>
+                  </div>
+                </div>
+              ) : catalogImages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-600 font-medium mb-2">No hay imágenes disponibles</p>
+                  <p className="text-gray-500 text-sm">
+                    {config?.numPages 
+                      ? 'Las imágenes se están generando. Intenta recargar en unos momentos.'
+                      : 'Sube un PDF en la sección de Configuración para generar las imágenes del catálogo.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                  {catalogImages.map((image) => (
+                    <div
+                      key={image.pageNum}
+                      className="group relative bg-gray-50 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-primary-400 hover:shadow-lg transition-all duration-200"
+                    >
+                      <div className="aspect-[3/4] relative bg-white overflow-hidden">
+                        <img
+                          src={image.url}
+                          alt={`Página ${image.pageNum} del catálogo`}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const parent = e.target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-sm">Imagen no disponible</div>';
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white font-semibold text-sm">
+                            Página {image.pageNum}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {(() => {
+                              const hotspotsOnPage = config?.hotspots?.filter(
+                                (h) => h.page === image.pageNum && h.enabled
+                              ) || [];
+                              if (hotspotsOnPage.length > 0) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-500/90 text-white text-xs font-medium">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    {hotspotsOnPage.length} {hotspotsOnPage.length === 1 ? 'hotspot' : 'hotspots'}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
         </div>
       </main>
