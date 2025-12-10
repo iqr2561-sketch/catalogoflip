@@ -52,11 +52,10 @@ export default function CatalogPage() {
         const configData = await checkImagesResponse.ok ? await checkImagesResponse.json() : null;
         const imagesGenerated = configData?.imagesGenerated || false;
         
+        let validUrls = [];
+        
         if (imagesGenerated && numPages > 0) {
           // Las imágenes ya están generadas, cargarlas directamente
-          const imageUrls = [];
-          let allImagesExist = true;
-          
           // Cargar todas las imágenes en paralelo para mayor velocidad
           const imagePromises = [];
           for (let page = 1; page <= numPages; page++) {
@@ -67,34 +66,37 @@ export default function CatalogPage() {
                     console.log(`[catalog] Imagen de página ${page} cargada exitosamente`);
                     return `/api/pdf-images?page=${page}`;
                   } else {
-                    console.error(`[catalog] Error al cargar imagen de página ${page}: HTTP ${response.status}`);
+                    console.warn(`[catalog] Imagen de página ${page} no encontrada en el servidor.`);
                     return null;
                   }
                 })
                 .catch((err) => {
-                  console.error(`[catalog] Error al cargar imagen de página ${page}:`, err);
+                  console.error(`[catalog] Error al cargar imagen de página ${page} desde el servidor:`, err);
                   return null;
                 })
             );
           }
           
           const results = await Promise.all(imagePromises);
-          const validUrls = results.filter(url => url !== null);
+          validUrls = results.filter(url => url !== null);
           
           if (validUrls.length === numPages) {
             // Todas las imágenes existen, cargarlas
             setImages(validUrls);
             setLoading(false);
+            console.log(`[catalog] ✓ ${validUrls.length} imágenes cargadas desde el servidor.`);
             return;
+          } else {
+            console.warn(`[catalog] No todas las imágenes pre-generadas se encontraron (${validUrls.length}/${numPages}).`);
           }
         }
         
         // Si no existen imágenes pre-generadas, convertir PDF (solo como fallback)
-        console.warn('[catalog] Imágenes no encontradas o no generadas, convirtiendo PDF en cliente...');
+        console.warn('[catalog] Imágenes no encontradas o no generadas, convirtiendo PDF en cliente (fallback)...');
         console.log('[catalog] Configuración:', {
           imagesGenerated,
           numPages,
-          validUrlsCount: validUrls?.length || 0,
+          validUrlsCount: validUrls.length,
         });
         const pdfUrl = catalogConfig.pdf || '/api/catalogo';
         console.log('[catalog] Intentando cargar PDF desde:', pdfUrl);
