@@ -66,7 +66,8 @@ checkFile('package.json');
 checkFile('next.config.js');
 checkFile('tailwind.config.js');
 checkFile('postcss.config.js');
-checkFile('.gitignore');
+// .gitignore es opcional en builds de producción (Vercel, etc.)
+checkFile('.gitignore', false);
 
 console.log(`\n${colors.blue}📁 Estructura de Carpetas:${colors.reset}`);
 checkDirectory('components');
