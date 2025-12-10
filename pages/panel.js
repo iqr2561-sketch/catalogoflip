@@ -344,21 +344,159 @@ export default function PanelDeControl() {
       return;
     }
 
-    // Validar tamaño - Vercel tiene un límite de 4.5MB para el body
-    const vercelLimit = 4.5 * 1024 * 1024; // 4.5MB (límite de Vercel)
-    const maxSize = 100 * 1024 * 1024; // 100MB (límite teórico)
-    
-    if (file.size > vercelLimit) {
-      setError(
-        `El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). ` +
-        `El límite de Vercel es 4.5MB. Por favor, comprime el PDF usando una herramienta online ` +
-        `o reduce la calidad del archivo antes de subirlo.`
-      );
+    // Validar tamaño máximo
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 50MB`);
       return;
     }
-    
+
+    if (file.size === 0) {
+      setError('El archivo está vacío. Por favor, selecciona un PDF válido.');
+      return;
+    }
+
+    setPdfUploading(true);
+    setError(null);
+    setMessage(null);
+    setPdfFile(file);
+
+    const errorLogs = [];
+
+    try {
+      console.log(`[panel] Iniciando subida de PDF por chunks: ${file.name} (${file.size} bytes)`);
+      
+      // Subir en chunks para evitar el límite de 4.5MB de Vercel
+      const chunkSize = 3 * 1024 * 1024; // 3MB por chunk
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      const sessionId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      console.log(`[panel] Archivo dividido en ${totalChunks} chunks de ~${(chunkSize / 1024 / 1024).toFixed(2)}MB`);
+      setMessage(`Subiendo PDF: 0/${totalChunks} partes...`);
+      
+      // Leer el archivo completo
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Subir cada chunk
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunkArray = uint8Array.slice(start, end);
+        
+        // Convertir a base64
+        let binary = '';
+        for (let j = 0; j < chunkArray.length; j++) {
+          binary += String.fromCharCode(chunkArray[j]);
+        }
+        const chunkBase64 = btoa(binary);
+        
+        console.log(`[panel] Subiendo chunk ${i + 1}/${totalChunks} (${chunkArray.length} bytes)`);
+        setMessage(`Subiendo PDF: ${i + 1}/${totalChunks} partes...`);
+        
+        try {
+          const res = await fetch('/api/upload-pdf-chunk', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionId,
+              chunkIndex: i,
+              totalChunks,
+              chunkData: chunkBase64,
+              filename: file.name,
+            }),
+          });
+          
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+            throw new Error(errorData.error || `Error al subir chunk ${i + 1}/${totalChunks}`);
+          }
+          
+          const data = await res.json();
+          console.log(`[panel] Chunk ${i + 1}/${totalChunks} subido exitosamente`);
+          
+          // Si es el último chunk y se ensambló correctamente
+          if (data.assembled) {
+            console.log(`[panel] PDF ensamblado exitosamente en el servidor`);
+            setMessage('PDF subido exitosamente. Generando imágenes...');
+            
+            // Generar imágenes del PDF
+            try {
+              const genRes = await fetch('/api/generate-pdf-images', {
+                method: 'POST',
+              });
+              
+              if (genRes.ok) {
+                const genData = await genRes.json();
+                setMessage(`✓ PDF cargado y ${genData.numPages || 0} imágenes generadas exitosamente.`);
+                
+                // Recargar configuración
+                setTimeout(async () => {
+                  try {
+                    const configRes = await fetch('/api/catalog-config');
+                    if (configRes.ok) {
+                      const newConfig = await configRes.json();
+                      setConfig(newConfig);
+                    }
+                  } catch (err) {
+                    console.error('[panel] Error al recargar configuración:', err);
+                  }
+                }, 1000);
+              } else {
+                const genError = await genRes.json().catch(() => ({ error: 'Error desconocido' }));
+                setMessage(`PDF subido, pero hubo un error al generar imágenes: ${genError.error}. Se generarán en la primera carga.`);
+              }
+            } catch (genError) {
+              console.error('[panel] Error al generar imágenes:', genError);
+              setMessage('PDF subido exitosamente. Las imágenes se generarán en la primera carga del catálogo.');
+            }
+          }
+        } catch (chunkError) {
+          const errorMsg = `Error al subir chunk ${i + 1}/${totalChunks}: ${chunkError.message}`;
+          errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+          console.error('[panel]', errorMsg, chunkError);
+          throw new Error(errorMsg);
+        }
+      }
+      
+      setPdfFile(null);
+    } catch (err) {
+      const errorDetails = {
+        message: err.message,
+        name: err.name,
+        logs: errorLogs,
+        timestamp: new Date().toISOString(),
+      };
+      console.error('[panel] Error al subir PDF:', errorDetails);
+      
+      const errorMessage = errorLogs.length > 0 
+        ? `Error al subir el archivo PDF: ${err.message}`
+        : `Error al subir el archivo PDF: ${err.message}`;
+      
+      setError(errorMessage);
+      setPdfFile(null);
+    } finally {
+      setPdfUploading(false);
+    }
+  };
+
+  // Función auxiliar para el manejo anterior (no usada con chunks)
+  const handlePdfUploadOld = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validaciones del archivo
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Por favor, selecciona un archivo PDF válido.');
+      return;
+    }
+
+    // Validar tamaño máximo
+    const maxSize = 4 * 1024 * 1024; // 4MB
     if (file.size > maxSize) {
-      setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 100MB`);
+      setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 4MB para subida directa.`);
       return;
     }
 

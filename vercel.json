@@ -14,6 +14,14 @@
     "pages/api/upload-pdf.js": {
       "maxDuration": 300,
       "memory": 2048
+    },
+    "pages/api/upload-pdf-chunk.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "pages/api/generate-pdf-images.js": {
+      "maxDuration": 300,
+      "memory": 2048
     }
   },
   "crons": []
