@@ -40,21 +40,46 @@ export default function CatalogPage() {
     if (!catalogConfig) return;
 
     const loadImages = async () => {
+      const startTime = Date.now();
+      const errorLogs = [];
+      
       try {
         setLoading(true);
         setError(null);
         
+        console.log('[catalog] Iniciando carga de imágenes del catálogo...');
         const numPages = catalogConfig.numPages || 1;
+        console.log(`[catalog] Configuración detectada: ${numPages} páginas`);
         
         // Intentar cargar imágenes pre-generadas desde el servidor
         // Verificar primero si las imágenes están generadas
-        const checkImagesResponse = await fetch('/api/catalog-config');
-        const configData = await checkImagesResponse.ok ? await checkImagesResponse.json() : null;
-        const imagesGenerated = configData?.imagesGenerated || false;
+        let checkImagesResponse;
+        let configData = null;
+        try {
+          checkImagesResponse = await fetch('/api/catalog-config');
+          if (checkImagesResponse.ok) {
+            configData = await checkImagesResponse.json();
+            console.log('[catalog] Configuración cargada desde API:', {
+              imagesGenerated: configData?.imagesGenerated,
+              numPages: configData?.numPages,
+            });
+          } else {
+            errorLogs.push(`[${new Date().toISOString()}] Error HTTP al cargar configuración: ${checkImagesResponse.status}`);
+            console.warn('[catalog] No se pudo cargar configuración desde API');
+          }
+        } catch (configError) {
+          errorLogs.push(`[${new Date().toISOString()}] Error al cargar configuración: ${configError.message}`);
+          console.error('[catalog] Error al cargar configuración:', {
+            message: configError.message,
+            stack: configError.stack,
+          });
+        }
         
+        const imagesGenerated = configData?.imagesGenerated || false;
         let validUrls = [];
         
         if (imagesGenerated && numPages > 0) {
+          console.log(`[catalog] Intentando cargar ${numPages} imágenes pre-generadas desde el servidor...`);
           // Las imágenes ya están generadas, cargarlas directamente
           // Cargar todas las imágenes en paralelo para mayor velocidad
           const imagePromises = [];
@@ -63,15 +88,23 @@ export default function CatalogPage() {
               fetch(`/api/pdf-images?page=${page}`)
                 .then(response => {
                   if (response.ok) {
-                    console.log(`[catalog] Imagen de página ${page} cargada exitosamente`);
+                    console.log(`[catalog] ✓ Imagen de página ${page} cargada exitosamente`);
                     return `/api/pdf-images?page=${page}`;
                   } else {
-                    console.warn(`[catalog] Imagen de página ${page} no encontrada en el servidor.`);
+                    const errorMsg = `Imagen de página ${page} no encontrada (HTTP ${response.status})`;
+                    errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+                    console.warn(`[catalog] ${errorMsg}`);
                     return null;
                   }
                 })
                 .catch((err) => {
-                  console.error(`[catalog] Error al cargar imagen de página ${page} desde el servidor:`, err);
+                  const errorMsg = `Error al cargar imagen de página ${page}: ${err.message}`;
+                  errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
+                  console.error(`[catalog] ${errorMsg}`, {
+                    name: err.name,
+                    message: err.message,
+                    stack: err.stack,
+                  });
                   return null;
                 })
             );
@@ -82,31 +115,52 @@ export default function CatalogPage() {
           
           if (validUrls.length === numPages) {
             // Todas las imágenes existen, cargarlas
+            const loadTime = Date.now() - startTime;
             setImages(validUrls);
             setLoading(false);
-            console.log(`[catalog] ✓ ${validUrls.length} imágenes cargadas desde el servidor.`);
+            console.log(`[catalog] ✓ ${validUrls.length} imágenes cargadas desde el servidor en ${loadTime}ms`);
             return;
           } else {
-            console.warn(`[catalog] No todas las imágenes pre-generadas se encontraron (${validUrls.length}/${numPages}).`);
+            const warningMsg = `No todas las imágenes pre-generadas se encontraron (${validUrls.length}/${numPages})`;
+            errorLogs.push(`[${new Date().toISOString()}] ${warningMsg}`);
+            console.warn(`[catalog] ${warningMsg}`);
           }
         }
         
         // Si no existen imágenes pre-generadas, convertir PDF (solo como fallback)
         console.warn('[catalog] Imágenes no encontradas o no generadas, convirtiendo PDF en cliente (fallback)...');
-        console.log('[catalog] Configuración:', {
+        console.log('[catalog] Estado actual:', {
           imagesGenerated,
           numPages,
           validUrlsCount: validUrls.length,
+          timestamp: new Date().toISOString(),
         });
+        
         const pdfUrl = catalogConfig.pdf || '/api/catalogo';
-        console.log('[catalog] Intentando cargar PDF desde:', pdfUrl);
-        const pdfImages = await pdfToImages(pdfUrl);
-        console.log(`[catalog] PDF convertido exitosamente: ${pdfImages.length} imágenes generadas`);
+        console.log(`[catalog] Intentando cargar PDF desde: ${pdfUrl}`);
+        
+        let pdfImages;
+        try {
+          pdfImages = await pdfToImages(pdfUrl);
+          console.log(`[catalog] ✓ PDF convertido exitosamente: ${pdfImages.length} imágenes generadas`);
+        } catch (pdfError) {
+          const errorDetails = {
+            message: pdfError.message,
+            name: pdfError.name,
+            stack: pdfError.stack,
+            pdfUrl,
+            timestamp: new Date().toISOString(),
+          };
+          errorLogs.push(`[${new Date().toISOString()}] Error crítico al convertir PDF: ${pdfError.message}`);
+          console.error('[catalog] Error crítico al convertir PDF:', errorDetails);
+          throw new Error(`Error al convertir PDF: ${pdfError.message}. Logs: ${errorLogs.join('; ')}`);
+        }
+        
         setImages(pdfImages);
         
         // Guardar las imágenes en el servidor para próximas cargas
         try {
-          console.log('[catalog] Guardando imágenes en el servidor...');
+          console.log('[catalog] Intentando guardar imágenes en el servidor...');
           const saveResponse = await fetch('/api/generate-images', {
             method: 'POST',
             headers: {
@@ -120,25 +174,42 @@ export default function CatalogPage() {
           
           if (saveResponse.ok) {
             const saveData = await saveResponse.json();
-            console.log('[catalog] Imágenes guardadas en el servidor exitosamente:', saveData);
+            console.log('[catalog] ✓ Imágenes guardadas en el servidor exitosamente');
           } else {
             const errorData = await saveResponse.json().catch(() => ({ error: 'Error desconocido' }));
+            const errorMsg = `Error al guardar imágenes (HTTP ${saveResponse.status}): ${JSON.stringify(errorData)}`;
+            errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
             console.error('[catalog] Error al guardar imágenes en el servidor:', {
               status: saveResponse.status,
               data: errorData,
             });
           }
         } catch (saveError) {
+          const errorMsg = `Error al guardar imágenes: ${saveError.message}`;
+          errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
           console.error('[catalog] Error al guardar las imágenes en el servidor:', {
             message: saveError.message,
             stack: saveError.stack,
+            name: saveError.name,
           });
           // Continuar sin error, las imágenes ya están cargadas
         }
       } catch (err) {
-        console.error('Error al cargar el catálogo:', err);
-        setError('Error al cargar el catálogo. Por favor, asegúrate de que el archivo PDF existe.');
+        const errorDetails = {
+          message: err.message,
+          name: err.name,
+          stack: err.stack,
+          timestamp: new Date().toISOString(),
+          logs: errorLogs,
+        };
+        console.error('[catalog] Error crítico al cargar el catálogo:', errorDetails);
+        const errorMessage = errorLogs.length > 0 
+          ? `Error al cargar el catálogo. Logs: ${errorLogs.join('; ')}`
+          : `Error al cargar el catálogo: ${err.message}`;
+        setError(errorMessage);
       } finally {
+        const totalTime = Date.now() - startTime;
+        console.log(`[catalog] Proceso de carga completado en ${totalTime}ms`);
         setLoading(false);
       }
     };
