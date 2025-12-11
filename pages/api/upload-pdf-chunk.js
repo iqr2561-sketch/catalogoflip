@@ -161,12 +161,15 @@ export default async function handler(req, res) {
         
         // Subir nuevo PDF
         console.log(`[upload-pdf-chunk] Subiendo PDF a GridFS...`);
-        const { Readable } = await import('stream');
+        const { Readable } = require('stream');
         const uploadStream = bucket.openUploadStream('catalogo.pdf', {
           contentType: 'application/pdf',
         });
         
-        const readable = Readable.from([pdfBuffer]);
+        // Crear stream readable desde el buffer
+        const readable = new Readable();
+        readable.push(pdfBuffer);
+        readable.push(null); // EOF
         readable.pipe(uploadStream);
         
         await new Promise((resolve, reject) => {
