@@ -21,6 +21,7 @@ export default function PanelDeControl() {
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
+  const [autoGenerating, setAutoGenerating] = useState(false);
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -650,6 +651,55 @@ export default function PanelDeControl() {
     }
   };
 
+  const handleAutoGenerate = async () => {
+    if (!config?.numPages || config.numPages < 1) {
+      setError('No hay páginas detectadas. Sube un PDF primero.');
+      return;
+    }
+
+    if (!window.confirm(`¿Generar automáticamente ${config.numPages} productos y ${config.numPages} hotspots?\n\nEsto sobrescribirá los datos existentes.`)) {
+      return;
+    }
+
+    setAutoGenerating(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/auto-generate-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          numPages: config.numPages,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Error al generar items');
+      }
+
+      setMessage(`✓ Se generaron ${data.productosGenerados} productos y ${data.hotspotsGenerados} hotspots automáticamente`);
+      
+      // Recargar configuración
+      setTimeout(async () => {
+        const configRes = await fetch('/api/catalog-config');
+        if (configRes.ok) {
+          const newConfig = await configRes.json();
+          setConfig(newConfig);
+        }
+      }, 1000);
+    } catch (err) {
+      console.error('[panel] Error al generar items:', err);
+      setError(`Error: ${err.message}`);
+    } finally {
+      setAutoGenerating(false);
+    }
+  };
+
   const handleTestDatabase = async () => {
     setDbTesting(true);
     setDbTestResult(null);
@@ -713,14 +763,37 @@ export default function PanelDeControl() {
                     Panel de Control
                   </h1>
                   {typeof config?.numPages === 'number' && config.numPages > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary-50 border border-primary-200">
-                      <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="text-sm font-semibold text-primary-700">
-                        <span className="text-primary-600">{config.numPages}</span> páginas disponibles
-                      </span>
-                    </div>
+                    <>
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary-50 border border-primary-200">
+                        <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm font-semibold text-primary-700">
+                          <span className="text-primary-600">{config.numPages}</span> páginas
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAutoGenerate}
+                        disabled={autoGenerating}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-xs font-semibold shadow-sm transition-all"
+                        title={`Generar automáticamente ${config.numPages} productos y ${config.numPages} hotspots`}
+                      >
+                        {autoGenerating ? (
+                          <>
+                            <span className="inline-block animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-white"></span>
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Auto-generar
+                          </>
+                        )}
+                      </button>
+                    </>
                   )}
                 </div>
                 <p className="text-gray-600 mt-1 text-xs md:text-sm">
