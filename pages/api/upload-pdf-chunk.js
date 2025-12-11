@@ -114,15 +114,17 @@ export default async function handler(req, res) {
         });
       }
       
-      // Ensamblar el archivo
+      // Ensamblar el archivo concatenando cada chunk decodificado
       console.log(`[upload-pdf-chunk] Ensamblando ${allChunks.length} chunks...`);
       
       try {
-        const base64Data = allChunks.map(c => c.chunkData).join('');
-        console.log(`[upload-pdf-chunk] Base64 data length: ${base64Data.length} chars`);
-        
-        const pdfBuffer = Buffer.from(base64Data, 'base64');
-        console.log(`[upload-pdf-chunk] PDF Buffer creado: ${pdfBuffer.length} bytes`);
+        const buffers = allChunks.map((c, idx) => {
+          const buf = Buffer.from(c.chunkData, 'base64');
+          console.log(`[upload-pdf-chunk] Chunk ${idx + 1} decodificado: ${buf.length} bytes`);
+          return buf;
+        });
+        const pdfBuffer = Buffer.concat(buffers);
+        console.log(`[upload-pdf-chunk] PDF Buffer creado: ${pdfBuffer.length} bytes (esperado ~${buffers.reduce((a, b) => a + b.length, 0)} bytes)`);
         
         if (pdfBuffer.length === 0) {
           throw new Error('El buffer del PDF está vacío después del ensamblaje');
