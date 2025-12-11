@@ -97,12 +97,16 @@ export default async function handler(req, res) {
     // Si es el último chunk, ensamblar el archivo completo
     if (chunkIndex === totalChunks - 1) {
       console.log(`[upload-pdf-chunk] Último chunk recibido, ensamblando archivo...`);
+      console.log(`[upload-pdf-chunk] SessionId: ${sessionId}, TotalChunks: ${totalChunks}`);
       
       // Obtener todos los chunks
+      console.log(`[upload-pdf-chunk] Buscando chunks en MongoDB...`);
       const allChunks = await chunksCollection
         .find({ sessionId })
         .sort({ chunkIndex: 1 })
         .toArray();
+      
+      console.log(`[upload-pdf-chunk] Chunks encontrados: ${allChunks.length}`);
       
       if (allChunks.length !== totalChunks) {
         return sendJsonResponse(400, {
@@ -112,79 +116,118 @@ export default async function handler(req, res) {
       
       // Ensamblar el archivo
       console.log(`[upload-pdf-chunk] Ensamblando ${allChunks.length} chunks...`);
-      const base64Data = allChunks.map(c => c.chunkData).join('');
-      console.log(`[upload-pdf-chunk] Base64 data length: ${base64Data.length}`);
       
-      const pdfBuffer = Buffer.from(base64Data, 'base64');
-      console.log(`[upload-pdf-chunk] Archivo ensamblado: ${pdfBuffer.length} bytes`);
-      
-      // Validar que sea un PDF válido
-      const header = pdfBuffer.slice(0, 4).toString();
-      console.log(`[upload-pdf-chunk] Header del PDF: ${header}`);
-      
-      if (header !== '%PDF') {
-        // Limpiar chunks
-        await chunksCollection.deleteMany({ sessionId });
-        return sendJsonResponse(400, {
-          error: 'El archivo no es un PDF válido',
-          receivedHeader: header,
-        });
-      }
-      
-      // Guardar en GridFS
-      const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
-      
-      // Eliminar PDF anterior
       try {
-        const existingFiles = await bucket.find({ filename: 'catalogo.pdf' }).toArray();
-        for (const file of existingFiles) {
-          await bucket.delete(file._id);
+        const base64Data = allChunks.map(c => c.chunkData).join('');
+        console.log(`[upload-pdf-chunk] Base64 data length: ${base64Data.length} chars`);
+        
+        const pdfBuffer = Buffer.from(base64Data, 'base64');
+        console.log(`[upload-pdf-chunk] PDF Buffer creado: ${pdfBuffer.length} bytes`);
+        
+        if (pdfBuffer.length === 0) {
+          throw new Error('El buffer del PDF está vacío después del ensamblaje');
         }
-      } catch (e) {
-        console.warn('[upload-pdf-chunk] No se pudo eliminar PDF anterior:', e);
-      }
       
-      // Subir nuevo PDF
-      const { Readable } = await import('stream');
-      const uploadStream = bucket.openUploadStream('catalogo.pdf', {
-        contentType: 'application/pdf',
-      });
+        // Validar que sea un PDF válido
+        const header = pdfBuffer.slice(0, 4).toString();
+        console.log(`[upload-pdf-chunk] Header del PDF: "${header}"`);
+        
+        if (header !== '%PDF') {
+          // Limpiar chunks
+          await chunksCollection.deleteMany({ sessionId });
+          return sendJsonResponse(400, {
+            error: 'El archivo no es un PDF válido',
+            receivedHeader: header,
+          });
+        }
+        
+        console.log(`[upload-pdf-chunk] PDF válido, guardando en GridFS...`);
+        
+        // Guardar en GridFS
+        const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
       
-      const readable = Readable.from([pdfBuffer]);
-      readable.pipe(uploadStream);
-      
-      await new Promise((resolve, reject) => {
-        uploadStream.on('finish', resolve);
-        uploadStream.on('error', reject);
-      });
-      
-      console.log(`[upload-pdf-chunk] PDF guardado en GridFS`);
-      
-      // Limpiar chunks temporales
-      await chunksCollection.deleteMany({ sessionId });
-      console.log(`[upload-pdf-chunk] Chunks temporales eliminados`);
-      
-      // Actualizar configuración
-      await db.collection('catalogs').updateOne(
-        { isMain: true },
-        {
-          $set: {
-            pdfUpdatedAt: new Date(),
-            pdfSize: pdfBuffer.length,
+        // Eliminar PDF anterior
+        try {
+          console.log(`[upload-pdf-chunk] Buscando PDFs anteriores...`);
+          const existingFiles = await bucket.find({ filename: 'catalogo.pdf' }).toArray();
+          console.log(`[upload-pdf-chunk] PDFs anteriores encontrados: ${existingFiles.length}`);
+          for (const file of existingFiles) {
+            await bucket.delete(file._id);
+            console.log(`[upload-pdf-chunk] PDF anterior eliminado: ${file._id}`);
+          }
+        } catch (e) {
+          console.warn('[upload-pdf-chunk] No se pudo eliminar PDF anterior:', e.message);
+        }
+        
+        // Subir nuevo PDF
+        console.log(`[upload-pdf-chunk] Subiendo PDF a GridFS...`);
+        const { Readable } = await import('stream');
+        const uploadStream = bucket.openUploadStream('catalogo.pdf', {
+          contentType: 'application/pdf',
+        });
+        
+        const readable = Readable.from([pdfBuffer]);
+        readable.pipe(uploadStream);
+        
+        await new Promise((resolve, reject) => {
+          uploadStream.on('finish', () => {
+            console.log(`[upload-pdf-chunk] Upload stream finished`);
+            resolve();
+          });
+          uploadStream.on('error', (err) => {
+            console.error(`[upload-pdf-chunk] Upload stream error:`, err);
+            reject(err);
+          });
+        });
+        
+        console.log(`[upload-pdf-chunk] ✓ PDF guardado en GridFS exitosamente`);
+        
+        // Limpiar chunks temporales
+        console.log(`[upload-pdf-chunk] Limpiando chunks temporales...`);
+        const deleteResult = await chunksCollection.deleteMany({ sessionId });
+        console.log(`[upload-pdf-chunk] ${deleteResult.deletedCount} chunks eliminados`);
+        
+        // Actualizar configuración
+        console.log(`[upload-pdf-chunk] Actualizando configuración del catálogo...`);
+        await db.collection('catalogs').updateOne(
+          { isMain: true },
+          {
+            $set: {
+              pdfUpdatedAt: new Date(),
+              pdfSize: pdfBuffer.length,
+            },
+            $setOnInsert: { isMain: true }
           },
-          $setOnInsert: { isMain: true }
-        },
-        { upsert: true }
-      );
-      
-      return sendJsonResponse(200, {
-        ok: true,
-        message: 'PDF cargado exitosamente',
-        filename: 'catalogo.pdf',
-        size: pdfBuffer.length,
-        totalChunks,
-        assembled: true,
-      });
+          { upsert: true }
+        );
+        
+        console.log(`[upload-pdf-chunk] ✓ Proceso completado exitosamente`);
+        
+        return sendJsonResponse(200, {
+          ok: true,
+          message: 'PDF cargado exitosamente. Genera las imágenes desde el panel.',
+          filename: 'catalogo.pdf',
+          size: pdfBuffer.length,
+          totalChunks,
+          assembled: true,
+        });
+        
+      } catch (assemblyError) {
+        console.error('[upload-pdf-chunk] Error durante el ensamblaje:', {
+          message: assemblyError.message,
+          name: assemblyError.name,
+          stack: assemblyError.stack,
+        });
+        
+        // Limpiar chunks en caso de error
+        try {
+          await chunksCollection.deleteMany({ sessionId });
+        } catch (cleanError) {
+          console.error('[upload-pdf-chunk] Error al limpiar chunks:', cleanError);
+        }
+        
+        throw assemblyError;
+      }
     }
     
     // No es el último chunk, simplemente confirmar recepción
@@ -200,11 +243,31 @@ export default async function handler(req, res) {
       message: error.message,
       name: error.name,
       stack: error.stack,
+      timestamp: new Date().toISOString(),
     });
+    
+    // Intentar limpiar chunks en caso de error
+    try {
+      if (mongoUri) {
+        const clientPromise = getMongoClient();
+        const mongoClient = await clientPromise;
+        const db = mongoClient.db();
+        const chunksCollection = db.collection('pdf_upload_chunks');
+        const deletedCount = await chunksCollection.deleteMany({ 
+          uploadedAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) } // Older than 10 minutes
+        });
+        console.log(`[upload-pdf-chunk] Limpieza: ${deletedCount.deletedCount} chunks antiguos eliminados`);
+      }
+    } catch (cleanupError) {
+      console.error('[upload-pdf-chunk] Error al limpiar chunks:', cleanupError);
+    }
+    
     return sendJsonResponse(500, {
       ok: false,
-      error: 'Error al procesar el chunk',
+      error: `Error al procesar el chunk: ${error.name}`,
       details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      hint: 'Verifica los logs del servidor para más detalles',
     });
   }
 }
