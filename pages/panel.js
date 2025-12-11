@@ -1688,11 +1688,11 @@ export default function PanelDeControl() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 place-items-center">
                   {catalogImages.map((image) => (
                     <div
                       key={image.pageNum}
-                      className="group relative bg-gray-50 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-primary-400 hover:shadow-lg transition-all duration-200"
+                      className="group relative bg-gray-50 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-primary-400 hover:shadow-lg transition-all duration-200 w-full max-w-[220px]"
                     >
                       <div className="aspect-[3/4] relative bg-white overflow-hidden">
                         <img
