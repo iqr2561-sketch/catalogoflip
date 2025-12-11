@@ -3,8 +3,9 @@ import { useRouter } from 'next/router';
 
 export default function ConfigModal({ isOpen, onClose }) {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // Prefill credenciales en modo desarrollo para acceso rápido
+  const [username, setUsername] = useState(process.env.NODE_ENV === 'development' ? 'admin' : '');
+  const [password, setPassword] = useState(process.env.NODE_ENV === 'development' ? '1234' : '');
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
