@@ -651,6 +651,17 @@ export default function PanelDeControl() {
     }
   };
 
+  const handleDeleteHotspot = (index) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este marcador?')) {
+      return;
+    }
+    
+    const updated = { ...config };
+    updated.hotspots = updated.hotspots.filter((_, i) => i !== index);
+    setConfig(updated);
+    setMessage('Marcador eliminado. Recuerda guardar los cambios.');
+  };
+
   const handleAutoGenerate = async () => {
     if (!config?.numPages || config.numPages < 1) {
       setError('No hay páginas detectadas. Sube un PDF primero.');
@@ -1484,6 +1495,7 @@ export default function PanelDeControl() {
                     <th className="py-2 pr-4">Posición (%)</th>
                     <th className="py-2 pr-4 hidden md:table-cell">Tamaño (%)</th>
                     <th className="py-2 pr-4 hidden md:table-cell">Vista previa</th>
+                    <th className="py-2 pr-4">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1601,6 +1613,18 @@ export default function PanelDeControl() {
                               }}
                             />
                           </div>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHotspot(globalIndex)}
+                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                            title="Eliminar marcador"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     );
