@@ -367,7 +367,7 @@ export default function PanelDeControl() {
       console.log(`[panel] Iniciando subida de PDF por chunks: ${file.name} (${file.size} bytes)`);
       
       // Subir en chunks para evitar el límite de 4.5MB de Vercel
-      const chunkSize = 3 * 1024 * 1024; // 3MB por chunk
+      const chunkSize = 2 * 1024 * 1024; // 2MB por chunk (más pequeño para mayor confiabilidad)
       const totalChunks = Math.ceil(file.size / chunkSize);
       const sessionId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
       

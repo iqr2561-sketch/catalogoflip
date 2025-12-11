@@ -111,13 +111,17 @@ export default async function handler(req, res) {
       }
       
       // Ensamblar el archivo
+      console.log(`[upload-pdf-chunk] Ensamblando ${allChunks.length} chunks...`);
       const base64Data = allChunks.map(c => c.chunkData).join('');
-      const pdfBuffer = Buffer.from(base64Data, 'base64');
+      console.log(`[upload-pdf-chunk] Base64 data length: ${base64Data.length}`);
       
+      const pdfBuffer = Buffer.from(base64Data, 'base64');
       console.log(`[upload-pdf-chunk] Archivo ensamblado: ${pdfBuffer.length} bytes`);
       
       // Validar que sea un PDF válido
       const header = pdfBuffer.slice(0, 4).toString();
+      console.log(`[upload-pdf-chunk] Header del PDF: ${header}`);
+      
       if (header !== '%PDF') {
         // Limpiar chunks
         await chunksCollection.deleteMany({ sessionId });
