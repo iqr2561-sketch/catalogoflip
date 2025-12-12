@@ -148,19 +148,6 @@ export default async function handler(req, res) {
         // Guardar en GridFS
         const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
       
-        // Eliminar PDF anterior
-        try {
-          console.log(`[upload-pdf-chunk] Buscando PDFs anteriores...`);
-          const existingFiles = await bucket.find({ filename: 'catalogo.pdf' }).toArray();
-          console.log(`[upload-pdf-chunk] PDFs anteriores encontrados: ${existingFiles.length}`);
-          for (const file of existingFiles) {
-            await bucket.delete(file._id);
-            console.log(`[upload-pdf-chunk] PDF anterior eliminado: ${file._id}`);
-          }
-        } catch (e) {
-          console.warn('[upload-pdf-chunk] No se pudo eliminar PDF anterior:', e.message);
-        }
-        
         // Subir nuevo PDF
         console.log(`[upload-pdf-chunk] Subiendo PDF a GridFS...`);
         const { Readable } = require('stream');
@@ -200,6 +187,8 @@ export default async function handler(req, res) {
             $set: {
               pdfUpdatedAt: new Date(),
               pdfSize: pdfBuffer.length,
+              imagesGenerated: false,
+              numPages: null,
             },
             $setOnInsert: { isMain: true }
           },

@@ -3,6 +3,15 @@ import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 
+// Aumentar el límite del body para permitir cargas grandes (imágenes en base64)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
+
 const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL || '';
 
 let client = null;

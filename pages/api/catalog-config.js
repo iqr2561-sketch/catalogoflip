@@ -284,6 +284,23 @@ export default async function handler(req, res) {
       // Asegurar estructuras básicas
       if (!Array.isArray(data.hotspots)) data.hotspots = [];
       if (!Array.isArray(data.productos)) data.productos = [];
+
+      // Detectar imágenes generadas en filesystem como respaldo
+      try {
+        const imagesDir = path.join(process.cwd(), 'public', 'pdf-images');
+        if (fs.existsSync(imagesDir)) {
+          const files = fs.readdirSync(imagesDir).filter((f) => f.endsWith('.png'));
+          if (files.length > 0) {
+            data.imagesGenerated = true;
+            if (!data.numPages) {
+              data.numPages = files.length;
+            }
+          }
+        }
+      } catch (fsError) {
+        // Solo loguear
+        console.warn('[catalog-config] No se pudo verificar imágenes en filesystem:', fsError);
+      }
       
       // NO crear hotspots automáticamente - solo mostrar los que están en la BD
       

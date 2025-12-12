@@ -208,16 +208,6 @@ export default async function handler(req, res) {
           const db = client.db();
           const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
           
-          // Eliminar el PDF anterior si existe
-          try {
-            const existingFiles = await bucket.find({ filename: 'catalogo.pdf' }).toArray();
-            for (const file of existingFiles) {
-              await bucket.delete(file._id);
-            }
-          } catch (e) {
-            console.warn('No se pudo eliminar PDF anterior:', e);
-          }
-          
           // Subir el nuevo PDF
           const uploadStream = bucket.openUploadStream('catalogo.pdf', {
             contentType: 'application/pdf',

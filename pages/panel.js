@@ -17,8 +17,13 @@ export default function PanelDeControl() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfPageCount, setPdfPageCount] = useState(null);
   const [catalogImages, setCatalogImages] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [pdfList, setPdfList] = useState([]);
+  const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const [deletingPdfId, setDeletingPdfId] = useState(null);
+  const [regenerating, setRegenerating] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
   const [autoGenerating, setAutoGenerating] = useState(false);
@@ -89,6 +94,31 @@ export default function PanelDeControl() {
       loadCatalogImages();
     }
   }, [activeTab, config?.numPages]);
+
+  const fetchPdfList = async () => {
+    setLoadingPdfs(true);
+    try {
+      const res = await fetch('/api/catalog-pdfs');
+      const data = await res.json();
+      if (res.ok) {
+        setPdfList(data.pdfs || []);
+      } else {
+        setPdfList([]);
+        setError(data.error || 'No se pudieron obtener los PDFs');
+      }
+    } catch (err) {
+      console.error('Error al obtener PDFs:', err);
+      setPdfList([]);
+    } finally {
+      setLoadingPdfs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'catalogo') {
+      fetchPdfList();
+    }
+  }, [activeTab]);
 
   const handleProductoChange = (id, field, value) => {
     setConfig((prev) => {
@@ -361,6 +391,7 @@ export default function PanelDeControl() {
     setError(null);
     setMessage(null);
     setPdfFile(file);
+    setPdfPageCount(null);
 
     const errorLogs = [];
 
@@ -379,6 +410,16 @@ export default function PanelDeControl() {
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
+      // Obtener cantidad de páginas para informar al usuario
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        setPdfPageCount(pdfDoc.numPages);
+        setMessage(`PDF detectado con ${pdfDoc.numPages} páginas. Preparando subida...`);
+      } catch (pageCountError) {
+        console.warn('[panel] No se pudo leer el número de páginas antes de subir:', pageCountError);
+      }
+
       // Subir cada chunk
       for (let i = 0; i < totalChunks; i++) {
         const start = i * chunkSize;
@@ -453,6 +494,8 @@ export default function PanelDeControl() {
               console.error('[panel] Error al generar imágenes:', genError);
               setMessage('PDF subido exitosamente. Las imágenes se generarán en la primera carga del catálogo.');
             }
+
+            await fetchPdfList();
           }
         } catch (chunkError) {
           const errorMsg = `Error al subir chunk ${i + 1}/${totalChunks}: ${chunkError.message}`;
@@ -480,6 +523,34 @@ export default function PanelDeControl() {
       setPdfFile(null);
     } finally {
       setPdfUploading(false);
+    }
+  };
+
+  const handleRegenerateImages = async () => {
+    setRegenerating(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch('/api/generate-pdf-images', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudieron generar las imágenes');
+      }
+      setMessage(data.message || 'Imágenes generadas exitosamente');
+      // Recargar configuración e imágenes
+      const configRes = await fetch('/api/catalog-config');
+      if (configRes.ok) {
+        const newConfig = await configRes.json();
+        setConfig(newConfig);
+      }
+      await fetchPdfList();
+      setLoadingCatalog(true);
+      setCatalogImages([]);
+    } catch (err) {
+      console.error('Error al regenerar imágenes:', err);
+      setError(err.message || 'No se pudieron generar las imágenes');
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -616,6 +687,9 @@ export default function PanelDeControl() {
       
       setMessage(successMessage + imagesInfo);
       setPdfFile(null);
+      if (pdfPageCount) {
+        setMessage(`${successMessage} (${pdfPageCount} páginas detectadas).${imagesInfo}`);
+      }
       
       // Recargar la configuración para obtener el nuevo número de páginas
       setTimeout(async () => {
@@ -708,6 +782,30 @@ export default function PanelDeControl() {
       setError(`Error: ${err.message}`);
     } finally {
       setAutoGenerating(false);
+    }
+  };
+
+  const handleDeletePdf = async (id) => {
+    if (!id) return;
+    if (!window.confirm('¿Eliminar este PDF del servidor?')) return;
+
+    setDeletingPdfId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/catalog-pdfs?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo eliminar el PDF');
+      }
+      setMessage('PDF eliminado. Genera nuevamente las imágenes si es necesario.');
+      await fetchPdfList();
+      setCatalogImages([]);
+      setConfig((prev) => prev ? { ...prev, imagesGenerated: false, numPages: prev.numPages } : prev);
+    } catch (err) {
+      console.error('Error al eliminar PDF:', err);
+      setError(err.message);
+    } finally {
+      setDeletingPdfId(null);
     }
   };
 
@@ -1662,6 +1760,85 @@ export default function PanelDeControl() {
                     <span className="text-sm font-semibold text-primary-700">
                       {config.numPages} {config.numPages === 1 ? 'página' : 'páginas'}
                     </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={handleRegenerateImages}
+                  disabled={regenerating}
+                  className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:bg-gray-400 shadow-sm transition-colors flex items-center gap-2"
+                >
+                  {regenerating ? (
+                    <>
+                      <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8 8 0 104.582 9M4 4l5 5" />
+                      </svg>
+                      Generar miniaturas
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchPdfList}
+                  disabled={loadingPdfs}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:bg-gray-100"
+                >
+                  {loadingPdfs ? 'Actualizando...' : 'Actualizar lista de PDFs'}
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-800">PDFs cargados</h3>
+                  {loadingPdfs && <span className="text-xs text-gray-500">Cargando...</span>}
+                </div>
+                {pdfList.length === 0 ? (
+                  <p className="text-sm text-gray-500">Aún no hay PDFs registrados.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b">
+                          <th className="py-2 pr-4">Nombre</th>
+                          <th className="py-2 pr-4">Tamaño</th>
+                          <th className="py-2 pr-4">Fecha</th>
+                          <th className="py-2 pr-4">Origen</th>
+                          <th className="py-2 pr-4">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pdfList.map((pdf) => (
+                          <tr key={pdf.id} className="border-b last:border-0">
+                            <td className="py-2 pr-4 text-gray-800 font-medium">{pdf.filename}</td>
+                            <td className="py-2 pr-4 text-gray-700">{((pdf.length || 0) / (1024 * 1024)).toFixed(2)} MB</td>
+                            <td className="py-2 pr-4 text-gray-600">
+                              {pdf.uploadDate ? new Date(pdf.uploadDate).toLocaleString() : 'N/D'}
+                            </td>
+                            <td className="py-2 pr-4 text-gray-600 capitalize">{pdf.storage || 'mongo'}</td>
+                            <td className="py-2 pr-4">
+                              {pdf.id !== 'filesystem' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePdf(pdf.id)}
+                                  disabled={deletingPdfId === pdf.id}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 disabled:text-gray-400 disabled:bg-gray-100"
+                                >
+                                  {deletingPdfId === pdf.id ? 'Eliminando...' : 'Eliminar'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

@@ -12,6 +12,8 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [catalogConfig, setCatalogConfig] = useState(null);
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [generationMessage, setGenerationMessage] = useState('');
 
   // Cargar configuración del catálogo desde la API (MongoDB o JSON)
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function CatalogPage() {
               imagesGenerated: configData?.imagesGenerated,
               numPages: configData?.numPages,
             });
+            setCatalogConfig(configData);
           } else {
             errorLogs.push(`[${new Date().toISOString()}] Error HTTP al cargar configuración: ${checkImagesResponse.status}`);
             console.warn('[catalog] No se pudo cargar configuración desde API');
@@ -217,6 +220,30 @@ export default function CatalogPage() {
 
     loadImages();
   }, [catalogConfig]);
+
+  const handleGenerateImages = async () => {
+    setGeneratingImages(true);
+    setGenerationMessage('Generando imágenes del PDF en el servidor...');
+    try {
+      const res = await fetch('/api/generate-pdf-images', { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Error HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setGenerationMessage(`Listo: ${data.numPages || 0} páginas procesadas. Recargando catálogo...`);
+      const configRes = await fetch('/api/catalog-config');
+      if (configRes.ok) {
+        const newConfig = await configRes.json();
+        setCatalogConfig(newConfig);
+      }
+    } catch (genError) {
+      console.error('[catalog] Error al generar imágenes manualmente:', genError);
+      setGenerationMessage(`No se pudieron generar las imágenes: ${genError.message}`);
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files && event.target.files[0];
@@ -378,6 +405,34 @@ export default function CatalogPage() {
       <main className="relative">
         {/* Botón de configuración siempre visible (abre modal de acceso al panel) */}
         <ConfigButton />
+
+        {/* Banner para generar imágenes manualmente si no existen */}
+        {(!catalogConfig?.imagesGenerated || images.length === 0) && (
+          <div className="mx-auto mt-6 mb-4 max-w-4xl px-4">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-amber-800">
+                  {generationMessage ||
+                    'Las imágenes del catálogo no están listas. Puedes generarlas ahora.'}
+                </div>
+                <button
+                  onClick={handleGenerateImages}
+                  disabled={generatingImages}
+                  className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                >
+                  {generatingImages ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Generando...
+                    </>
+                  ) : (
+                    'Generar imágenes'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {catalogConfig && (
           <FlipbookCatalog
