@@ -26,7 +26,6 @@ export default function PanelDeControl() {
   const [regenerating, setRegenerating] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
-  const [autoGenerating, setAutoGenerating] = useState(false);
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -139,47 +138,6 @@ export default function PanelDeControl() {
             }
           : p
       );
-
-      // Si se cambió la página, crear o actualizar el hotspot
-      if (field === 'page') {
-        const pageNum = Number.isNaN(parseInt(value, 10))
-          ? 1
-          : Math.max(1, Math.min(prev.numPages || 1, parseInt(value, 10)));
-
-        // Buscar si ya existe un hotspot para este producto
-        const existingHotspotIndex = prev.hotspots.findIndex(
-          (h) => h.idProducto === id
-        );
-
-        let updatedHotspots = [...prev.hotspots];
-
-        if (existingHotspotIndex >= 0) {
-          // Actualizar el hotspot existente
-          updatedHotspots[existingHotspotIndex] = {
-            ...updatedHotspots[existingHotspotIndex],
-            page: pageNum,
-            enabled: true, // Habilitar automáticamente cuando se asigna página
-          };
-        } else {
-          // Crear un nuevo hotspot
-          updatedHotspots.push({
-            page: pageNum,
-            idProducto: id,
-            enabled: true,
-            x: 50,
-            y: 50,
-            width: 20,
-            height: 20,
-          });
-        }
-
-        return {
-          ...prev,
-          productos: updatedProductos,
-          hotspots: updatedHotspots,
-        };
-      }
-
       return {
         ...prev,
         productos: updatedProductos,
@@ -192,8 +150,6 @@ export default function PanelDeControl() {
 
     setConfig((prev) => {
       const productos = [...prev.productos];
-      const hotspots = [...prev.hotspots];
-      const numPages = prev.numPages || 1;
 
       let nextIndex = productos.length + 1;
 
@@ -208,28 +164,11 @@ export default function PanelDeControl() {
           imagen: '',
           descripcion: '',
         });
-
-        // Crear un hotspot asociado, distribuyendo las páginas de forma cíclica
-        const page =
-          numPages > 0
-            ? ((hotspots.length + i) % numPages) + 1
-            : 1;
-
-        hotspots.push({
-          page,
-          idProducto: newId,
-          enabled: false,
-          x: 50,
-          y: 50,
-          width: 20,
-          height: 20,
-        });
       }
 
       return {
         ...prev,
         productos,
-        hotspots,
       };
     });
   };
@@ -408,12 +347,16 @@ export default function PanelDeControl() {
       
       // Leer el archivo completo
       const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
+      // Crear una copia del buffer para evitar "detached ArrayBuffer" si pdf.js lo consume
+      const bufferCopy = arrayBuffer.slice(0);
+      const uint8Array = new Uint8Array(bufferCopy);
       
-      // Obtener cantidad de páginas para informar al usuario
+      // Obtener cantidad de páginas para informar al usuario (usando copia separada)
       try {
         const pdfjsLib = await import('pdfjs-dist');
-        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        // Usar otra copia para pdf.js
+        const pdfBufferCopy = arrayBuffer.slice(0);
+        const pdfDoc = await pdfjsLib.getDocument({ data: pdfBufferCopy }).promise;
         setPdfPageCount(pdfDoc.numPages);
         setMessage(`PDF detectado con ${pdfDoc.numPages} páginas. Preparando subida...`);
       } catch (pageCountError) {
@@ -498,7 +441,7 @@ export default function PanelDeControl() {
             await fetchPdfList();
           }
         } catch (chunkError) {
-          const errorMsg = `Error al subir chunk ${i + 1}/${totalChunks}: ${chunkError.message}`;
+          const errorMsg = `Error al subir chunk ${i + 1}/${totalChunks}: ${chunkError.message || chunkError}`;
           errorLogs.push(`[${new Date().toISOString()}] ${errorMsg}`);
           console.error('[panel]', errorMsg, chunkError);
           throw new Error(errorMsg);
@@ -508,7 +451,7 @@ export default function PanelDeControl() {
       setPdfFile(null);
     } catch (err) {
       const errorDetails = {
-        message: err.message,
+        message: err.message || String(err),
         name: err.name,
         logs: errorLogs,
         timestamp: new Date().toISOString(),
@@ -736,55 +679,6 @@ export default function PanelDeControl() {
     setMessage('Marcador eliminado. Recuerda guardar los cambios.');
   };
 
-  const handleAutoGenerate = async () => {
-    if (!config?.numPages || config.numPages < 1) {
-      setError('No hay páginas detectadas. Sube un PDF primero.');
-      return;
-    }
-
-    if (!window.confirm(`¿Generar automáticamente ${config.numPages} productos y ${config.numPages} hotspots?\n\nEsto sobrescribirá los datos existentes.`)) {
-      return;
-    }
-
-    setAutoGenerating(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const res = await fetch('/api/auto-generate-items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          numPages: config.numPages,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Error al generar items');
-      }
-
-      setMessage(`✓ Se generaron ${data.productosGenerados} productos y ${data.hotspotsGenerados} hotspots automáticamente`);
-      
-      // Recargar configuración
-      setTimeout(async () => {
-        const configRes = await fetch('/api/catalog-config');
-        if (configRes.ok) {
-          const newConfig = await configRes.json();
-          setConfig(newConfig);
-        }
-      }, 1000);
-    } catch (err) {
-      console.error('[panel] Error al generar items:', err);
-      setError(`Error: ${err.message}`);
-    } finally {
-      setAutoGenerating(false);
-    }
-  };
-
   const handleDeletePdf = async (id) => {
     if (!id) return;
     if (!window.confirm('¿Eliminar este PDF del servidor?')) return;
@@ -871,39 +765,16 @@ export default function PanelDeControl() {
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
                     Panel de Control
                   </h1>
-                  {typeof config?.numPages === 'number' && config.numPages > 0 && (
-                    <>
-                      <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary-50 border border-primary-200">
-                        <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="text-sm font-semibold text-primary-700">
-                          <span className="text-primary-600">{config.numPages}</span> páginas
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAutoGenerate}
-                        disabled={autoGenerating}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-xs font-semibold shadow-sm transition-all"
-                        title={`Generar automáticamente ${config.numPages} productos y ${config.numPages} hotspots`}
-                      >
-                        {autoGenerating ? (
-                          <>
-                            <span className="inline-block animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-white"></span>
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Auto-generar
-                          </>
-                        )}
-                      </button>
-                    </>
-                  )}
+              {typeof config?.numPages === 'number' && config.numPages > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary-50 border border-primary-200">
+                  <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-primary-700">
+                    <span className="text-primary-600">{config.numPages}</span> páginas
+                  </span>
+                </div>
+              )}
                 </div>
                 <p className="text-gray-600 mt-1 text-xs md:text-sm">
                   Gestiona productos, marcadores y configuración del catálogo.
@@ -1222,80 +1093,7 @@ export default function PanelDeControl() {
                       </div>
                     )}
 
-                    {/* Campo de página - Mejorado */}
-                    {viewMode === 'grid' && (
-                      <div className="mt-2">
-                        <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1.5">
-                          Página del Catálogo
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <select
-                            className="flex-1 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white px-3 py-2.5 font-medium text-gray-700 transition-all hover:border-primary-300"
-                            value={
-                              (() => {
-                                const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
-                                return hotspot?.page || '';
-                              })()
-                            }
-                            onChange={(e) =>
-                              handleProductoChange(producto.id, 'page', e.target.value)
-                            }
-                          >
-                            <option value="">-- Sin página asignada --</option>
-                            {(() => {
-                              const numPages = config.numPages && config.numPages > 0 ? config.numPages : 1;
-                              return Array.from({ length: numPages }, (_, i) => i + 1).map(
-                                (pageNum) => (
-                                  <option key={pageNum} value={pageNum}>
-                                    Página {pageNum}
-                                  </option>
-                                )
-                              );
-                            })()}
-                          </select>
-                          {(() => {
-                            const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
-                            if (hotspot?.enabled && hotspot?.page) {
-                              return (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-bold whitespace-nowrap shadow-sm">
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                  Visible
-                                </span>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1.5 px-1">
-                          {(() => {
-                            const hotspot = config.hotspots.find((h) => h.idProducto === producto.id);
-                            if (hotspot?.page) {
-                              return (
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-                                  Hotspot visible en página {hotspot.page}
-                                </span>
-                              );
-                            }
-                            return (
-                              <span className="text-gray-400 italic">
-                                Selecciona una página para activar el hotspot
-                              </span>
-                            );
-                          })()}
-                        </p>
-                      </div>
-                    )}
+                    {/* Campo de página eliminado: los hotspots se agregan manualmente */}
                     
                     {/* Botón eliminar en vista lista */}
                     {viewMode === 'list' && (

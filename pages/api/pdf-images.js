@@ -51,23 +51,44 @@ export default async function handler(req, res) {
         if (clientPromise) {
           const client = await clientPromise;
           const db = client.db();
-          // Intentar ambos nombres de bucket para compatibilidad
-          let bucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
-          let filename = `catalogo_page_${pageNum}.png`;
-          let files = await bucket.find({ filename }).toArray();
+          const bucket = new GridFSBucket(db, { bucketName: 'pdf_images' });
           
-          // Si no se encuentra, intentar con el nombre antiguo
+          // Intentar primero con .jpg, luego .png para compatibilidad
+          let filename = `catalogo_page_${pageNum}.jpg`;
+          let files = await bucket.find({ filename }).toArray();
+          let contentType = 'image/jpeg';
+          
           if (files.length === 0) {
-            bucket = new GridFSBucket(db, { bucketName: 'pdfImages' });
-            filename = `page-${pageNum}.png`;
+            filename = `catalogo_page_${pageNum}.png`;
             files = await bucket.find({ filename }).toArray();
+            contentType = 'image/png';
+          }
+          
+          // Fallback al bucket antiguo
+          if (files.length === 0) {
+            const oldBucket = new GridFSBucket(db, { bucketName: 'pdfImages' });
+            filename = `page-${pageNum}.png`;
+            files = await oldBucket.find({ filename }).toArray();
+            contentType = 'image/png';
+            if (files.length > 0) {
+              const file = files[0];
+              console.log(`[pdf-images] Imagen encontrada en GridFS (bucket antiguo): ${filename}`);
+              res.writeHead(200, {
+                'Content-Type': contentType,
+                'Content-Length': file.length,
+                'Cache-Control': 'public, max-age=31536000, immutable',
+              });
+              const downloadStream = oldBucket.openDownloadStreamByName(filename);
+              downloadStream.pipe(res);
+              return;
+            }
           }
           
           if (files.length > 0) {
             const file = files[0];
             console.log(`[pdf-images] Imagen encontrada en GridFS: ${filename} (página ${pageNum}, tamaño: ${file.length} bytes)`);
             res.writeHead(200, {
-              'Content-Type': 'image/png',
+              'Content-Type': contentType,
               'Content-Length': file.length,
               'Cache-Control': 'public, max-age=31536000, immutable',
             });
@@ -91,14 +112,20 @@ export default async function handler(req, res) {
       }
     }
     
-    // Fallback: leer desde sistema de archivos
-    const imagePath = path.join(process.cwd(), 'public', 'pdf-images', `page-${pageNum}.png`);
+    // Fallback: leer desde sistema de archivos (primero .jpg, luego .png)
+    let imagePath = path.join(process.cwd(), 'public', 'pdf-images', `page-${pageNum}.jpg`);
+    let contentType = 'image/jpeg';
+    
+    if (!fs.existsSync(imagePath)) {
+      imagePath = path.join(process.cwd(), 'public', 'pdf-images', `page-${pageNum}.png`);
+      contentType = 'image/png';
+    }
     
     if (fs.existsSync(imagePath)) {
       try {
         const stat = fs.statSync(imagePath);
         res.writeHead(200, {
-          'Content-Type': 'image/png',
+          'Content-Type': contentType,
           'Content-Length': stat.size,
           'Cache-Control': 'public, max-age=31536000, immutable',
         });

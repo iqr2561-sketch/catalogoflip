@@ -7,7 +7,8 @@ import path from 'path';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      // Ampliamos porque 50MB no alcanzan para catálogos largos
+      sizeLimit: '200mb',
     },
   },
 };
@@ -81,13 +82,18 @@ export default async function handler(req, res) {
             const pageNum = pageNumbers?.[i] || (i + 1);
             const imageData = images[i];
             
+            // Detectar formato de imagen
+            const isJpeg = imageData.startsWith('data:image/jpeg');
+            const ext = isJpeg ? 'jpg' : 'png';
+            const contentType = isJpeg ? 'image/jpeg' : 'image/png';
+            
             // Convertir dataURL a buffer
             const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
             
-            const filename = `catalogo_page_${pageNum}.png`;
+            const filename = `catalogo_page_${pageNum}.${ext}`;
             const uploadStream = bucket.openUploadStream(filename, {
-              contentType: 'image/png',
+              contentType,
             });
             
             const readable = Readable.from([buffer]);
@@ -134,11 +140,15 @@ export default async function handler(req, res) {
       const pageNum = pageNumbers?.[i] || (i + 1);
       const imageData = images[i];
       
+      // Detectar formato de imagen
+      const isJpeg = imageData.startsWith('data:image/jpeg');
+      const ext = isJpeg ? 'jpg' : 'png';
+      
       // Convertir dataURL a buffer
-      const base64Data = imageData.replace(/^data:image\/png;base64,/, '');
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
       
-      const filename = `page-${pageNum}.png`;
+      const filename = `page-${pageNum}.${ext}`;
       const filePath = path.join(imagesDir, filename);
       fs.writeFileSync(filePath, buffer);
     }

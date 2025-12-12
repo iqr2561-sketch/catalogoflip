@@ -72,7 +72,7 @@ function wipeFsImagesDir(imagesDir) {
     if (!fs.existsSync(imagesDir)) return;
     const files = fs.readdirSync(imagesDir);
     files.forEach((file) => {
-      if (file.endsWith('.png')) {
+      if (file.endsWith('.jpg') || file.endsWith('.png')) {
         fs.unlinkSync(path.join(imagesDir, file));
       }
     });
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
 
     console.log(`[generate-pdf-images] Fuente de PDF: ${pdfData.source}`);
     console.log('[generate-pdf-images] Generando imágenes del PDF...');
-    const images = await pdfToImagesServer(pdfData.buffer, 2.0);
+    const images = await pdfToImagesServer(pdfData.buffer, 1.5);
     console.log(`[generate-pdf-images] ${images.length} imágenes generadas exitosamente`);
 
     let storedIn = [];
@@ -135,9 +135,9 @@ export default async function handler(req, res) {
 
       console.log('[generate-pdf-images] Guardando nuevas imágenes en MongoDB...');
       for (const image of images) {
-        const filename = `catalogo_page_${image.pageNum}.png`;
+        const filename = `catalogo_page_${image.pageNum}.jpg`;
         const uploadStream = imagesBucket.openUploadStream(filename, {
-          contentType: 'image/png',
+          contentType: 'image/jpeg',
         });
 
         const readable = Readable.from([image.buffer]);
@@ -180,7 +180,7 @@ export default async function handler(req, res) {
       }
 
       for (const image of images) {
-        const filename = `page-${image.pageNum}.png`;
+        const filename = `page-${image.pageNum}.jpg`;
         const filePath = path.join(imagesDir, filename);
         fs.writeFileSync(filePath, image.buffer);
       }
