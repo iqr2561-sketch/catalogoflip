@@ -156,19 +156,19 @@ export default function PanelDeControl() {
           
           if (res.ok && result.ok) {
             console.log('[panel] Guardado exitoso:', result);
-            setMessage(`✓ Producto eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setMessage(`✓ Producto eliminado correctamente`);
             setTimeout(() => {
               window.location.reload();
-            }, 2000);
+            }, 1500);
           } else {
             console.error('[panel] Error al guardar:', result);
-            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El producto fue eliminado localmente.`);
-            setTimeout(() => setError(null), 10000);
+            setError(`✗ No se pudo eliminar el producto. Intenta nuevamente.`);
+            setTimeout(() => setError(null), 8000);
           }
         } catch (err) {
           console.error('[panel] Error al guardar después de eliminar:', err);
-          setError(`✗ Error de conexión: ${err.message}. El producto fue eliminado localmente. Intenta guardar manualmente.`);
-          setTimeout(() => setError(null), 10000);
+          setError(`✗ Error de conexión. Intenta nuevamente.`);
+          setTimeout(() => setError(null), 8000);
         } finally {
           setSaving(false);
         }
@@ -360,19 +360,19 @@ export default function PanelDeControl() {
           
           if (res.ok && result.ok) {
             console.log('[panel] Guardado exitoso:', result);
-            setMessage(`✓ ${countToDelete} marcador(es) eliminado(s) y guardado(s) ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setMessage(`✓ ${countToDelete} marcador(es) eliminado(s) correctamente`);
             setTimeout(() => {
               window.location.reload();
-            }, 2000);
+            }, 1500);
           } else {
             console.error('[panel] Error al guardar:', result);
-            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
-            setTimeout(() => setError(null), 10000);
+            setError(`✗ No se pudieron eliminar los marcadores. Intenta nuevamente.`);
+            setTimeout(() => setError(null), 8000);
           }
         } catch (err) {
           console.error('[panel] Error al guardar después de eliminar:', err);
-          setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
-          setTimeout(() => setError(null), 10000);
+          setError(`✗ Error de conexión. Intenta nuevamente.`);
+          setTimeout(() => setError(null), 8000);
         } finally {
           setSaving(false);
         }
@@ -650,19 +650,19 @@ export default function PanelDeControl() {
           
           if (res.ok && result.ok) {
             console.log('[panel] Guardado exitoso:', result);
-            setMessage(`✓ Marcador eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setMessage(`✓ Marcador eliminado correctamente`);
             setTimeout(() => {
               window.location.reload();
-            }, 2000);
+            }, 1500);
           } else {
             console.error('[panel] Error al guardar:', result);
-            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El marcador fue eliminado localmente.`);
-            setTimeout(() => setError(null), 10000);
+            setError(`✗ No se pudo eliminar el marcador. Intenta nuevamente.`);
+            setTimeout(() => setError(null), 8000);
           }
         } catch (err) {
           console.error('[panel] Error al guardar después de eliminar marcador:', err);
-          setError(`✗ Error de conexión: ${err.message}. El marcador fue eliminado localmente. Intenta guardar manualmente.`);
-          setTimeout(() => setError(null), 10000);
+          setError(`✗ Error de conexión. Intenta nuevamente.`);
+          setTimeout(() => setError(null), 8000);
         } finally {
           setSaving(false);
         }
@@ -711,19 +711,19 @@ export default function PanelDeControl() {
           
           if (res.ok && result.ok) {
             console.log('[panel] Guardado exitoso:', result);
-            setMessage(`✓ Todos los marcadores (${count}) eliminados y guardados ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setMessage(`✓ Todos los marcadores (${count}) eliminados correctamente`);
             setTimeout(() => {
               window.location.reload();
-            }, 2000);
+            }, 1500);
           } else {
             console.error('[panel] Error al guardar:', result);
-            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
-            setTimeout(() => setError(null), 10000);
+            setError(`✗ No se pudieron eliminar los marcadores. Intenta nuevamente.`);
+            setTimeout(() => setError(null), 8000);
           }
         } catch (err) {
           console.error('[panel] Error al guardar después de eliminar todos los marcadores:', err);
-          setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
-          setTimeout(() => setError(null), 10000);
+          setError(`✗ Error de conexión. Intenta nuevamente.`);
+          setTimeout(() => setError(null), 8000);
         } finally {
           setSaving(false);
         }
