@@ -427,7 +427,12 @@ export default function FlipbookCatalog({
                     <img
                       src={images[leftIndex]}
                       alt={`Página ${leftIndex + 1}`}
-                      className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm"
+                      className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm transition-opacity duration-300"
+                      loading={leftIndex <= 2 ? "eager" : "lazy"}
+                      style={{ opacity: loadedImages.has(images[leftIndex]) ? 1 : 0.3 }}
+                      onLoad={() => {
+                        setLoadedImages(prev => new Set([...prev, images[leftIndex]]));
+                      }}
                     />
                   </div>
                 )}
