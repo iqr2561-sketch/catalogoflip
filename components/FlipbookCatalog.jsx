@@ -584,8 +584,13 @@ export default function FlipbookCatalog({
           Haz clic en los puntos destacados para ver más información del producto
         </p>
         <p className="text-xs mt-2">
-          Arrastra las esquinas o usa las flechas para pasar las páginas
+          Usa las flechas del teclado, el espacio, o haz clic en los lados de la página para navegar
         </p>
+        {isLoading && (
+          <p className="text-xs mt-1 text-primary-600 animate-pulse">
+            Cargando catálogo...
+          </p>
+        )}
       </div>
 
       {/* Modal de producto */}
