@@ -277,19 +277,62 @@ export default function PanelDeControl() {
     const pos = position || globalPosition;
 
     setConfig((prev) => {
-      const defaultProductId = prev.productos[0]?.id || '';
+      let productos = [...prev.productos];
       const newHotspots = [];
       
+      // Calcular cuántos marcadores se van a crear
+      let marcadoresACrear = 0;
+      if (end && end >= start) {
+        // Usar rango de páginas
+        const pages = [];
+        for (let p = start; p <= end && pages.length < count; p++) {
+          pages.push(p);
+          marcadoresACrear++;
+        }
+      } else {
+        // Modo secuencial
+        for (let i = 0; i < count; i++) {
+          const page = start + i;
+          if (page <= maxPages) {
+            marcadoresACrear++;
+          }
+        }
+      }
+
+      // Crear productos automáticamente si no hay suficientes
+      if (productos.length < marcadoresACrear) {
+        const productosNecesarios = marcadoresACrear - productos.length;
+        let nextIndex = productos.length + 1;
+        
+        for (let i = 0; i < productosNecesarios; i++) {
+          const newId = `p${String(nextIndex).padStart(3, '0')}`;
+          nextIndex++;
+          
+          productos.push({
+            id: newId,
+            nombre: `Producto Página ${start + i}`,
+            precio: 0,
+            imagen: '',
+            descripcion: '',
+          });
+        }
+      }
+
+      // Crear los marcadores
       if (end && end >= start) {
         // Usar rango de páginas
         const pages = [];
         for (let p = start; p <= end && pages.length < count; p++) {
           pages.push(p);
         }
-        pages.forEach((page) => {
+        pages.forEach((page, index) => {
+          // Asignar producto diferente a cada marcador si hay suficientes
+          const productIndex = Math.min(index, productos.length - 1);
+          const productId = productos[productIndex]?.id || productos[0]?.id || '';
+          
           newHotspots.push({
             page: page,
-            idProducto: defaultProductId,
+            idProducto: productId,
             enabled: false,
             x: pos.x,
             y: pos.y,
@@ -302,9 +345,13 @@ export default function PanelDeControl() {
         for (let i = 0; i < count; i++) {
           const page = start + i;
           if (page <= maxPages) {
+            // Asignar producto diferente a cada marcador si hay suficientes
+            const productIndex = Math.min(i, productos.length - 1);
+            const productId = productos[productIndex]?.id || productos[0]?.id || '';
+            
             newHotspots.push({
               page: page,
-              idProducto: defaultProductId,
+              idProducto: productId,
               enabled: false,
               x: pos.x,
               y: pos.y,
@@ -317,6 +364,7 @@ export default function PanelDeControl() {
 
       return {
         ...prev,
+        productos: productos,
         hotspots: [...prev.hotspots, ...newHotspots],
       };
     });
