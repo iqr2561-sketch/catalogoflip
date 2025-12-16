@@ -20,6 +20,9 @@ export default function PanelDeControl() {
   const [pdfPageCount, setPdfPageCount] = useState(null);
   const [dbTesting, setDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
+  const [bulkHotspotCount, setBulkHotspotCount] = useState(1);
+  const [bulkHotspotStartPage, setBulkHotspotStartPage] = useState(1);
+  const [globalPosition, setGlobalPosition] = useState({ x: 50, y: 50, width: 20, height: 20 });
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -29,11 +32,11 @@ export default function PanelDeControl() {
         setLoading(true);
         const res = await fetch('/api/catalog-config');
         const data = await res.json();
-        // Asegurar que todos los hotspots tengan la propiedad enabled
+        // Asegurar que todos los hotspots tengan la propiedad enabled (mantener el valor existente o false por defecto)
         const normalized = {
           ...data,
           hotspots: (data.hotspots || []).map((h) => ({
-            enabled: true,
+            enabled: h.enabled !== undefined ? h.enabled : false,
             ...h,
           })),
         };
@@ -192,15 +195,62 @@ export default function PanelDeControl() {
           {
             page: 1,
             idProducto: defaultProductId,
-            enabled: true,
-            x: 50,
-            y: 50,
-            width: 20,
-            height: 20,
+            enabled: false, // Por defecto deshabilitado
+            x: globalPosition.x,
+            y: globalPosition.y,
+            width: globalPosition.width,
+            height: globalPosition.height,
           },
         ],
       };
     });
+  };
+
+  const handleBulkAddHotspots = (cantidad, startPage, position) => {
+    const count = Math.max(1, Math.min(100, cantidad || 1));
+    const start = Math.max(1, Math.min(config?.numPages || 1, startPage || 1));
+    const pos = position || globalPosition;
+
+    setConfig((prev) => {
+      const defaultProductId = prev.productos[0]?.id || '';
+      const newHotspots = [];
+      
+      for (let i = 0; i < count; i++) {
+        const page = start + i;
+        // Solo agregar si la página no excede el número total de páginas
+        if (page <= (prev.numPages || 1)) {
+          newHotspots.push({
+            page: page,
+            idProducto: defaultProductId,
+            enabled: false, // Por defecto deshabilitado
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+          });
+        }
+      }
+
+      return {
+        ...prev,
+        hotspots: [...prev.hotspots, ...newHotspots],
+      };
+    });
+  };
+
+  const handleApplyGlobalPosition = () => {
+    setConfig((prev) => ({
+      ...prev,
+      hotspots: prev.hotspots.map((h) => ({
+        ...h,
+        x: globalPosition.x,
+        y: globalPosition.y,
+        width: globalPosition.width,
+        height: globalPosition.height,
+      })),
+    }));
+    setMessage('Posición global aplicada a todos los marcadores');
+    setTimeout(() => setMessage(null), 3000);
   };
 
   const handleSave = async () => {
@@ -1225,14 +1275,130 @@ export default function PanelDeControl() {
               </table>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddHotspot}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 transition-colors"
-            >
-              <span className="text-lg leading-none">+</span>
-              Añadir hotspot
-            </button>
+            <div className="space-y-4">
+              {/* Configuración de posición global */}
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Posición Global para Marcadores</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      X (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={globalPosition.x}
+                      onChange={(e) => setGlobalPosition(prev => ({ ...prev, x: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      Y (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={globalPosition.y}
+                      onChange={(e) => setGlobalPosition(prev => ({ ...prev, y: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      Ancho (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={globalPosition.width}
+                      onChange={(e) => setGlobalPosition(prev => ({ ...prev, width: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      Alto (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={globalPosition.height}
+                      onChange={(e) => setGlobalPosition(prev => ({ ...prev, height: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyGlobalPosition}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Aplicar a Todos los Marcadores
+                </button>
+              </div>
+
+              {/* Agregar marcadores individuales */}
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddHotspot}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 transition-colors"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  Añadir marcador
+                </button>
+              </div>
+
+              {/* Agregar múltiples marcadores */}
+              <div className="bg-gradient-to-br from-primary-50 to-white rounded-xl p-5 border border-primary-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Agregar Múltiples Marcadores</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      Cantidad
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={bulkHotspotCount}
+                      onChange={(e) => setBulkHotspotCount(Math.max(1, Math.min(100, parseInt(e.target.value || '1', 10))))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                      Página Inicial
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={config?.numPages || 1}
+                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      value={bulkHotspotStartPage}
+                      onChange={(e) => setBulkHotspotStartPage(Math.max(1, Math.min(config?.numPages || 1, parseInt(e.target.value || '1', 10))))}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      El marcador 1 empezará en la página {bulkHotspotStartPage}, el 2 en la {bulkHotspotStartPage + 1}, etc.
+                    </p>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => handleBulkAddHotspots(bulkHotspotCount, bulkHotspotStartPage, globalPosition)}
+                      className="w-full px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                    >
+                      Crear {bulkHotspotCount} Marcador{bulkHotspotCount !== 1 ? 'es' : ''}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
           )}
         </div>
