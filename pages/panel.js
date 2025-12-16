@@ -271,9 +271,9 @@ export default function PanelDeControl() {
 
   const handleBulkAddHotspots = (cantidad, startPage, endPage, position) => {
     const count = Math.max(1, Math.min(100, cantidad || 1));
-    const maxPages = config?.numPages || 1;
-    const start = Math.max(1, Math.min(maxPages, startPage || 1));
-    const end = endPage ? Math.max(start, Math.min(maxPages, endPage)) : null;
+    const maxPages = config?.numPages || 9999; // Permitir más páginas si no está definido
+    const start = Math.max(1, startPage || 1);
+    const end = endPage ? Math.max(start, endPage) : null;
     const pos = position || globalPosition;
 
     setConfig((prev) => {
@@ -290,13 +290,8 @@ export default function PanelDeControl() {
           marcadoresACrear++;
         }
       } else {
-        // Modo secuencial
-        for (let i = 0; i < count; i++) {
-          const page = start + i;
-          if (page <= maxPages) {
-            marcadoresACrear++;
-          }
-        }
+        // Modo secuencial - crear todos los marcadores solicitados
+        marcadoresACrear = count;
       }
 
       // Crear productos automáticamente si no hay suficientes
@@ -341,26 +336,30 @@ export default function PanelDeControl() {
           });
         });
       } else {
-        // Modo secuencial (comportamiento anterior)
+        // Modo secuencial - crear todos los marcadores sin limitación de páginas
         for (let i = 0; i < count; i++) {
           const page = start + i;
-          if (page <= maxPages) {
-            // Asignar producto diferente a cada marcador si hay suficientes
-            const productIndex = Math.min(i, productos.length - 1);
-            const productId = productos[productIndex]?.id || productos[0]?.id || '';
-            
-            newHotspots.push({
-              page: page,
-              idProducto: productId,
-              enabled: false,
-              x: pos.x,
-              y: pos.y,
-              width: pos.width,
-              height: pos.height,
-            });
-          }
+          // Asignar producto diferente a cada marcador si hay suficientes
+          const productIndex = Math.min(i, productos.length - 1);
+          const productId = productos[productIndex]?.id || productos[0]?.id || '';
+          
+          newHotspots.push({
+            page: page,
+            idProducto: productId,
+            enabled: false,
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+          });
         }
       }
+
+      console.log(`[handleBulkAddHotspots] Creados ${newHotspots.length} marcadores desde página ${start}`, {
+        cantidadSolicitada: count,
+        marcadoresCreados: newHotspots.length,
+        productosDisponibles: productos.length
+      });
 
       return {
         ...prev,
