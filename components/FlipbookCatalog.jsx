@@ -18,6 +18,8 @@ export default function FlipbookCatalog({
   const [containerSize, setContainerSize] = useState({ width: 600, height: 800 });
   const [flipDirection, setFlipDirection] = useState(null); // 'next' | 'prev' | null
   const [isMobile, setIsMobile] = useState(false);
+  const [loadedImages, setLoadedImages] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
@@ -437,7 +439,12 @@ export default function FlipbookCatalog({
                     <img
                       src={images[rightIndex]}
                       alt={`Página ${rightIndex + 1}`}
-                      className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm"
+                      className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm transition-opacity duration-300"
+                      loading={rightIndex <= 2 ? "eager" : "lazy"}
+                      style={{ opacity: loadedImages.has(images[rightIndex]) ? 1 : 0.3 }}
+                      onLoad={(e) => {
+                        setLoadedImages(prev => new Set([...prev, images[rightIndex]]));
+                      }}
                     />
                   </div>
                 )}
@@ -453,7 +460,12 @@ export default function FlipbookCatalog({
                   <img
                     src={images[currentPage]}
                     alt={`Página ${currentPage + 1}`}
-                    className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm"
+                    className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm transition-opacity duration-300"
+                    loading={currentPage <= 2 ? "eager" : "lazy"}
+                    style={{ opacity: loadedImages.has(images[currentPage]) ? 1 : 0.3 }}
+                    onLoad={(e) => {
+                      setLoadedImages(prev => new Set([...prev, images[currentPage]]));
+                    }}
                   />
                 </div>
               )
