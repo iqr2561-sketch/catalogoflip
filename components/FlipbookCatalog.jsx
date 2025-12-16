@@ -14,7 +14,7 @@ export default function FlipbookCatalog({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
-  const [viewMode, setViewMode] = useState('double'); // 'single' | 'double'
+  const [viewMode, setViewMode] = useState('single'); // 'single' | 'double'
   const [containerSize, setContainerSize] = useState({ width: 600, height: 800 });
   const [flipDirection, setFlipDirection] = useState(null); // 'next' | 'prev' | null
   const [isMobile, setIsMobile] = useState(false);
@@ -120,9 +120,18 @@ export default function FlipbookCatalog({
     return () => clearTimeout(timeoutId);
   }, [flipDirection]);
 
-  // Obtener hotspots de la página actual (solo los habilitados)
+  // Obtener hotspots de las páginas visibles (solo los habilitados)
+  const isDouble = !isMobile && viewMode === 'double';
+  const baseIndex = isDouble ? currentPage - (currentPage % 2) : currentPage;
+  const leftPageNum = baseIndex + 1;
+  const rightPageNum = isDouble && baseIndex + 1 < images.length ? baseIndex + 2 : null;
+  
+  const visiblePageNumbers = isDouble 
+    ? [leftPageNum, rightPageNum].filter(Boolean)
+    : [currentPage + 1];
+  
   const currentPageHotspots = hotspots.filter((h) => {
-    const pageMatch = h.page === currentPage + 1;
+    const pageMatch = visiblePageNumbers.includes(h.page);
     const isEnabled = h.enabled !== false;
     return pageMatch && isEnabled;
   });
@@ -451,34 +460,99 @@ export default function FlipbookCatalog({
             )}
                 {/* Hotspots superpuestos - sobre el flipbook */}
                 {pageDimensions.width > 0 && (
-                  <div
-                    className="absolute top-0 left-0 pointer-events-none"
-                    style={{
-                      width: pageDimensions.width || 600,
-                      height: pageDimensions.height || 800,
-                    }}
-                  >
-                    {currentPageHotspots.map((hotspot, index) => {
-                      const producto = currentPageProducts[index];
-                      // Si no hay producto, no renderizar el hotspot
-                      if (!producto) {
-                        console.warn(`Hotspot sin producto en página ${hotspot.page}:`, hotspot);
-                        return null;
-                      }
+                  <>
+                    {isDouble ? (
+                      // Modo double: hotspots en ambas páginas
+                      <>
+                        {/* Hotspots de la página izquierda */}
+                        <div
+                          className="absolute top-0 left-0 pointer-events-none"
+                          style={{
+                            width: (pageDimensions.width || 600) / 2,
+                            height: pageDimensions.height || 800,
+                          }}
+                        >
+                          {currentPageHotspots
+                            .filter((h) => h.page === leftPageNum)
+                            .map((hotspot, index) => {
+                              const producto = productos.find((p) => String(p.id) === String(hotspot.idProducto));
+                              if (!producto) return null;
 
-                      return (
-                        <div key={`${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
-                          <Hotspot
-                            hotspot={hotspot}
-                            producto={producto}
-                            onHotspotClick={handleHotspotClick}
-                            pageWidth={pageDimensions.width || 600}
-                            pageHeight={pageDimensions.height || 800}
-                          />
+                              return (
+                                <div key={`left-${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
+                                  <Hotspot
+                                    hotspot={hotspot}
+                                    producto={producto}
+                                    onHotspotClick={handleHotspotClick}
+                                    pageWidth={(pageDimensions.width || 600) / 2}
+                                    pageHeight={pageDimensions.height || 800}
+                                  />
+                                </div>
+                              );
+                            })}
                         </div>
-                      );
-                    })}
-                  </div>
+                        {/* Hotspots de la página derecha */}
+                        {rightPageNum && (
+                          <div
+                            className="absolute top-0 left-1/2 pointer-events-none"
+                            style={{
+                              width: (pageDimensions.width || 600) / 2,
+                              height: pageDimensions.height || 800,
+                            }}
+                          >
+                            {currentPageHotspots
+                              .filter((h) => h.page === rightPageNum)
+                              .map((hotspot, index) => {
+                                const producto = productos.find((p) => String(p.id) === String(hotspot.idProducto));
+                                if (!producto) return null;
+
+                                return (
+                                  <div key={`right-${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
+                                    <Hotspot
+                                      hotspot={hotspot}
+                                      producto={producto}
+                                      onHotspotClick={handleHotspotClick}
+                                      pageWidth={(pageDimensions.width || 600) / 2}
+                                      pageHeight={pageDimensions.height || 800}
+                                    />
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      // Modo single: hotspots en una sola página
+                      <div
+                        className="absolute top-0 left-0 pointer-events-none"
+                        style={{
+                          width: pageDimensions.width || 600,
+                          height: pageDimensions.height || 800,
+                        }}
+                      >
+                        {currentPageHotspots.map((hotspot, index) => {
+                          const producto = currentPageProducts[index];
+                          // Si no hay producto, no renderizar el hotspot
+                          if (!producto) {
+                            console.warn(`Hotspot sin producto en página ${hotspot.page}:`, hotspot);
+                            return null;
+                          }
+
+                          return (
+                            <div key={`${hotspot.page}-${hotspot.idProducto}-${index}`} className="pointer-events-auto">
+                              <Hotspot
+                                hotspot={hotspot}
+                                producto={producto}
+                                onHotspotClick={handleHotspotClick}
+                                pageWidth={pageDimensions.width || 600}
+                                pageHeight={pageDimensions.height || 800}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
