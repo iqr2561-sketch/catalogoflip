@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Toast from '../components/Toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function PanelDeControl() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function PanelDeControl() {
   const [bulkHotspotEndPage, setBulkHotspotEndPage] = useState(null);
   const [globalPosition, setGlobalPosition] = useState({ x: 50, y: 50, width: 20, height: 20 });
   const [selectedHotspots, setSelectedHotspots] = useState(new Set());
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -114,10 +116,18 @@ export default function PanelDeControl() {
   };
 
   const handleDeleteProducto = async (id) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Producto',
+      message: '¿Estás seguro de que quieres eliminar este producto?',
+      onConfirm: () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        deleteProducto(id);
+      }
+    });
+  };
 
+  const deleteProducto = async (id) => {
     // Calcular la configuración actualizada ANTES de actualizar el estado
     setConfig((prev) => {
       const remaining = prev.productos.filter((p) => p.id !== id);
@@ -318,9 +328,18 @@ export default function PanelDeControl() {
       return;
     }
 
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar ${selectedHotspots.size} marcador(es)?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Marcadores',
+      message: `¿Estás seguro de que quieres eliminar ${selectedHotspots.size} marcador(es)?`,
+      onConfirm: () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        deleteBulkHotspots();
+      }
+    });
+  };
+
+  const deleteBulkHotspots = () => {
 
     const countToDelete = selectedHotspots.size;
 
@@ -616,9 +635,18 @@ export default function PanelDeControl() {
   };
 
   const handleDeleteHotspot = async (index) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este marcador?')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Marcador',
+      message: '¿Estás seguro de que quieres eliminar este marcador?',
+      onConfirm: () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        deleteHotspot(index);
+      }
+    });
+  };
+
+  const deleteHotspot = async (index) => {
     
     setConfig((prev) => {
       const updatedConfig = {
@@ -673,9 +701,18 @@ export default function PanelDeControl() {
   };
 
   const handleDeleteAllHotspots = async () => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar TODOS los ${config.hotspots.length} marcadores? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Todos los Marcadores',
+      message: `¿Estás seguro de que quieres eliminar TODOS los ${config.hotspots.length} marcadores? Esta acción no se puede deshacer.`,
+      onConfirm: () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        deleteAllHotspots();
+      }
+    });
+  };
+
+  const deleteAllHotspots = async () => {
 
     setConfig((prev) => {
       const count = prev.hotspots.length;
@@ -849,6 +886,18 @@ export default function PanelDeControl() {
           type="error"
           onClose={() => setError(null)}
           duration={8000}
+        />
+
+        {/* Confirm Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm || (() => {})}
+          onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null })}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          type="danger"
         />
 
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -1257,9 +1306,15 @@ export default function PanelDeControl() {
                     onClick={() => {
                       const sinNombre = config.productos.filter((p) => !p.nombre || p.nombre.trim() === '' || p.nombre.includes('Nuevo producto'));
                       if (sinNombre.length > 0) {
-                        if (window.confirm(`¿Eliminar ${sinNombre.length} producto(s) sin nombre o con nombre por defecto?`)) {
-                          sinNombre.forEach((p) => handleDeleteProducto(p.id));
-                        }
+                        setConfirmModal({
+                          isOpen: true,
+                          title: 'Eliminar Productos Sin Nombre',
+                          message: `¿Eliminar ${sinNombre.length} producto(s) sin nombre o con nombre por defecto?`,
+                          onConfirm: () => {
+                            setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+                            sinNombre.forEach((p) => deleteProducto(p.id));
+                          }
+                        });
                       } else {
                         alert('No hay productos sin nombre para eliminar');
                       }
