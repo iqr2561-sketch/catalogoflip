@@ -110,19 +110,55 @@ export default function PanelDeControl() {
     handleBulkAddProductos(1);
   };
 
-  const handleDeleteProducto = (id) => {
+  const handleDeleteProducto = async (id) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      return;
+    }
+
+    let updatedConfig = null;
+
     setConfig((prev) => {
       const remaining = prev.productos.filter((p) => p.id !== id);
       const fallbackId = remaining[0]?.id || '';
 
-      return {
+      updatedConfig = {
         ...prev,
         productos: remaining,
         hotspots: prev.hotspots.map((h) =>
           h.idProducto === id ? { ...h, idProducto: fallbackId } : h
         ),
       };
+
+      return updatedConfig;
     });
+
+    // Guardar automáticamente después de eliminar
+    if (updatedConfig) {
+      try {
+        setSaving(true);
+        const res = await fetch('/api/catalog-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedConfig, null, 2),
+        });
+
+        if (res.ok) {
+          setMessage('Producto eliminado y cambios guardados');
+          setTimeout(() => setMessage(null), 3000);
+        } else {
+          setError('Producto eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
+          setTimeout(() => setError(null), 5000);
+        }
+      } catch (err) {
+        console.error('Error al guardar después de eliminar:', err);
+        setError('Producto eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 5000);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   const handleHotspotToggle = (index, enabled) => {
@@ -578,6 +614,70 @@ export default function PanelDeControl() {
 
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
+          {/* Resumen/Estadísticas */}
+          {config && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Productos</p>
+                    <p className="text-2xl font-bold text-gray-900">{config.productos?.length || 0}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Marcadores Activos</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {config.hotspots?.filter((h) => h.enabled !== false).length || 0}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Marcadores</p>
+                    <p className="text-2xl font-bold text-gray-900">{config.hotspots?.length || 0}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Páginas del PDF</p>
+                    <p className="text-2xl font-bold text-gray-900">{config.numPages || 'N/A'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabs */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-2 py-2 flex gap-2 text-sm font-medium">
             <button
@@ -618,10 +718,24 @@ export default function PanelDeControl() {
           {/* Sección productos */}
           {activeTab === 'productos' && (
           <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Productos</h2>
-            <p className="text-gray-600 text-sm mb-6">
-              Edita el precio y la descripción que se muestran en el modal de cada producto.
-            </p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Productos</h2>
+                <p className="text-gray-600 text-sm">
+                  Edita el precio y la descripción que se muestran en el modal de cada producto.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {config.productos && config.productos.length > 0 && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Valor total estimado</p>
+                    <p className="text-lg font-bold text-primary-600">
+                      ${config.productos.reduce((sum, p) => sum + (p.precio || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Paginación y selector de vista */}
             <div className="flex items-center justify-between mb-4 px-2 flex-wrap gap-3">
@@ -868,7 +982,7 @@ export default function PanelDeControl() {
               ))}
             </div>
 
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 pt-4 border-t border-gray-200">
               <button
                 type="button"
                 onClick={handleAddProducto}
@@ -893,9 +1007,31 @@ export default function PanelDeControl() {
                   onClick={() => handleBulkAddProductos(bulkCount)}
                   className="px-3 py-1 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
                 >
-                  Crear
+                  Crear {bulkCount} Producto{bulkCount !== 1 ? 's' : ''}
                 </button>
               </div>
+
+              {config.productos && config.productos.length > 0 && (
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sinNombre = config.productos.filter((p) => !p.nombre || p.nombre.trim() === '' || p.nombre.includes('Nuevo producto'));
+                      if (sinNombre.length > 0) {
+                        if (window.confirm(`¿Eliminar ${sinNombre.length} producto(s) sin nombre o con nombre por defecto?`)) {
+                          sinNombre.forEach((p) => handleDeleteProducto(p.id));
+                        }
+                      } else {
+                        alert('No hay productos sin nombre para eliminar');
+                      }
+                    }}
+                    className="px-3 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors border border-red-200"
+                    title="Eliminar productos sin nombre o con nombre por defecto"
+                  >
+                    Limpiar sin nombre
+                  </button>
+                </div>
+              )}
             </div>
           </section>
           )}
