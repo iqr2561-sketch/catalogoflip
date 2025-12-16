@@ -118,13 +118,12 @@ export default function PanelDeControl() {
       return;
     }
 
-    let updatedConfig = null;
-
+    // Calcular la configuración actualizada ANTES de actualizar el estado
     setConfig((prev) => {
       const remaining = prev.productos.filter((p) => p.id !== id);
       const fallbackId = remaining[0]?.id || '';
 
-      updatedConfig = {
+      const updatedConfig = {
         ...prev,
         productos: remaining,
         hotspots: prev.hotspots.map((h) =>
@@ -132,52 +131,51 @@ export default function PanelDeControl() {
         ),
       };
 
+      // Guardar automáticamente después de eliminar
+      (async () => {
+        try {
+          setSaving(true);
+          setMessage(null);
+          setError(null);
+          
+          console.log('[panel] Guardando configuración después de eliminar producto:', {
+            productosRestantes: updatedConfig.productos.length,
+            hotspots: updatedConfig.hotspots.length,
+            timestamp: new Date().toISOString()
+          });
+          
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+
+          const result = await res.json();
+          
+          if (res.ok && result.ok) {
+            console.log('[panel] Guardado exitoso:', result);
+            setMessage(`✓ Producto eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            console.error('[panel] Error al guardar:', result);
+            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El producto fue eliminado localmente.`);
+            setTimeout(() => setError(null), 10000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar:', err);
+          setError(`✗ Error de conexión: ${err.message}. El producto fue eliminado localmente. Intenta guardar manualmente.`);
+          setTimeout(() => setError(null), 10000);
+        } finally {
+          setSaving(false);
+        }
+      })();
+
       return updatedConfig;
     });
-
-    // Guardar automáticamente después de eliminar
-    if (updatedConfig) {
-      try {
-        setSaving(true);
-        setMessage(null);
-        setError(null);
-        
-        console.log('[panel] Guardando configuración después de eliminar producto:', {
-          productosRestantes: updatedConfig.productos.length,
-          hotspots: updatedConfig.hotspots.length
-        });
-        
-        const res = await fetch('/api/catalog-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedConfig, null, 2),
-        });
-
-        const result = await res.json();
-        
-        if (res.ok) {
-          console.log('[panel] Guardado exitoso:', result);
-          setMessage(`✓ Producto eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
-          setTimeout(() => setMessage(null), 3000);
-          // Recargar la configuración para asegurar sincronización
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        } else {
-          console.error('[panel] Error al guardar:', result);
-          setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El producto fue eliminado localmente.`);
-          setTimeout(() => setError(null), 10000);
-        }
-      } catch (err) {
-        console.error('[panel] Error al guardar después de eliminar:', err);
-        setError(`✗ Error de conexión: ${err.message}. El producto fue eliminado localmente. Intenta guardar manualmente.`);
-        setTimeout(() => setError(null), 10000);
-      } finally {
-        setSaving(false);
-      }
-    }
   };
 
   const handleHotspotToggle = (index, enabled) => {
@@ -324,66 +322,64 @@ export default function PanelDeControl() {
       return;
     }
 
-    let updatedConfig = null;
     const countToDelete = selectedHotspots.size;
 
     setConfig((prev) => {
       const indicesToDelete = Array.from(selectedHotspots).sort((a, b) => b - a); // Ordenar descendente
       const newHotspots = prev.hotspots.filter((_, index) => !indicesToDelete.includes(index));
       
-      updatedConfig = {
+      const updatedConfig = {
         ...prev,
         hotspots: newHotspots,
       };
 
+      setSelectedHotspots(new Set());
+
+      // Guardar automáticamente después de eliminar
+      (async () => {
+        try {
+          setSaving(true);
+          setMessage(null);
+          setError(null);
+          
+          console.log('[panel] Guardando configuración después de eliminar marcadores masivamente:', {
+            eliminados: countToDelete,
+            hotspotsRestantes: updatedConfig.hotspots.length,
+            timestamp: new Date().toISOString()
+          });
+          
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+
+          const result = await res.json();
+          
+          if (res.ok && result.ok) {
+            console.log('[panel] Guardado exitoso:', result);
+            setMessage(`✓ ${countToDelete} marcador(es) eliminado(s) y guardado(s) ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            console.error('[panel] Error al guardar:', result);
+            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
+            setTimeout(() => setError(null), 10000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar:', err);
+          setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
+          setTimeout(() => setError(null), 10000);
+        } finally {
+          setSaving(false);
+        }
+      })();
+
       return updatedConfig;
     });
-
-    setSelectedHotspots(new Set());
-
-    // Guardar automáticamente después de eliminar
-    if (updatedConfig) {
-      try {
-        setSaving(true);
-        setMessage(null);
-        setError(null);
-        
-        console.log('[panel] Guardando configuración después de eliminar marcadores masivamente:', {
-          eliminados: countToDelete,
-          hotspotsRestantes: updatedConfig.hotspots.length
-        });
-        
-        const res = await fetch('/api/catalog-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedConfig, null, 2),
-        });
-
-        const result = await res.json();
-        
-        if (res.ok) {
-          console.log('[panel] Guardado exitoso:', result);
-          setMessage(`✓ ${countToDelete} marcador(es) eliminado(s) y guardado(s) ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
-          setTimeout(() => setMessage(null), 3000);
-          // Recargar la configuración para asegurar sincronización
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        } else {
-          console.error('[panel] Error al guardar:', result);
-          setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
-          setTimeout(() => setError(null), 10000);
-        }
-      } catch (err) {
-        console.error('[panel] Error al guardar después de eliminar:', err);
-        setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
-        setTimeout(() => setError(null), 10000);
-      } finally {
-        setSaving(false);
-      }
-    }
   };
 
   const handleSelectAllHotspots = () => {
@@ -624,58 +620,56 @@ export default function PanelDeControl() {
       return;
     }
     
-    let updatedConfig = null;
-    
     setConfig((prev) => {
-      updatedConfig = {
+      const updatedConfig = {
         ...prev,
         hotspots: prev.hotspots.filter((_, i) => i !== index),
       };
+
+      // Guardar automáticamente después de eliminar
+      (async () => {
+        try {
+          setSaving(true);
+          setMessage(null);
+          setError(null);
+          
+          console.log('[panel] Guardando configuración después de eliminar marcador:', {
+            hotspotsRestantes: updatedConfig.hotspots.length,
+            timestamp: new Date().toISOString()
+          });
+          
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+
+          const result = await res.json();
+          
+          if (res.ok && result.ok) {
+            console.log('[panel] Guardado exitoso:', result);
+            setMessage(`✓ Marcador eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            console.error('[panel] Error al guardar:', result);
+            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El marcador fue eliminado localmente.`);
+            setTimeout(() => setError(null), 10000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar marcador:', err);
+          setError(`✗ Error de conexión: ${err.message}. El marcador fue eliminado localmente. Intenta guardar manualmente.`);
+          setTimeout(() => setError(null), 10000);
+        } finally {
+          setSaving(false);
+        }
+      })();
+
       return updatedConfig;
     });
-
-    // Guardar automáticamente después de eliminar
-    if (updatedConfig) {
-      try {
-        setSaving(true);
-        setMessage(null);
-        setError(null);
-        
-        console.log('[panel] Guardando configuración después de eliminar marcador:', {
-          hotspotsRestantes: updatedConfig.hotspots.length
-        });
-        
-        const res = await fetch('/api/catalog-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedConfig, null, 2),
-        });
-
-        const result = await res.json();
-        
-        if (res.ok) {
-          console.log('[panel] Guardado exitoso:', result);
-          setMessage(`✓ Marcador eliminado y guardado ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
-          setTimeout(() => setMessage(null), 3000);
-          // Recargar la configuración para asegurar sincronización
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        } else {
-          console.error('[panel] Error al guardar:', result);
-          setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. El marcador fue eliminado localmente.`);
-          setTimeout(() => setError(null), 10000);
-        }
-      } catch (err) {
-        console.error('[panel] Error al guardar después de eliminar marcador:', err);
-        setError(`✗ Error de conexión: ${err.message}. El marcador fue eliminado localmente. Intenta guardar manualmente.`);
-        setTimeout(() => setError(null), 10000);
-      } finally {
-        setSaving(false);
-      }
-    }
   };
 
   const handleDeleteAllHotspots = async () => {
@@ -683,62 +677,60 @@ export default function PanelDeControl() {
       return;
     }
 
-    let updatedConfig = null;
-
     setConfig((prev) => {
-      updatedConfig = {
+      const count = prev.hotspots.length;
+      const updatedConfig = {
         ...prev,
         hotspots: [],
       };
+
+      setSelectedHotspots(new Set());
+
+      // Guardar automáticamente después de eliminar
+      (async () => {
+        try {
+          setSaving(true);
+          setMessage(null);
+          setError(null);
+          
+          console.log('[panel] Guardando configuración después de eliminar todos los marcadores:', {
+            eliminados: count,
+            hotspotsRestantes: 0,
+            timestamp: new Date().toISOString()
+          });
+          
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+
+          const result = await res.json();
+          
+          if (res.ok && result.ok) {
+            console.log('[panel] Guardado exitoso:', result);
+            setMessage(`✓ Todos los marcadores (${count}) eliminados y guardados ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            console.error('[panel] Error al guardar:', result);
+            setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
+            setTimeout(() => setError(null), 10000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar todos los marcadores:', err);
+          setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
+          setTimeout(() => setError(null), 10000);
+        } finally {
+          setSaving(false);
+        }
+      })();
+
       return updatedConfig;
     });
-
-    setSelectedHotspots(new Set());
-
-    // Guardar automáticamente después de eliminar
-    if (updatedConfig) {
-      try {
-        setSaving(true);
-        setMessage(null);
-        setError(null);
-        
-        const count = config.hotspots.length;
-        console.log('[panel] Guardando configuración después de eliminar todos los marcadores:', {
-          eliminados: count,
-          hotspotsRestantes: 0
-        });
-        
-        const res = await fetch('/api/catalog-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedConfig, null, 2),
-        });
-
-        const result = await res.json();
-        
-        if (res.ok) {
-          console.log('[panel] Guardado exitoso:', result);
-          setMessage(`✓ Todos los marcadores (${count}) eliminados y guardados ${result.savedToMongo ? 'en MongoDB' : 'en archivo JSON'} correctamente. Recargando...`);
-          setTimeout(() => setMessage(null), 3000);
-          // Recargar la configuración para asegurar sincronización
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        } else {
-          console.error('[panel] Error al guardar:', result);
-          setError(`✗ Error al guardar: ${result.error || result.details || 'Error desconocido'}. Los marcadores fueron eliminados localmente.`);
-          setTimeout(() => setError(null), 10000);
-        }
-      } catch (err) {
-        console.error('[panel] Error al guardar después de eliminar todos los marcadores:', err);
-        setError(`✗ Error de conexión: ${err.message}. Los marcadores fueron eliminados localmente. Intenta guardar manualmente.`);
-        setTimeout(() => setError(null), 10000);
-      } finally {
-        setSaving(false);
-      }
-    }
   };
 
   const handleTestDatabase = async () => {
@@ -850,11 +842,13 @@ export default function PanelDeControl() {
           message={message}
           type="success"
           onClose={() => setMessage(null)}
+          duration={5000}
         />
         <Toast
           message={error}
           type="error"
           onClose={() => setError(null)}
+          duration={8000}
         />
 
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
