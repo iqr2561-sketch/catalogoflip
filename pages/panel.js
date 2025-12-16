@@ -1551,14 +1551,25 @@ export default function PanelDeControl() {
                   <input
                     type="number"
                     min={1}
-                    max={config?.numPages || 1}
+                    max={config?.numPages || 9999}
+                    step={1}
                     className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
                     value={bulkHotspotStartPage}
                     onChange={(e) => {
-                      const val = Math.max(1, Math.min(config?.numPages || 1, parseInt(e.target.value || '1', 10)));
-                      setBulkHotspotStartPage(val);
-                      if (bulkHotspotEndPage < val) {
-                        setBulkHotspotEndPage(val);
+                      const inputVal = e.target.value;
+                      if (inputVal === '' || inputVal === null) {
+                        setBulkHotspotStartPage(1);
+                        return;
+                      }
+                      const numVal = parseInt(inputVal, 10);
+                      if (!isNaN(numVal) && numVal >= 1) {
+                        const maxPage = config?.numPages || 9999;
+                        const val = Math.max(1, Math.min(maxPage, numVal));
+                        setBulkHotspotStartPage(val);
+                        // Si la página final es menor que la inicial, ajustarla
+                        if (bulkHotspotEndPage !== null && bulkHotspotEndPage < val) {
+                          setBulkHotspotEndPage(val);
+                        }
                       }
                     }}
                   />
@@ -1570,7 +1581,8 @@ export default function PanelDeControl() {
                   <input
                     type="number"
                     min={bulkHotspotStartPage || 1}
-                    max={config?.numPages || 1}
+                    max={config?.numPages || 9999}
+                    step={1}
                     className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
                     value={bulkHotspotEndPage || ''}
                     onChange={(e) => {
@@ -1579,8 +1591,10 @@ export default function PanelDeControl() {
                         setBulkHotspotEndPage(null);
                       } else {
                         const numVal = parseInt(inputVal, 10);
-                        if (!isNaN(numVal)) {
-                          const val = Math.max(bulkHotspotStartPage || 1, Math.min(config?.numPages || 1, numVal));
+                        if (!isNaN(numVal) && numVal >= 1) {
+                          const maxPage = config?.numPages || 9999;
+                          const minVal = bulkHotspotStartPage || 1;
+                          const val = Math.max(minVal, Math.min(maxPage, numVal));
                           setBulkHotspotEndPage(val);
                         }
                       }
