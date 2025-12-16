@@ -327,13 +327,17 @@ export default async function handler(req, res) {
       // Intentar guardar en MongoDB primero
       const savedToMongo = await saveToMongoDB(data);
       
-      // También guardar en archivo JSON como backup
-      if (fs.existsSync(filePath) || !savedToMongo) {
-        try {
-          fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-        } catch (fileError) {
-          console.warn('No se pudo guardar en archivo JSON:', fileError);
+      // SIEMPRE guardar en archivo JSON como backup (incluso si MongoDB funciona)
+      try {
+        // Asegurar que el directorio existe
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
         }
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        console.log('[catalog-config] Configuración guardada en archivo JSON como backup');
+      } catch (fileError) {
+        console.warn('[catalog-config] No se pudo guardar en archivo JSON:', fileError);
       }
       
       if (!savedToMongo && !fs.existsSync(filePath)) {
