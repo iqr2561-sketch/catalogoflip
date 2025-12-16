@@ -22,7 +22,9 @@ export default function PanelDeControl() {
   const [dbTestResult, setDbTestResult] = useState(null);
   const [bulkHotspotCount, setBulkHotspotCount] = useState(1);
   const [bulkHotspotStartPage, setBulkHotspotStartPage] = useState(1);
+  const [bulkHotspotEndPage, setBulkHotspotEndPage] = useState(1);
   const [globalPosition, setGlobalPosition] = useState({ x: 50, y: 50, width: 20, height: 20 });
+  const [selectedHotspots, setSelectedHotspots] = useState(new Set());
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
@@ -32,7 +34,7 @@ export default function PanelDeControl() {
         setLoading(true);
         const res = await fetch('/api/catalog-config');
         const data = await res.json();
-        // Asegurar que todos los hotspots tengan la propiedad enabled (mantener el valor existente o false por defecto)
+        // Solo normalizar los hotspots existentes, NO crear nuevos
         const normalized = {
           ...data,
           hotspots: (data.hotspots || []).map((h) => ({
@@ -41,6 +43,10 @@ export default function PanelDeControl() {
           })),
         };
         setConfig(normalized);
+        // Inicializar página final con el número de páginas si está disponible
+        if (normalized.numPages) {
+          setBulkHotspotEndPage(normalized.numPages);
+        }
       } catch (err) {
         console.error('Error al cargar configuración:', err);
         setError('No se pudo cargar la configuración del catálogo.');
@@ -242,28 +248,49 @@ export default function PanelDeControl() {
     });
   };
 
-  const handleBulkAddHotspots = (cantidad, startPage, position) => {
+  const handleBulkAddHotspots = (cantidad, startPage, endPage, position) => {
     const count = Math.max(1, Math.min(100, cantidad || 1));
-    const start = Math.max(1, Math.min(config?.numPages || 1, startPage || 1));
+    const maxPages = config?.numPages || 1;
+    const start = Math.max(1, Math.min(maxPages, startPage || 1));
+    const end = endPage ? Math.max(start, Math.min(maxPages, endPage)) : null;
     const pos = position || globalPosition;
 
     setConfig((prev) => {
       const defaultProductId = prev.productos[0]?.id || '';
       const newHotspots = [];
       
-      for (let i = 0; i < count; i++) {
-        const page = start + i;
-        // Solo agregar si la página no excede el número total de páginas
-        if (page <= (prev.numPages || 1)) {
+      if (end && end >= start) {
+        // Usar rango de páginas
+        const pages = [];
+        for (let p = start; p <= end && pages.length < count; p++) {
+          pages.push(p);
+        }
+        pages.forEach((page) => {
           newHotspots.push({
             page: page,
             idProducto: defaultProductId,
-            enabled: false, // Por defecto deshabilitado
+            enabled: false,
             x: pos.x,
             y: pos.y,
             width: pos.width,
             height: pos.height,
           });
+        });
+      } else {
+        // Modo secuencial (comportamiento anterior)
+        for (let i = 0; i < count; i++) {
+          const page = start + i;
+          if (page <= maxPages) {
+            newHotspots.push({
+              page: page,
+              idProducto: defaultProductId,
+              enabled: false,
+              x: pos.x,
+              y: pos.y,
+              width: pos.width,
+              height: pos.height,
+            });
+          }
         }
       }
 
@@ -272,6 +299,84 @@ export default function PanelDeControl() {
         hotspots: [...prev.hotspots, ...newHotspots],
       };
     });
+  };
+
+  const handleBulkDeleteHotspots = async () => {
+    if (selectedHotspots.size === 0) {
+      alert('Selecciona al menos un marcador para eliminar');
+      return;
+    }
+
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar ${selectedHotspots.size} marcador(es)?`)) {
+      return;
+    }
+
+    let updatedConfig = null;
+    const countToDelete = selectedHotspots.size;
+
+    setConfig((prev) => {
+      const indicesToDelete = Array.from(selectedHotspots).sort((a, b) => b - a); // Ordenar descendente
+      const newHotspots = prev.hotspots.filter((_, index) => !indicesToDelete.includes(index));
+      
+      updatedConfig = {
+        ...prev,
+        hotspots: newHotspots,
+      };
+
+      return updatedConfig;
+    });
+
+    setSelectedHotspots(new Set());
+
+    // Guardar automáticamente después de eliminar
+    if (updatedConfig) {
+      try {
+        setSaving(true);
+        const res = await fetch('/api/catalog-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedConfig, null, 2),
+        });
+
+        if (res.ok) {
+          setMessage(`${countToDelete} marcador(es) eliminado(s) y cambios guardados`);
+          setTimeout(() => setMessage(null), 3000);
+        } else {
+          setError('Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
+          setTimeout(() => setError(null), 5000);
+        }
+      } catch (err) {
+        console.error('Error al guardar después de eliminar:', err);
+        setError('Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 5000);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleSelectAllHotspots = () => {
+    const currentPageIndices = [];
+    const start = (hotspotsPage - 1) * hotspotsPerPage;
+    const end = Math.min(start + hotspotsPerPage, config.hotspots.length);
+    
+    for (let i = start; i < end; i++) {
+      currentPageIndices.push(i);
+    }
+
+    if (currentPageIndices.every(idx => selectedHotspots.has(idx))) {
+      // Deseleccionar todos de la página actual
+      const newSelected = new Set(selectedHotspots);
+      currentPageIndices.forEach(idx => newSelected.delete(idx));
+      setSelectedHotspots(newSelected);
+    } else {
+      // Seleccionar todos de la página actual
+      const newSelected = new Set(selectedHotspots);
+      currentPageIndices.forEach(idx => newSelected.add(idx));
+      setSelectedHotspots(newSelected);
+    }
   };
 
   const handleApplyGlobalPosition = () => {
@@ -1233,6 +1338,90 @@ export default function PanelDeControl() {
               Activa o desactiva los puntos de compra interactivos en cada página del catálogo.
             </p>
 
+            {/* Sección de agregar múltiples marcadores - MOVIDA A LA PARTE SUPERIOR */}
+            <div className="bg-gradient-to-br from-primary-50 to-white rounded-xl p-5 border border-primary-200 shadow-sm mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Agregar Múltiples Marcadores</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                    Cantidad
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    value={bulkHotspotCount}
+                    onChange={(e) => setBulkHotspotCount(Math.max(1, Math.min(100, parseInt(e.target.value || '1', 10))))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                    Página Inicial
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={config?.numPages || 1}
+                    className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    value={bulkHotspotStartPage}
+                    onChange={(e) => {
+                      const val = Math.max(1, Math.min(config?.numPages || 1, parseInt(e.target.value || '1', 10)));
+                      setBulkHotspotStartPage(val);
+                      if (bulkHotspotEndPage < val) {
+                        setBulkHotspotEndPage(val);
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                    Página Final (Opcional)
+                  </label>
+                  <input
+                    type="number"
+                    min={bulkHotspotStartPage}
+                    max={config?.numPages || 1}
+                    className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    value={bulkHotspotEndPage || ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? Math.max(bulkHotspotStartPage, Math.min(config?.numPages || 1, parseInt(e.target.value, 10))) : null;
+                      setBulkHotspotEndPage(val);
+                    }}
+                    placeholder="Auto"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {bulkHotspotEndPage ? `Rango: ${bulkHotspotStartPage}-${bulkHotspotEndPage}` : `Secuencial desde página ${bulkHotspotStartPage}`}
+                  </p>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAddHotspots(bulkHotspotCount, bulkHotspotStartPage, bulkHotspotEndPage, globalPosition)}
+                    className="w-full px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    Crear {bulkHotspotCount} Marcador{bulkHotspotCount !== 1 ? 'es' : ''}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Botón para eliminar masivamente */}
+            {selectedHotspots.size > 0 && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-red-700 font-semibold">
+                  {selectedHotspots.size} marcador(es) seleccionado(s)
+                </span>
+                <button
+                  type="button"
+                  onClick={handleBulkDeleteHotspots}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Eliminar Seleccionados
+                </button>
+              </div>
+            )}
+
             {/* Paginación de hotspots */}
             {config.hotspots.length > hotspotsPerPage && (
               <div className="flex items-center justify-between mb-4 px-2">
@@ -1267,6 +1456,17 @@ export default function PanelDeControl() {
               <table className="min-w-full text-sm align-middle">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-gray-500">
+                    <th className="py-2 pr-4">
+                      <input
+                        type="checkbox"
+                        checked={config.hotspots.slice((hotspotsPage - 1) * hotspotsPerPage, hotspotsPage * hotspotsPerPage).length > 0 && 
+                                config.hotspots.slice((hotspotsPage - 1) * hotspotsPerPage, hotspotsPage * hotspotsPerPage)
+                                  .every((_, idx) => selectedHotspots.has((hotspotsPage - 1) * hotspotsPerPage + idx))}
+                        onChange={handleSelectAllHotspots}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        title="Seleccionar todos de esta página"
+                      />
+                    </th>
                     <th className="py-2 pr-4">Activo</th>
                     <th className="py-2 pr-4">Página</th>
                     <th className="py-2 pr-4">Producto</th>
@@ -1282,8 +1482,25 @@ export default function PanelDeControl() {
                     .map((h, index) => {
                       const globalIndex = (hotspotsPage - 1) * hotspotsPerPage + index;
                     const producto = config.productos.find((p) => p.id === h.idProducto);
+                    const isSelected = selectedHotspots.has(globalIndex);
                     return (
-                      <tr key={`${h.page}-${h.idProducto}-${index}`} className="border-b border-gray-100">
+                      <tr key={`${h.page}-${h.idProducto}-${index}`} className={`border-b border-gray-100 ${isSelected ? 'bg-blue-50' : ''}`}>
+                        <td className="py-2 pr-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedHotspots);
+                              if (e.target.checked) {
+                                newSelected.add(globalIndex);
+                              } else {
+                                newSelected.delete(globalIndex);
+                              }
+                              setSelectedHotspots(newSelected);
+                            }}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                        </td>
                         <td className="py-2 pr-4">
                           <label className="inline-flex items-center gap-2 cursor-pointer">
                             <input
@@ -1490,50 +1707,6 @@ export default function PanelDeControl() {
                 </button>
               </div>
 
-              {/* Agregar múltiples marcadores */}
-              <div className="bg-gradient-to-br from-primary-50 to-white rounded-xl p-5 border border-primary-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Agregar Múltiples Marcadores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
-                      Cantidad
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
-                      value={bulkHotspotCount}
-                      onChange={(e) => setBulkHotspotCount(Math.max(1, Math.min(100, parseInt(e.target.value || '1', 10))))}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
-                      Página Inicial
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={config?.numPages || 1}
-                      className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
-                      value={bulkHotspotStartPage}
-                      onChange={(e) => setBulkHotspotStartPage(Math.max(1, Math.min(config?.numPages || 1, parseInt(e.target.value || '1', 10))))}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      El marcador 1 empezará en la página {bulkHotspotStartPage}, el 2 en la {bulkHotspotStartPage + 1}, etc.
-                    </p>
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => handleBulkAddHotspots(bulkHotspotCount, bulkHotspotStartPage, globalPosition)}
-                      className="w-full px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-                    >
-                      Crear {bulkHotspotCount} Marcador{bulkHotspotCount !== 1 ? 'es' : ''}
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </section>
           )}
