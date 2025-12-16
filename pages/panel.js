@@ -22,7 +22,7 @@ export default function PanelDeControl() {
   const [dbTestResult, setDbTestResult] = useState(null);
   const [bulkHotspotCount, setBulkHotspotCount] = useState(1);
   const [bulkHotspotStartPage, setBulkHotspotStartPage] = useState(1);
-  const [bulkHotspotEndPage, setBulkHotspotEndPage] = useState(1);
+  const [bulkHotspotEndPage, setBulkHotspotEndPage] = useState(null);
   const [globalPosition, setGlobalPosition] = useState({ x: 50, y: 50, width: 20, height: 20 });
   const [selectedHotspots, setSelectedHotspots] = useState(new Set());
   const itemsPerPage = 10; // Productos por página
@@ -43,10 +43,7 @@ export default function PanelDeControl() {
           })),
         };
         setConfig(normalized);
-        // Inicializar página final con el número de páginas si está disponible
-        if (normalized.numPages) {
-          setBulkHotspotEndPage(normalized.numPages);
-        }
+        // Inicializar página final con null (se calculará dinámicamente)
       } catch (err) {
         console.error('Error al cargar configuración:', err);
         setError('No se pudo cargar la configuración del catálogo.');
@@ -151,16 +148,17 @@ export default function PanelDeControl() {
         });
 
         if (res.ok) {
-          setMessage('Producto eliminado y cambios guardados');
-          setTimeout(() => setMessage(null), 3000);
+          setMessage('✓ Producto eliminado y guardado correctamente');
+          setTimeout(() => setMessage(null), 4000);
         } else {
-          setError('Producto eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
-          setTimeout(() => setError(null), 5000);
+          const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          setError(`✗ Producto eliminado localmente, pero no se pudo guardar: ${errorData.error || 'Error desconocido'}`);
+          setTimeout(() => setError(null), 6000);
         }
       } catch (err) {
         console.error('Error al guardar después de eliminar:', err);
-        setError('Producto eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
-        setTimeout(() => setError(null), 5000);
+        setError('✗ Producto eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 6000);
       } finally {
         setSaving(false);
       }
@@ -341,16 +339,17 @@ export default function PanelDeControl() {
         });
 
         if (res.ok) {
-          setMessage(`${countToDelete} marcador(es) eliminado(s) y cambios guardados`);
-          setTimeout(() => setMessage(null), 3000);
+          setMessage(`✓ ${countToDelete} marcador(es) eliminado(s) y guardado(s) correctamente`);
+          setTimeout(() => setMessage(null), 5000);
         } else {
-          setError('Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
-          setTimeout(() => setError(null), 5000);
+          const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          setError(`✗ Marcadores eliminados localmente, pero no se pudo guardar: ${errorData.error || 'Error desconocido'}`);
+          setTimeout(() => setError(null), 6000);
         }
       } catch (err) {
         console.error('Error al guardar después de eliminar:', err);
-        setError('Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
-        setTimeout(() => setError(null), 5000);
+        setError('✗ Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 6000);
       } finally {
         setSaving(false);
       }
@@ -590,15 +589,102 @@ export default function PanelDeControl() {
     }
   };
 
-  const handleDeleteHotspot = (index) => {
+  const handleDeleteHotspot = async (index) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este marcador?')) {
       return;
     }
     
-    const updated = { ...config };
-    updated.hotspots = updated.hotspots.filter((_, i) => i !== index);
-    setConfig(updated);
-    setMessage('Marcador eliminado. Recuerda guardar los cambios.');
+    let updatedConfig = null;
+    
+    setConfig((prev) => {
+      updatedConfig = {
+        ...prev,
+        hotspots: prev.hotspots.filter((_, i) => i !== index),
+      };
+      return updatedConfig;
+    });
+
+    // Guardar automáticamente después de eliminar
+    if (updatedConfig) {
+      try {
+        setSaving(true);
+        setMessage(null);
+        setError(null);
+        
+        const res = await fetch('/api/catalog-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedConfig, null, 2),
+        });
+
+        if (res.ok) {
+          setMessage('✓ Marcador eliminado y guardado correctamente');
+          setTimeout(() => setMessage(null), 4000);
+        } else {
+          const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          setError(`✗ Marcador eliminado localmente, pero no se pudo guardar: ${errorData.error || 'Error desconocido'}`);
+          setTimeout(() => setError(null), 6000);
+        }
+      } catch (err) {
+        console.error('Error al guardar después de eliminar marcador:', err);
+        setError('✗ Marcador eliminado localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 6000);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleDeleteAllHotspots = async () => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar TODOS los ${config.hotspots.length} marcadores? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    let updatedConfig = null;
+
+    setConfig((prev) => {
+      updatedConfig = {
+        ...prev,
+        hotspots: [],
+      };
+      return updatedConfig;
+    });
+
+    setSelectedHotspots(new Set());
+
+    // Guardar automáticamente después de eliminar
+    if (updatedConfig) {
+      try {
+        setSaving(true);
+        setMessage(null);
+        setError(null);
+        
+        const res = await fetch('/api/catalog-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedConfig, null, 2),
+        });
+
+        if (res.ok) {
+          setMessage(`✓ Todos los marcadores (${config.hotspots.length}) eliminados y guardados correctamente`);
+          setTimeout(() => setMessage(null), 5000);
+        } else {
+          const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          setError(`✗ Marcadores eliminados localmente, pero no se pudo guardar: ${errorData.error || 'Error desconocido'}`);
+          setTimeout(() => setError(null), 6000);
+        }
+      } catch (err) {
+        console.error('Error al guardar después de eliminar todos los marcadores:', err);
+        setError('✗ Marcadores eliminados localmente, pero no se pudo guardar. Guarda manualmente.');
+        setTimeout(() => setError(null), 6000);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   const handleTestDatabase = async () => {
@@ -1380,13 +1466,21 @@ export default function PanelDeControl() {
                   </label>
                   <input
                     type="number"
-                    min={bulkHotspotStartPage}
+                    min={bulkHotspotStartPage || 1}
                     max={config?.numPages || 1}
                     className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-sm focus:ring-primary-500 focus:border-primary-500"
                     value={bulkHotspotEndPage || ''}
                     onChange={(e) => {
-                      const val = e.target.value ? Math.max(bulkHotspotStartPage, Math.min(config?.numPages || 1, parseInt(e.target.value, 10))) : null;
-                      setBulkHotspotEndPage(val);
+                      const inputVal = e.target.value;
+                      if (inputVal === '' || inputVal === null) {
+                        setBulkHotspotEndPage(null);
+                      } else {
+                        const numVal = parseInt(inputVal, 10);
+                        if (!isNaN(numVal)) {
+                          const val = Math.max(bulkHotspotStartPage || 1, Math.min(config?.numPages || 1, numVal));
+                          setBulkHotspotEndPage(val);
+                        }
+                      }
                     }}
                     placeholder="Auto"
                   />
@@ -1406,21 +1500,33 @@ export default function PanelDeControl() {
               </div>
             </div>
 
-            {/* Botón para eliminar masivamente */}
-            {selectedHotspots.size > 0 && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
-                <span className="text-sm text-red-700 font-semibold">
-                  {selectedHotspots.size} marcador(es) seleccionado(s)
-                </span>
+            {/* Botones para eliminar masivamente */}
+            <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+              {selectedHotspots.size > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                  <span className="text-sm text-red-700 font-semibold">
+                    {selectedHotspots.size} marcador(es) seleccionado(s)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleBulkDeleteHotspots}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                  >
+                    Eliminar Seleccionados
+                  </button>
+                </div>
+              )}
+              {config.hotspots && config.hotspots.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleBulkDeleteHotspots}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                  onClick={handleDeleteAllHotspots}
+                  className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold hover:bg-red-800 transition-colors border-2 border-red-800"
+                  title="Eliminar todos los marcadores"
                 >
-                  Eliminar Seleccionados
+                  🗑️ Eliminar Todos los Marcadores
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Paginación de hotspots */}
             {config.hotspots.length > hotspotsPerPage && (
