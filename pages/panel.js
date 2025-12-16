@@ -251,14 +251,27 @@ export default function PanelDeControl() {
   const handleAddHotspot = () => {
     setConfig((prev) => {
       const defaultProductId = prev.productos[0]?.id || '';
+      const page = 1;
+      const pairPage = page % 2 === 1 ? page + 1 : page - 1; // Página pareja
+      
       return {
         ...prev,
         hotspots: [
           ...prev.hotspots,
           {
-            page: 1,
+            page: page,
             idProducto: defaultProductId,
             enabled: false, // Por defecto deshabilitado
+            x: globalPosition.x,
+            y: globalPosition.y,
+            width: globalPosition.width,
+            height: globalPosition.height,
+          },
+          // Crear automáticamente en la página pareja
+          {
+            page: pairPage,
+            idProducto: defaultProductId,
+            enabled: false,
             x: globalPosition.x,
             y: globalPosition.y,
             width: globalPosition.width,
@@ -313,6 +326,19 @@ export default function PanelDeControl() {
         }
       }
 
+      // Función auxiliar para obtener la página pareja (para modo double)
+      const getPairPage = (page) => {
+        // Si es página impar (1, 3, 5...), su pareja es la siguiente (2, 4, 6...)
+        // Si es página par (2, 4, 6...), su pareja es la anterior (1, 3, 5...)
+        if (page % 2 === 1) {
+          // Página impar -> pareja es la siguiente
+          return page + 1;
+        } else {
+          // Página par -> pareja es la anterior
+          return page - 1;
+        }
+      };
+
       // Crear los marcadores
       if (end && end >= start) {
         // Usar rango de páginas
@@ -325,8 +351,21 @@ export default function PanelDeControl() {
           const productIndex = Math.min(index, productos.length - 1);
           const productId = productos[productIndex]?.id || productos[0]?.id || '';
           
+          // Crear marcador en la página original
           newHotspots.push({
             page: page,
+            idProducto: productId,
+            enabled: false,
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+          });
+
+          // Crear marcador automáticamente en la página pareja
+          const pairPage = getPairPage(page);
+          newHotspots.push({
+            page: pairPage,
             idProducto: productId,
             enabled: false,
             x: pos.x,
@@ -343,8 +382,21 @@ export default function PanelDeControl() {
           const productIndex = Math.min(i, productos.length - 1);
           const productId = productos[productIndex]?.id || productos[0]?.id || '';
           
+          // Crear marcador en la página original
           newHotspots.push({
             page: page,
+            idProducto: productId,
+            enabled: false,
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+          });
+
+          // Crear marcador automáticamente en la página pareja
+          const pairPage = getPairPage(page);
+          newHotspots.push({
+            page: pairPage,
             idProducto: productId,
             enabled: false,
             x: pos.x,
