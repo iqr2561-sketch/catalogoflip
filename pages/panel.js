@@ -1680,41 +1680,63 @@ export default function PanelDeControl() {
 
                     {/* cuerpo */}
                     {viewMode === 'list' ? (
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-32">
-                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-                            Precio
-                          </label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-2 flex items-center text-gray-500 text-xs font-medium">
-                              $
-                            </span>
+                      <>
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="w-32">
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                              Precio Base
+                            </label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-2 flex items-center text-gray-500 text-xs font-medium">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white font-medium"
+                                value={producto.precio || ''}
+                                onChange={(e) =>
+                                  handleProductoChange(producto.id, 'precio', e.target.value)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                              Descripción
+                            </label>
                             <input
-                              type="number"
-                              className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white font-medium"
-                              value={producto.precio || ''}
+                              type="text"
+                              className="w-full rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white px-2 py-1.5"
+                              value={(producto.descripcion || '').substring(0, 60)}
                               onChange={(e) =>
-                                handleProductoChange(producto.id, 'precio', e.target.value)
+                                handleProductoChange(producto.id, 'descripcion', e.target.value)
                               }
-                              placeholder="0"
+                              placeholder="Descripción..."
                             />
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-                            Descripción
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white px-2 py-1.5"
-                            value={(producto.descripcion || '').substring(0, 60)}
-                            onChange={(e) =>
-                              handleProductoChange(producto.id, 'descripcion', e.target.value)
-                            }
-                            placeholder="Descripción..."
-                          />
-                        </div>
-                      </div>
+                        {/* Variaciones en vista lista (compacta) */}
+                        {(producto.variaciones || []).length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-semibold text-gray-500 uppercase">Variaciones:</span>
+                              {(producto.variaciones || []).map((variacion, variacionIndex) => (
+                                <span key={variacionIndex} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                                  {variacion.nombre} ({(variacion.valores || []).length} opciones)
+                                </span>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => handleAddVariacion(producto.id)}
+                                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                              >
+                                + Agregar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
                         <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-4 items-start">
