@@ -153,6 +153,7 @@ async function saveToMongoDB(data) {
         pdf: data.pdf || '/api/catalogo',
         whatsappNumber: data.whatsappNumber || null,
         numPages: data.numPages || null,
+        variacionesGlobales: data.variacionesGlobales || [], // Guardar variaciones globales
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -187,6 +188,7 @@ async function saveToMongoDB(data) {
           precio: p.precio || 0,
           imagen: p.imagen || '',
           descripcion: p.descripcion || '',
+          variaciones: p.variaciones || [], // Guardar variaciones del producto
           createdAt: new Date(),
         }));
         const insertResult = await productsCollection.insertMany(productsToInsert);
