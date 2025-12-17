@@ -12,8 +12,9 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     if (isOpen && producto) {
       const inicial = {};
       (producto.variaciones || []).forEach((variacion) => {
-        if (variacion.valores && variacion.valores.length > 0) {
-          inicial[variacion.nombre] = variacion.valores[0].nombre;
+        // Sistema simplificado: no hay valores, solo nombre y precio
+        if (variacion.nombre) {
+          inicial[variacion.nombre] = variacion.nombre;
         }
       });
       setVariacionesSeleccionadas(inicial);
@@ -22,6 +23,8 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
   
   // Calcular precio basado en variaciones seleccionadas (sistema simplificado)
   const calcularPrecio = () => {
+    if (!producto) return 0;
+    
     if (!producto.variaciones || producto.variaciones.length === 0) {
       return producto.precio || 0;
     }
@@ -36,10 +39,10 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     
     return precioTotal;
   };
-  
-  const precioFinal = calcularPrecio();
 
   if (!isOpen || !producto) return null;
+  
+  const precioFinal = calcularPrecio();
 
   const handleComprar = () => {
     const qty = Math.max(1, cantidad || 1);
