@@ -35,36 +35,37 @@ export default function PanelDeControl() {
   const itemsPerPage = 10; // Productos por página
   const hotspotsPerPage = 15; // Hotspots por página
 
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/catalog-config');
-        const data = await res.json();
-        // Solo normalizar los hotspots existentes, NO crear nuevos
-        const normalized = {
-          ...data,
-          hotspots: (data.hotspots || []).map((h) => ({
-            enabled: h.enabled !== undefined ? h.enabled : false,
-            ...h,
-          })),
-          variacionesGlobales: data.variacionesGlobales || [], // Variaciones globales predefinidas
-          cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar (por defecto 1)
-          tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
-        };
-        setConfig(normalized);
-        
-        // Cargar miniaturas si hay páginas
-        if (normalized.numPages) {
-          loadThumbnails(normalized.numPages);
-        }
-      } catch (err) {
-        console.error('Error al cargar configuración:', err);
-        setError('No se pudo cargar la configuración del catálogo.');
-      } finally {
-        setLoading(false);
+  const loadConfig = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/catalog-config');
+      const data = await res.json();
+      // Solo normalizar los hotspots existentes, NO crear nuevos
+      const normalized = {
+        ...data,
+        hotspots: (data.hotspots || []).map((h) => ({
+          enabled: h.enabled !== undefined ? h.enabled : false,
+          ...h,
+        })),
+        variacionesGlobales: data.variacionesGlobales || [], // Variaciones globales predefinidas
+        cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar (por defecto 1)
+        tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
+      };
+      setConfig(normalized);
+      
+      // Cargar miniaturas si hay páginas
+      if (normalized.numPages) {
+        loadThumbnails(normalized.numPages);
       }
-    };
+    } catch (err) {
+      console.error('Error al cargar configuración:', err);
+      setError('No se pudo cargar la configuración del catálogo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
 
     loadConfig();
   }, []);
