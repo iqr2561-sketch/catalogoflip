@@ -878,6 +878,245 @@ export default function PanelDeControl() {
     }
   };
 
+  // Funciones para gestionar variaciones globales (en Configuración)
+  const handleAddVariacionGlobal = () => {
+    setConfig((prev) => ({
+      ...prev,
+      variacionesGlobales: [
+        ...(prev.variacionesGlobales || []),
+        {
+          nombre: 'Nueva variación',
+          precioBase: 0,
+        },
+      ],
+    }));
+  };
+
+  const handleDeleteVariacionGlobal = (index) => {
+    setConfig((prev) => ({
+      ...prev,
+      variacionesGlobales: (prev.variacionesGlobales || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleVariacionGlobalChange = (index, field, value) => {
+    setConfig((prev) => {
+      const updated = (prev.variacionesGlobales || []).map((v, i) =>
+        i === index
+          ? {
+              ...v,
+              [field]:
+                field === 'precioBase'
+                  ? Number.isNaN(parseInt(value, 10))
+                    ? 0
+                    : parseInt(value, 10)
+                  : value,
+            }
+          : v
+      );
+      return {
+        ...prev,
+        variacionesGlobales: updated,
+      };
+    });
+  };
+
+  // Agregar variación global a un producto (simplificado)
+  const handleAddVariacionGlobalToProducto = (productoId, variacionGlobal) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: [
+                ...(p.variaciones || []),
+                {
+                  nombre: variacionGlobal.nombre,
+                  precio: variacionGlobal.precioBase, // Precio inicial desde la variación global
+                },
+              ],
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  // Actualizar precio de variación en producto
+  const handleUpdateVariacionPrecio = (productoId, variacionIndex, precio) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).map((v, i) =>
+                i === variacionIndex
+                  ? {
+                      ...v,
+                      precio: Number.isNaN(parseInt(precio, 10)) ? 0 : parseInt(precio, 10),
+                    }
+                  : v
+              ),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  // Funciones para gestionar variaciones de productos
+  const handleAddVariacion = (productoId) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: [
+                ...(p.variaciones || []),
+                {
+                  nombre: 'Nueva variación',
+                  valores: [{ nombre: 'Opción 1', precio: 0 }],
+                },
+              ],
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  const handleDeleteVariacion = (productoId, variacionIndex) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).filter((_, i) => i !== variacionIndex),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  const handleVariacionChange = (productoId, variacionIndex, field, value) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).map((v, i) =>
+                i === variacionIndex ? { ...v, [field]: value } : v
+              ),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  const handleAddValorVariacion = (productoId, variacionIndex) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).map((v, i) =>
+                i === variacionIndex
+                  ? {
+                      ...v,
+                      valores: [
+                        ...(v.valores || []),
+                        { nombre: `Opción ${(v.valores || []).length + 1}`, precio: 0 },
+                      ],
+                    }
+                  : v
+              ),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  const handleDeleteValorVariacion = (productoId, variacionIndex, valorIndex) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).map((v, i) =>
+                i === variacionIndex
+                  ? {
+                      ...v,
+                      valores: (v.valores || []).filter((_, vi) => vi !== valorIndex),
+                    }
+                  : v
+              ),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
+  const handleValorVariacionChange = (productoId, variacionIndex, valorIndex, field, value) => {
+    setConfig((prev) => {
+      const updatedProductos = prev.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              variaciones: (p.variaciones || []).map((v, i) =>
+                i === variacionIndex
+                  ? {
+                      ...v,
+                      valores: (v.valores || []).map((val, vi) =>
+                        vi === valorIndex
+                          ? {
+                              ...val,
+                              [field]:
+                                field === 'precio'
+                                  ? Number.isNaN(parseInt(value, 10))
+                                    ? 0
+                                    : parseInt(value, 10)
+                                  : value,
+                            }
+                          : val
+                      ),
+                    }
+                  : v
+              ),
+            }
+          : p
+      );
+      return {
+        ...prev,
+        productos: updatedProductos,
+      };
+    });
+  };
+
   const handleZipResponse = async (res) => {
     console.log('[panel] Respuesta del servidor:', {
       status: res.status,
