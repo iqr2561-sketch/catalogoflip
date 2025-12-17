@@ -30,6 +30,8 @@ export default function FlipbookCatalog({
   const [loading, setLoading] = useState(true);
   const canvasRefs = useRef({}); // Referencias a los canvas de cada página
   const renderQueue = useRef(new Set()); // Cola de páginas pendientes de renderizar
+  const imageRefs = useRef({}); // Referencias a las imágenes cargadas (para JPG)
+  const [loadedImages, setLoadedImages] = useState(new Set()); // Imágenes ya cargadas
 
   // Cargar imágenes o PDF
   useEffect(() => {
@@ -41,12 +43,21 @@ export default function FlipbookCatalog({
       try {
         setLoading(true);
 
-        // Si hay imágenes, usarlas directamente
+        // Si hay imágenes, usarlas directamente (carga rápida)
         if (images && images.length > 0) {
-          console.log(`[FlipbookCatalog] Usando ${images.length} imágenes del catálogo`);
+          console.log(`[FlipbookCatalog] ✓ Usando ${images.length} imágenes JPG (carga rápida)`);
           setNumPages(images.length);
           setPdfDoc(null); // No hay PDF
           setLoading(false);
+          
+          // Preload de la primera imagen inmediatamente
+          const firstImg = new Image();
+          firstImg.onload = () => {
+            setLoadedImages(prev => new Set([...prev, 0]));
+            console.log('[FlipbookCatalog] ✓ Primera imagen precargada');
+          };
+          firstImg.src = images[0];
+          
           return;
         }
 
@@ -244,25 +255,30 @@ export default function FlipbookCatalog({
     }
   };
 
-  // Renderizar páginas iniciales (lazy loading)
+  // Preload de imágenes JPG (más rápido que canvas)
   useEffect(() => {
-    if ((!pdfDoc && !images) || !containerSize.width || numPages === 0) return;
+    if (!images || images.length === 0 || numPages === 0) return;
 
-    const initialPages = isMobile ? [0, 1] : [0, 1, 2]; // Mobile: 2 páginas, Desktop: 3 páginas
-    
-    initialPages.forEach(pageIndex => {
-      if (pageIndex < numPages && !renderedPages.has(pageIndex) && !renderQueue.current.has(pageIndex)) {
-        renderQueue.current.add(pageIndex);
-        // Usar setTimeout para asegurar que el canvas esté montado
-        setTimeout(() => {
-          const canvas = canvasRefs.current[pageIndex];
-          if (canvas) {
-            renderPageToCanvas(pageIndex + 1, canvas, isMobile);
-          }
-        }, 100);
-      }
-    });
-  }, [pdfDoc, containerSize.width, numPages, isMobile, renderedPages]);
+    // Preload solo de la primera imagen inmediatamente
+    if (!loadedImages.has(0)) {
+      const img = new Image();
+      img.onload = () => {
+        setLoadedImages(prev => new Set([...prev, 0]));
+        setRenderedPages(prev => new Set([...prev, 0]));
+      };
+      img.src = images[0];
+    }
+
+    // Preload de la segunda imagen (solo 1 adelante para carga rápida)
+    if (numPages > 1 && !loadedImages.has(1)) {
+      const img = new Image();
+      img.onload = () => {
+        setLoadedImages(prev => new Set([...prev, 1]));
+        setRenderedPages(prev => new Set([...prev, 1]));
+      };
+      img.src = images[1];
+    }
+  }, [images, numPages, loadedImages]);
 
   // Renderizar páginas adyacentes cuando cambia la página actual
   useEffect(() => {
@@ -809,14 +825,49 @@ export default function FlipbookCatalog({
                       )}
                     </div>
                   ) : (
-                    // Modo single: mostrar solo la página actual con canvas
+                    // Modo single: usar imágenes JPG directamente (más rápido) o canvas para PDF
                     <div className="w-full h-full flex items-center justify-center relative">
                       {loading && currentPage === 0 ? (
                         <div className="text-center">
                           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mb-4"></div>
                           <p className="text-gray-600">Cargando primera página...</p>
                         </div>
+                      ) : images && images.length > 0 ? (
+                        // Usar imágenes JPG directamente (mucho más rápido)
+                        <>
+                          <img
+                            ref={(el) => {
+                              if (el) imageRefs.current[currentPage] = el;
+                            }}
+                            src={images[currentPage]}
+                            alt={`Página ${currentPage + 1}`}
+                            className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                              flipDirection === 'prev' ? 'page-slide-in-right' : 
+                              flipDirection === 'next' ? 'page-slide-in-left' : ''
+                            }`}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%',
+                              display: loadedImages.has(currentPage) ? 'block' : 'none'
+                            }}
+                            onClick={handleClickSinglePage}
+                            loading={currentPage === 0 ? 'eager' : 'lazy'}
+                            onLoad={() => {
+                              setLoadedImages(prev => new Set([...prev, currentPage]));
+                              setRenderedPages(prev => new Set([...prev, currentPage]));
+                            }}
+                          />
+                          {!loadedImages.has(currentPage) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                              <div className="text-center">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600 mb-2"></div>
+                                <p className="text-gray-600 text-sm">Cargando página {currentPage + 1}...</p>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : (
+                        // Fallback a canvas para PDF
                         <>
                           <canvas
                             ref={(el) => {
