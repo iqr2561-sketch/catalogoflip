@@ -187,46 +187,32 @@ export default function FlipbookCatalog({
     }
   }, [images, numPages, loadedImages]);
 
-  // Renderizar páginas adyacentes cuando cambia la página actual
+  // Preload de imágenes adyacentes cuando cambia la página (solo para JPG)
   useEffect(() => {
-    if ((!pdfDoc && !images) || numPages === 0) return;
+    if (!images || images.length === 0 || numPages === 0) return;
 
-    // Páginas a pre-renderizar alrededor de la actual
-    const pagesToRender = [];
-    
-    // Página actual
-    if (currentPage < numPages && !renderedPages.has(currentPage)) {
-      pagesToRender.push(currentPage);
+    // Preload solo de la página siguiente (1 adelante) para navegación fluida
+    const nextPage = currentPage + 1;
+    if (nextPage < numPages && !loadedImages.has(nextPage)) {
+      const img = new Image();
+      img.onload = () => {
+        setLoadedImages(prev => new Set([...prev, nextPage]));
+        setRenderedPages(prev => new Set([...prev, nextPage]));
+      };
+      img.src = images[nextPage];
     }
-    
-    // Páginas siguientes (hasta 2 adelante)
-    for (let i = 1; i <= 2; i++) {
-      const nextPage = currentPage + i;
-      if (nextPage < numPages && !renderedPages.has(nextPage)) {
-        pagesToRender.push(nextPage);
-      }
-    }
-    
-    // Páginas anteriores (hasta 1 atrás)
+
+    // Preload de la página anterior si no está cargada
     const prevPage = currentPage - 1;
-    if (prevPage >= 0 && !renderedPages.has(prevPage)) {
-      pagesToRender.push(prevPage);
+    if (prevPage >= 0 && !loadedImages.has(prevPage)) {
+      const img = new Image();
+      img.onload = () => {
+        setLoadedImages(prev => new Set([...prev, prevPage]));
+        setRenderedPages(prev => new Set([...prev, prevPage]));
+      };
+      img.src = images[prevPage];
     }
-
-    // Renderizar páginas pendientes
-    pagesToRender.forEach(pageIndex => {
-      if (!renderQueue.current.has(pageIndex)) {
-        renderQueue.current.add(pageIndex);
-        // Usar setTimeout para asegurar que el canvas esté montado
-        setTimeout(() => {
-          const canvas = canvasRefs.current[pageIndex];
-          if (canvas) {
-            renderPageToCanvas(pageIndex + 1, canvas, isMobile);
-          }
-        }, 100);
-      }
-    });
-  }, [currentPage, pdfDoc, numPages, renderedPages, isMobile]);
+  }, [currentPage, images, numPages, loadedImages]);
 
   // Limpiar canvas no visibles para evitar memory leaks
   useEffect(() => {
