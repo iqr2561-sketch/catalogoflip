@@ -806,9 +806,35 @@ export default function PanelDeControl() {
       let variacionesAgregadas = 0;
       let variacionesActualizadas = 0;
 
-      // Primero, crear un mapa de productos existentes
+      // Primero, crear un mapa de productos existentes (crear copias para evitar mutaciones directas)
       config.productos.forEach((p) => {
-        productosMap.set(p.nombre?.toLowerCase().trim(), p);
+        const key = p.nombre?.toLowerCase().trim();
+        if (key) {
+          productosMap.set(key, {
+            ...p,
+            variaciones: p.variaciones ? [...p.variaciones] : []
+          });
+        }
+      });
+
+      // Primero, procesar todas las filas para encontrar el precio base de cada producto
+      const preciosBasePorProducto = new Map();
+      data.forEach((row) => {
+        const nombreProducto = (row['Producto'] || row['producto'] || '').toString().trim();
+        if (!nombreProducto) return;
+        
+        let precioBaseRaw = row['Precio Base'] || row['precio base'] || row['PrecioBase'] || row['Precio Base (COP)'] || row['precio base (cop)'] || '';
+        if (typeof precioBaseRaw === 'string') {
+          precioBaseRaw = precioBaseRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        }
+        const precioBase = precioBaseRaw && !isNaN(parseFloat(precioBaseRaw)) ? parseFloat(precioBaseRaw) : null;
+        
+        if (precioBase !== null && precioBase !== undefined) {
+          const key = nombreProducto.toLowerCase();
+          if (!preciosBasePorProducto.has(key) || preciosBasePorProducto.get(key) === null) {
+            preciosBasePorProducto.set(key, precioBase);
+          }
+        }
       });
 
       // Procesar cada fila del Excel
@@ -851,10 +877,12 @@ export default function PanelDeControl() {
 
         // Si el producto no existe, crearlo
         if (!producto) {
+          // Usar precio base de esta fila o del mapa de precios base
+          const precioBaseFinal = precioBase || preciosBasePorProducto.get(key) || 0;
           producto = {
             id: `producto_${Date.now()}_${Math.random().toString(36).substring(7)}`,
             nombre: nombreProducto,
-            precio: precioBase || 0,
+            precio: precioBaseFinal,
             imagen: '',
             descripcion: '',
             variaciones: []
@@ -862,10 +890,10 @@ export default function PanelDeControl() {
           productosMap.set(key, producto);
           productosActualizados++;
         } else {
-          // Actualizar precio base si hay uno en esta fila (incluso si es 0, para permitir limpiar precios)
-          // Solo actualizar si el precio base viene explícitamente en esta fila (no vacío)
-          if (precioBaseRaw && precioBaseRaw.toString().trim() !== '' && precioBase !== producto.precio) {
-            producto.precio = precioBase;
+          // Actualizar precio base si hay uno disponible (de esta fila o del mapa)
+          const precioBaseFinal = precioBase || preciosBasePorProducto.get(key);
+          if (precioBaseFinal !== null && precioBaseFinal !== undefined && precioBaseFinal !== producto.precio) {
+            producto.precio = precioBaseFinal;
             productosActualizados++;
           }
         }
@@ -880,19 +908,19 @@ export default function PanelDeControl() {
           if (variacionExistente) {
             // Actualizar precios de variación existente - SIEMPRE actualizar si vienen del Excel
             let actualizado = false;
+            let nuevoPrecioMayorista = variacionExistente.precioMayorista;
+            let nuevoPrecioMinorista = variacionExistente.precioMinorista;
             
             // Si hay precios mayorista/minorista específicos en el Excel, usarlos (incluso si son 0)
             if (precioMayoristaRaw && precioMayoristaRaw.toString().trim() !== '') {
-              const nuevoPrecioMayorista = precioMayorista || 0;
+              nuevoPrecioMayorista = precioMayorista || 0;
               if (variacionExistente.precioMayorista !== nuevoPrecioMayorista) {
-                variacionExistente.precioMayorista = nuevoPrecioMayorista;
                 actualizado = true;
               }
             }
             if (precioMinoristaRaw && precioMinoristaRaw.toString().trim() !== '') {
-              const nuevoPrecioMinorista = precioMinorista || 0;
+              nuevoPrecioMinorista = precioMinorista || 0;
               if (variacionExistente.precioMinorista !== nuevoPrecioMinorista) {
-                variacionExistente.precioMinorista = nuevoPrecioMinorista;
                 actualizado = true;
               }
             }
@@ -901,13 +929,30 @@ export default function PanelDeControl() {
             if (precioVariacionRaw && precioVariacionRaw.toString().trim() !== '' && !precioMayoristaRaw && !precioMinoristaRaw) {
               const nuevoPrecio = precioVariacion || 0;
               if (variacionExistente.precioMinorista !== nuevoPrecio || variacionExistente.precioMayorista !== nuevoPrecio) {
-                variacionExistente.precioMinorista = nuevoPrecio;
-                variacionExistente.precioMayorista = nuevoPrecio;
+                nuevoPrecioMinorista = nuevoPrecio;
+                nuevoPrecioMayorista = nuevoPrecio;
                 actualizado = true;
               }
             }
             
-            if (actualizado) variacionesActualizadas++;
+            if (actualizado) {
+              // Crear nueva copia del array de variaciones para que React detecte el cambio
+              const variacionIndex = producto.variaciones.findIndex(
+                (v) => v.nombre?.toLowerCase().trim() === nombreVariacion.toLowerCase().trim()
+              );
+              if (variacionIndex !== -1) {
+                producto.variaciones = [
+                  ...producto.variaciones.slice(0, variacionIndex),
+                  {
+                    ...variacionExistente,
+                    precioMayorista: nuevoPrecioMayorista,
+                    precioMinorista: nuevoPrecioMinorista
+                  },
+                  ...producto.variaciones.slice(variacionIndex + 1)
+                ];
+              }
+              variacionesActualizadas++;
+            }
           } else {
             // Agregar nueva variación
             if (!producto.variaciones) {
