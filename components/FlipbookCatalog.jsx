@@ -162,29 +162,23 @@ export default function FlipbookCatalog({
     if (!canvas) return;
 
     try {
-      // Si hay imágenes, cargar primero miniatura y luego imagen completa (carga rápida)
+      // Si hay imágenes, cargar directamente (optimizado para velocidad)
       if (images && images.length > 0) {
         const pageIndex = pageNum - 1;
         if (pageIndex >= 0 && pageIndex < images.length) {
-          const context = canvas.getContext('2d');
-          const thumbnailUrl = `/api/catalog-thumbnail/${pageNum}`;
-          const fullImageUrl = images[pageIndex];
-          
-          // Ajustar tamaño del canvas (temporal, se ajustará con la imagen real)
-          const maxWidth = mobile ? window.innerWidth * 0.9 : 1200;
-          const maxHeight = mobile ? window.innerHeight * 0.8 : 1600;
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
           
           await new Promise((resolve, reject) => {
-            // Cargar miniatura primero para mostrar algo rápido
-            const thumbnailImg = new Image();
-            thumbnailImg.crossOrigin = 'anonymous';
-            
-            thumbnailImg.onload = () => {
-              // Ajustar canvas con dimensiones de miniatura escaladas
-              let width = thumbnailImg.width;
-              let height = thumbnailImg.height;
+            img.onload = () => {
+              // Ajustar tamaño del canvas según la imagen
+              const maxWidth = mobile ? window.innerWidth * 0.9 : 1200;
+              const maxHeight = mobile ? window.innerHeight * 0.8 : 1600;
               
-              // Escalar para que quepa en el viewport
+              let width = img.width;
+              let height = img.height;
+              
+              // Escalar si es necesario
               if (width > maxWidth) {
                 height = (height * maxWidth) / width;
                 width = maxWidth;
@@ -197,87 +191,16 @@ export default function FlipbookCatalog({
               canvas.width = width;
               canvas.height = height;
               
-              // Dibujar miniatura primero (carga rápida)
-              context.drawImage(thumbnailImg, 0, 0, width, height);
+              const context = canvas.getContext('2d');
+              context.drawImage(img, 0, 0, width, height);
               
-              // Cargar imagen completa en segundo plano
-              const fullImg = new Image();
-              fullImg.crossOrigin = 'anonymous';
-              
-              fullImg.onload = () => {
-                // Recalcular dimensiones con imagen completa
-                let fullWidth = fullImg.width;
-                let fullHeight = fullImg.height;
-                
-                if (fullWidth > maxWidth) {
-                  fullHeight = (fullHeight * maxWidth) / fullWidth;
-                  fullWidth = maxWidth;
-                }
-                if (fullHeight > maxHeight) {
-                  fullWidth = (fullWidth * maxHeight) / fullHeight;
-                  fullHeight = maxHeight;
-                }
-                
-                // Actualizar canvas si las dimensiones cambiaron
-                if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
-                  canvas.width = fullWidth;
-                  canvas.height = fullHeight;
-                }
-                
-                // Dibujar imagen completa
-                context.drawImage(fullImg, 0, 0, fullWidth, fullHeight);
-                
-                setRenderedPages(prev => new Set([...prev, pageIndex]));
-                renderQueue.current.delete(pageIndex);
-                console.log(`[FlipbookCatalog] ✓ Imagen ${pageNum} cargada (completa)`);
-                resolve();
-              };
-              
-              fullImg.onerror = () => {
-                // Si falla la imagen completa, mantener la miniatura
-                console.warn(`[FlipbookCatalog] Error al cargar imagen completa página ${pageNum}, usando miniatura`);
-                setRenderedPages(prev => new Set([...prev, pageIndex]));
-                renderQueue.current.delete(pageIndex);
-                resolve();
-              };
-              
-              fullImg.src = fullImageUrl;
+              setRenderedPages(prev => new Set([...prev, pageIndex]));
+              renderQueue.current.delete(pageIndex);
+              console.log(`[FlipbookCatalog] ✓ Imagen ${pageNum} cargada`);
+              resolve();
             };
-            
-            thumbnailImg.onerror = () => {
-              // Si no hay miniatura, cargar imagen completa directamente
-              const fullImg = new Image();
-              fullImg.crossOrigin = 'anonymous';
-              
-              fullImg.onload = () => {
-                let width = fullImg.width;
-                let height = fullImg.height;
-                
-                if (width > maxWidth) {
-                  height = (height * maxWidth) / width;
-                  width = maxWidth;
-                }
-                if (height > maxHeight) {
-                  width = (width * maxHeight) / height;
-                  height = maxHeight;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                
-                context.drawImage(fullImg, 0, 0, width, height);
-                
-                setRenderedPages(prev => new Set([...prev, pageIndex]));
-                renderQueue.current.delete(pageIndex);
-                console.log(`[FlipbookCatalog] ✓ Imagen ${pageNum} cargada (sin miniatura)`);
-                resolve();
-              };
-              
-              fullImg.onerror = reject;
-              fullImg.src = fullImageUrl;
-            };
-            
-            thumbnailImg.src = thumbnailUrl;
+            img.onerror = reject;
+            img.src = images[pageIndex];
           });
         }
         return;
