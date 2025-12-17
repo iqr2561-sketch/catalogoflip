@@ -880,23 +880,71 @@ export default function PanelDeControl() {
 
   // Funciones para gestionar variaciones globales (en Configuración)
   const handleAddVariacionGlobal = () => {
-    setConfig((prev) => ({
-      ...prev,
-      variacionesGlobales: [
-        ...(prev.variacionesGlobales || []),
-        {
-          nombre: 'Nueva variación',
-          precioBase: 0,
-        },
-      ],
-    }));
+    setConfig((prev) => {
+      const updatedConfig = {
+        ...prev,
+        variacionesGlobales: [
+          ...(prev.variacionesGlobales || []),
+          {
+            nombre: 'Nueva variación',
+            precioBase: 0,
+          },
+        ],
+      };
+      
+      // Guardar automáticamente
+      (async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            setMessage('✓ Variación global agregada correctamente');
+            setTimeout(() => setMessage(null), 2000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar variación global:', err);
+        } finally {
+          setSaving(false);
+        }
+      })();
+      
+      return updatedConfig;
+    });
   };
 
   const handleDeleteVariacionGlobal = (index) => {
-    setConfig((prev) => ({
-      ...prev,
-      variacionesGlobales: (prev.variacionesGlobales || []).filter((_, i) => i !== index),
-    }));
+    setConfig((prev) => {
+      const updatedConfig = {
+        ...prev,
+        variacionesGlobales: (prev.variacionesGlobales || []).filter((_, i) => i !== index),
+      };
+      
+      // Guardar automáticamente
+      (async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            setMessage('✓ Variación global eliminada correctamente');
+            setTimeout(() => setMessage(null), 2000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar variación global:', err);
+        } finally {
+          setSaving(false);
+        }
+      })();
+      
+      return updatedConfig;
+    });
   };
 
   const handleVariacionGlobalChange = (index, field, value) => {
@@ -914,10 +962,33 @@ export default function PanelDeControl() {
             }
           : v
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         variacionesGlobales: updated,
       };
+      
+      // Guardar automáticamente después de un pequeño delay para evitar demasiadas llamadas
+      clearTimeout(handleVariacionGlobalChange.saveTimeout);
+      handleVariacionGlobalChange.saveTimeout = setTimeout(async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            console.log('[panel] Variación global actualizada');
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar variación global:', err);
+        } finally {
+          setSaving(false);
+        }
+      }, 1000);
+      
+      return updatedConfig;
     });
   };
 
@@ -938,10 +1009,33 @@ export default function PanelDeControl() {
             }
           : p
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         productos: updatedProductos,
       };
+      
+      // Guardar automáticamente
+      (async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            setMessage('✓ Variación agregada correctamente');
+            setTimeout(() => setMessage(null), 2000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar variación:', err);
+        } finally {
+          setSaving(false);
+        }
+      })();
+      
+      return updatedConfig;
     });
   };
 
@@ -963,10 +1057,33 @@ export default function PanelDeControl() {
             }
           : p
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         productos: updatedProductos,
       };
+      
+      // Guardar automáticamente después de un pequeño delay para evitar demasiadas llamadas
+      clearTimeout(handleUpdateVariacionPrecio.saveTimeout);
+      handleUpdateVariacionPrecio.saveTimeout = setTimeout(async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            console.log('[panel] Precio de variación guardado');
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar precio de variación:', err);
+        } finally {
+          setSaving(false);
+        }
+      }, 1000);
+      
+      return updatedConfig;
     });
   };
 
@@ -981,16 +1098,39 @@ export default function PanelDeControl() {
                 ...(p.variaciones || []),
                 {
                   nombre: 'Nueva variación',
-                  valores: [{ nombre: 'Opción 1', precio: 0 }],
+                  precio: 0, // Sistema simplificado: solo nombre y precio
                 },
               ],
             }
           : p
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         productos: updatedProductos,
       };
+      
+      // Guardar automáticamente
+      (async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            setMessage('✓ Variación agregada correctamente');
+            setTimeout(() => setMessage(null), 2000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar variación:', err);
+        } finally {
+          setSaving(false);
+        }
+      })();
+      
+      return updatedConfig;
     });
   };
 
@@ -1004,10 +1144,33 @@ export default function PanelDeControl() {
             }
           : p
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         productos: updatedProductos,
       };
+      
+      // Guardar automáticamente
+      (async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            setMessage('✓ Variación eliminada correctamente');
+            setTimeout(() => setMessage(null), 2000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar variación:', err);
+        } finally {
+          setSaving(false);
+        }
+      })();
+      
+      return updatedConfig;
     });
   };
 
@@ -1023,10 +1186,33 @@ export default function PanelDeControl() {
             }
           : p
       );
-      return {
+      
+      const updatedConfig = {
         ...prev,
         productos: updatedProductos,
       };
+      
+      // Guardar automáticamente después de un pequeño delay para evitar demasiadas llamadas
+      clearTimeout(handleVariacionChange.saveTimeout);
+      handleVariacionChange.saveTimeout = setTimeout(async () => {
+        try {
+          setSaving(true);
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+          if (res.ok) {
+            console.log('[panel] Variación actualizada');
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar variación:', err);
+        } finally {
+          setSaving(false);
+        }
+      }, 1000);
+      
+      return updatedConfig;
     });
   };
 
@@ -1921,41 +2107,41 @@ export default function PanelDeControl() {
                     {/* cuerpo */}
                     {viewMode === 'list' ? (
                       <>
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="w-32">
-                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-32">
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
                               Precio Base
-                            </label>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-2 flex items-center text-gray-500 text-xs font-medium">
-                                $
-                              </span>
-                              <input
-                                type="number"
-                                className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white font-medium"
-                                value={producto.precio || ''}
-                                onChange={(e) =>
-                                  handleProductoChange(producto.id, 'precio', e.target.value)
-                                }
-                                placeholder="0"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-                              Descripción
-                            </label>
+                          </label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-2 flex items-center text-gray-500 text-xs font-medium">
+                              $
+                            </span>
                             <input
-                              type="text"
-                              className="w-full rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white px-2 py-1.5"
-                              value={(producto.descripcion || '').substring(0, 60)}
+                              type="number"
+                              className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white font-medium"
+                              value={producto.precio || ''}
                               onChange={(e) =>
-                                handleProductoChange(producto.id, 'descripcion', e.target.value)
+                                handleProductoChange(producto.id, 'precio', e.target.value)
                               }
-                              placeholder="Descripción..."
+                              placeholder="0"
                             />
                           </div>
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+                            Descripción
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full rounded border border-gray-200 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-xs bg-white px-2 py-1.5"
+                            value={(producto.descripcion || '').substring(0, 60)}
+                            onChange={(e) =>
+                              handleProductoChange(producto.id, 'descripcion', e.target.value)
+                            }
+                            placeholder="Descripción..."
+                          />
+                        </div>
+                      </div>
                         {/* Variaciones en vista lista (compacta) */}
                         {(producto.variaciones || []).length > 0 && (
                           <div className="mt-2 pt-2 border-t border-gray-200">
