@@ -110,9 +110,31 @@ export default async function handler(req, res) {
     }
 
     // Ruta de almacenamiento temporal local cuando no hay Mongo
-    const tmpDir = path.join(process.cwd(), '.tmp', 'pdf-chunks');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
+    // En entornos serverless (Vercel, Lambda), usar /tmp que es el único directorio escribible
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    const tmpDir = isServerless 
+      ? path.join('/tmp', 'pdf-chunks')
+      : path.join(process.cwd(), '.tmp', 'pdf-chunks');
+    
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch (mkdirError) {
+      console.error('[upload-pdf-chunk] Error al crear directorio temporal:', {
+        error: mkdirError.message,
+        path: tmpDir,
+        isServerless,
+      });
+      // Si no podemos crear el directorio y no hay MongoDB, devolver error
+      if (!useMongo || !db) {
+        return sendJsonResponse(500, {
+          error: 'No se pudo crear el directorio temporal y MongoDB no está disponible',
+          details: mkdirError.message,
+          hint: 'Configura MONGODB_URI o verifica los permisos del sistema de archivos',
+        });
+      }
+      // Si hay MongoDB, continuar sin filesystem fallback
     }
 
     if (useMongo && db) {
