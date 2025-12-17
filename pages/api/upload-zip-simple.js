@@ -93,18 +93,46 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log(`[upload-zip-simple] ZIP recibido: ${zipFile.originalFilename || zipFile.newFilename} (${zipFile.size} bytes)`);
+    console.log(`[upload-zip-simple] Archivo recibido:`, {
+      originalFilename: zipFile.originalFilename,
+      newFilename: zipFile.newFilename,
+      filepath: zipFile.filepath,
+      size: zipFile.size,
+      mimetype: zipFile.mimetype,
+    });
 
     // Leer el archivo
     let zipBuffer;
     try {
+      if (!fs.existsSync(zipFile.filepath)) {
+        console.error('[upload-zip-simple] El archivo temporal no existe:', zipFile.filepath);
+        return sendJsonResponse(500, {
+          error: 'El archivo temporal no se pudo encontrar',
+          details: `Ruta: ${zipFile.filepath}`,
+        });
+      }
+      
       zipBuffer = fs.readFileSync(zipFile.filepath);
       console.log(`[upload-zip-simple] ZIP leído: ${zipBuffer.length} bytes`);
+      
+      if (zipBuffer.length === 0) {
+        console.error('[upload-zip-simple] El archivo está vacío');
+        return sendJsonResponse(400, {
+          error: 'El archivo ZIP está vacío',
+        });
+      }
     } catch (readError) {
-      console.error('[upload-zip-simple] Error al leer archivo:', readError);
+      console.error('[upload-zip-simple] Error al leer archivo:', {
+        error: readError.message,
+        name: readError.name,
+        code: readError.code,
+        path: zipFile.filepath,
+        stack: readError.stack,
+      });
       return sendJsonResponse(500, {
         error: 'Error al leer el archivo ZIP',
         details: readError.message,
+        code: readError.code,
       });
     }
 
@@ -262,11 +290,24 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[upload-zip-simple] Error crítico:', error);
+    console.error('[upload-zip-simple] Error crítico:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      code: error.code,
+      errno: error.errno,
+      syscall: error.syscall,
+      path: error.path,
+      timestamp: new Date().toISOString(),
+    });
+    
     return sendJsonResponse(500, {
       ok: false,
       error: `Error al procesar el ZIP: ${error.message}`,
       details: error.message,
+      errorType: error.name,
+      code: error.code,
+      hint: 'Verifica los logs del servidor para más detalles. Si el problema persiste, verifica la conexión a MongoDB o el tamaño del archivo.',
     });
   }
 }
