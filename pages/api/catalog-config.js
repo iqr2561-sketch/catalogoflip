@@ -97,12 +97,14 @@ async function getFromMongoDB() {
       imageUrls: catalog.imageUrls || [],
       zipFilename: catalog.zipFilename || null,
       imagesUpdatedAt: catalog.imagesUpdatedAt || null,
+      variacionesGlobales: catalog.variacionesGlobales || [], // Incluir variaciones globales
       productos: productos.map(p => ({
         id: p._id.toString(),
         nombre: p.nombre,
         precio: p.precio,
         imagen: p.imagen || '',
         descripcion: p.descripcion || '',
+        variaciones: p.variaciones || [], // Incluir variaciones del producto
       })),
       hotspots: hotspots.map(h => ({
         page: h.page,
