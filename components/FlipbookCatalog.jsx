@@ -33,81 +33,32 @@ export default function FlipbookCatalog({
   const imageRefs = useRef({}); // Referencias a las imágenes cargadas (para JPG)
   const [loadedImages, setLoadedImages] = useState(new Set()); // Imágenes ya cargadas
 
-  // Cargar imágenes o PDF
+  // Cargar SOLO imágenes JPG - NO renderizar PDFs
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let mounted = true;
-
-    const loadContent = async () => {
-      try {
-        setLoading(true);
-
-        // Si hay imágenes, usarlas directamente (carga rápida)
-        if (images && images.length > 0) {
-          console.log(`[FlipbookCatalog] ✓ Usando ${images.length} imágenes JPG (carga rápida)`);
-          setNumPages(images.length);
-          setPdfDoc(null); // No hay PDF
-          setLoading(false);
-          
-          // Preload de la primera imagen inmediatamente
-          const firstImg = new Image();
-          firstImg.onload = () => {
-            setLoadedImages(prev => new Set([...prev, 0]));
-            console.log('[FlipbookCatalog] ✓ Primera imagen precargada');
-          };
-          firstImg.src = images[0];
-          
-          return;
-        }
-
-        // Si hay PDF, cargarlo
-        if (pdfUrl) {
-          console.log('[FlipbookCatalog] Cargando PDF desde:', pdfUrl);
-
-          // Importar PDF.js dinámicamente
-          const pdfjsLib = await import('pdfjs-dist');
-          
-          // Configurar worker de PDF.js
-          const pdfjsVersion = pdfjsLib.version || '4.10.38';
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 
-            `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
-
-          // Cargar el PDF
-          const response = await fetch(pdfUrl);
-          if (!response.ok) {
-            throw new Error(`Error al cargar PDF: ${response.status}`);
-          }
-          const arrayBuffer = await response.arrayBuffer();
-          
-          const loadingTask = pdfjsLib.getDocument({ 
-            data: arrayBuffer,
-            verbosity: 0,
-          });
-          
-          const pdf = await loadingTask.promise;
-          
-          if (!mounted) return;
-          
-          console.log(`[FlipbookCatalog] PDF cargado: ${pdf.numPages} páginas`);
-          setPdfDoc(pdf);
-          setNumPages(pdf.numPages);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('[FlipbookCatalog] Error al cargar contenido:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadContent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [pdfUrl, images]);
+    // SOLO usar imágenes JPG - NO cargar PDFs
+    if (images && images.length > 0) {
+      console.log(`[FlipbookCatalog] ✓ Usando ${images.length} imágenes JPG (carga rápida, sin PDF)`);
+      setNumPages(images.length);
+      setPdfDoc(null); // NO hay PDF
+      setLoading(false);
+      
+      // Preload de la primera imagen inmediatamente
+      const firstImg = new Image();
+      firstImg.onload = () => {
+        setLoadedImages(prev => new Set([...prev, 0]));
+        console.log('[FlipbookCatalog] ✓ Primera imagen precargada');
+      };
+      firstImg.src = images[0];
+    } else {
+      // Si no hay imágenes, mostrar error
+      console.warn('[FlipbookCatalog] ⚠ No hay imágenes JPG disponibles');
+      setLoading(false);
+      setNumPages(0);
+      setPdfDoc(null);
+    }
+  }, [images]);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
@@ -211,7 +162,7 @@ export default function FlipbookCatalog({
     }
   };
 
-  // Preload de imágenes JPG (más rápido que canvas)
+  // Preload de imágenes JPG (solo imágenes, sin PDF)
   useEffect(() => {
     if (!images || images.length === 0 || numPages === 0) return;
 
