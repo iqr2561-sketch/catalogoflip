@@ -51,6 +51,10 @@ export default async function handler(req, res) {
 
   try {
     console.log('[upload-zip-simple] Iniciando recepción de ZIP...');
+    console.log('[upload-zip-simple] Headers recibidos:', {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length'],
+    });
 
     // Usar formidable para parsear multipart/form-data
     const form = formidable({
@@ -58,11 +62,35 @@ export default async function handler(req, res) {
       keepExtensions: true,
     });
 
-    const [fields, files] = await form.parse(req);
-    const zipFile = Array.isArray(files.zip) ? files.zip[0] : files.zip;
-
-    if (!zipFile) {
-      return sendJsonResponse(400, { error: 'No se proporcionó ningún archivo ZIP' });
+    let zipFile;
+    try {
+      const [fields, files] = await form.parse(req);
+      console.log('[upload-zip-simple] Form parseado:', {
+        fields: Object.keys(fields),
+        files: Object.keys(files),
+      });
+      
+      zipFile = Array.isArray(files.zip) ? files.zip[0] : files.zip;
+      
+      if (!zipFile) {
+        console.error('[upload-zip-simple] No se encontró archivo ZIP. Archivos recibidos:', Object.keys(files));
+        return sendJsonResponse(400, { 
+          error: 'No se proporcionó ningún archivo ZIP',
+          hint: 'Asegúrate de que el campo del formulario se llame "zip"',
+          receivedFiles: Object.keys(files),
+        });
+      }
+    } catch (parseError) {
+      console.error('[upload-zip-simple] Error al parsear formulario:', {
+        error: parseError.message,
+        name: parseError.name,
+        stack: parseError.stack,
+      });
+      return sendJsonResponse(400, {
+        error: 'Error al procesar el formulario',
+        details: parseError.message,
+        hint: 'Verifica que el archivo sea un ZIP válido y no exceda 100MB',
+      });
     }
 
     console.log(`[upload-zip-simple] ZIP recibido: ${zipFile.originalFilename || zipFile.newFilename} (${zipFile.size} bytes)`);

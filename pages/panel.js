@@ -736,13 +736,58 @@ export default function PanelDeControl() {
         body: formData,
       });
 
+      console.log('[panel] Respuesta del servidor:', {
+        status: res.status,
+        statusText: res.statusText,
+        ok: res.ok,
+        headers: Object.fromEntries(res.headers.entries()),
+      });
+
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
-        throw new Error(errorData.error || 'Error al subir el ZIP');
+        let errorData;
+        try {
+          const text = await res.text();
+          console.error('[panel] Respuesta de error del servidor (texto):', text);
+          try {
+            errorData = JSON.parse(text);
+            console.error('[panel] Respuesta de error del servidor (JSON):', errorData);
+          } catch (parseError) {
+            console.error('[panel] No se pudo parsear la respuesta como JSON:', parseError);
+            errorData = { error: text || `Error HTTP ${res.status}: ${res.statusText}` };
+          }
+        } catch (readError) {
+          console.error('[panel] Error al leer la respuesta:', readError);
+          errorData = { 
+            error: `Error HTTP ${res.status}: ${res.statusText}`,
+            details: readError.message 
+          };
+        }
+        
+        const errorMessage = errorData.error || errorData.message || `Error al subir el ZIP (HTTP ${res.status})`;
+        const errorDetails = errorData.details ? ` - ${errorData.details}` : '';
+        const errorHint = errorData.hint ? `\n\n💡 ${errorData.hint}` : '';
+        
+        console.error('[panel] Error completo:', {
+          message: errorMessage,
+          details: errorData.details,
+          hint: errorData.hint,
+          fullError: errorData,
+          status: res.status,
+        });
+        
+        throw new Error(`${errorMessage}${errorDetails}${errorHint}`);
       }
 
-      const data = await res.json();
-      console.log('[panel] ZIP subido exitosamente:', data);
+      let data;
+      try {
+        const text = await res.text();
+        console.log('[panel] Respuesta exitosa del servidor (texto):', text.substring(0, 200));
+        data = JSON.parse(text);
+        console.log('[panel] ZIP subido exitosamente:', data);
+      } catch (parseError) {
+        console.error('[panel] Error al parsear respuesta exitosa:', parseError);
+        throw new Error('Error al procesar la respuesta del servidor');
+      }
 
       setMessage(`✓ ${data.numPages || 0} imágenes cargadas exitosamente`);
       setError(null);
