@@ -301,6 +301,7 @@ export default async function handler(req, res) {
                 numPages: imageEntries.length,
                 useImages: true,
                 imageUrls: imageUrls,
+                zipFilename: filename,
               },
               $setOnInsert: { isMain: true }
             },

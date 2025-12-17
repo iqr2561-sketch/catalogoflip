@@ -93,6 +93,10 @@ async function getFromMongoDB() {
       pdf: catalog.pdf || '/api/catalogo',
       whatsappNumber: catalog.whatsappNumber || null,
       numPages: catalog.numPages || null,
+      useImages: catalog.useImages || false,
+      imageUrls: catalog.imageUrls || [],
+      zipFilename: catalog.zipFilename || null,
+      imagesUpdatedAt: catalog.imagesUpdatedAt || null,
       productos: productos.map(p => ({
         id: p._id.toString(),
         nombre: p.nombre,

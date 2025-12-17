@@ -24,15 +24,19 @@ export default function CatalogPage() {
           const data = await response.json();
           setCatalogConfig(data);
           
-          // Verificar si hay imágenes disponibles
+          // Priorizar imágenes sobre PDF para carga más rápida
           if (data.useImages && data.imageUrls && data.imageUrls.length > 0) {
             setImages(data.imageUrls);
             setPdfUrl(null);
-            console.log(`[catalog] Usando ${data.imageUrls.length} imágenes del catálogo`);
-          } else {
-            // Obtener URL del PDF directamente
+            console.log(`[catalog] ✓ Usando ${data.imageUrls.length} imágenes del catálogo (carga rápida)`);
+          } else if (data.pdf) {
+            // Fallback a PDF si no hay imágenes
             const pdfUrl = data.pdf || '/api/catalogo';
             setPdfUrl(pdfUrl);
+            setImages(null);
+            console.log(`[catalog] Usando PDF: ${pdfUrl}`);
+          } else {
+            setPdfUrl('/api/catalogo');
             setImages(null);
           }
         } else {

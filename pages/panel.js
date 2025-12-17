@@ -1663,8 +1663,8 @@ export default function PanelDeControl() {
                 <h2 className="text-2xl font-bold text-gray-900">Configuración General</h2>
               </div>
               <div className="space-y-6">
-                {/* Cargar PDF */}
-                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                {/* Cargar PDF - OCULTO */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm" style={{ display: 'none' }}>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     Cargar Catálogo PDF
                   </label>
@@ -1702,6 +1702,47 @@ export default function PanelDeControl() {
                     </div>
                   )}
                 </div>
+
+                {/* Información del ZIP actual y opción de eliminar */}
+                {config?.useImages && config?.zipFilename && (
+                  <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-200 shadow-sm">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Archivo ZIP del Catálogo
+                    </label>
+                    <div className="bg-white rounded-lg border-2 border-blue-200 p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            <span className="text-sm font-semibold text-gray-800">{config.zipFilename}</span>
+                          </div>
+                          {config.imagesUpdatedAt && (
+                            <p className="text-xs text-gray-500">
+                              Subido: {new Date(config.imagesUpdatedAt).toLocaleString('es-ES')}
+                            </p>
+                          )}
+                          {config.numPages && (
+                            <p className="text-xs text-gray-500">
+                              {config.numPages} imágenes en el catálogo
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDeleteAllImages}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Eliminar ZIP e Imágenes
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Cargar ZIP con imágenes */}
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
