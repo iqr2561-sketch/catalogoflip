@@ -357,6 +357,9 @@ export default function FlipbookCatalog({
             maxWidth: '90vw',
             maxHeight: '80vh',
             transition: 'width 0.3s ease, height 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <div
@@ -402,11 +405,11 @@ export default function FlipbookCatalog({
               return (
                 <div
                   ref={flipbookRef}
-                  className="flipbook-container flex bg-white shadow-2xl rounded-lg overflow-hidden mx-auto"
+                  className="flipbook-container flex bg-white shadow-2xl rounded-lg overflow-hidden"
                   style={{
                     position: 'relative',
-                    width: `${containerSize.width}px`,
-                    height: `${containerSize.height}px`,
+                    width: '100%',
+                    height: '100%',
                     transform: isZoomed ? 'scale(1.5)' : 'scale(1)',
                     transformOrigin: 'center center',
                     transition: 'transform 0.3s ease',
