@@ -19,6 +19,10 @@ export default function FlipbookCatalog({
   const [flipDirection, setFlipDirection] = useState(null); // 'next' | 'prev' | null
   const [isMobile, setIsMobile] = useState(false);
   const [slideOffset, setSlideOffset] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
@@ -135,7 +139,59 @@ export default function FlipbookCatalog({
       // En modo single: cada página ocupa 100% del contenedor visible
       setSlideOffset(-currentPage * 100); // Mover un 100% del contenedor por cada página
     }
+    setDragOffset(0); // Resetear drag offset cuando cambia la página
   }, [currentPage, isMobile, viewMode]);
+
+  // Gestos táctiles para móvil - Swipe
+  const minSwipeDistance = 50; // Distancia mínima para considerar un swipe
+
+  const onTouchStart = (e) => {
+    if (isModalOpen) return;
+    const touch = e.touches[0];
+    setTouchEnd(null);
+    setTouchStart(touch.clientX);
+    setIsDragging(true);
+  };
+
+  const onTouchMove = (e) => {
+    if (!touchStart || isModalOpen) return;
+    const touch = e.touches[0];
+    const distance = touch.clientX - touchStart;
+    setDragOffset(distance);
+    setTouchEnd(touch.clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd || isModalOpen) {
+      setTouchStart(null);
+      setTouchEnd(null);
+      setIsDragging(false);
+      setDragOffset(0);
+      return;
+    }
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && currentPage < images.length - 1) {
+      handleNextPage();
+    } else if (isRightSwipe && currentPage > 0) {
+      handlePrevPage();
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  const onTouchCancel = () => {
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsDragging(false);
+    setDragOffset(0);
+  };
 
   // Obtener hotspots de las páginas visibles (solo los habilitados)
   const isDouble = !isMobile && viewMode === 'double';
@@ -419,6 +475,11 @@ export default function FlipbookCatalog({
                 }
               };
 
+              // Calcular el offset real considerando el drag durante el swipe
+              const containerWidth = containerSize.width || 600;
+              const dragOffsetPercent = isDragging && dragOffset ? (dragOffset / containerWidth) * 100 : 0;
+              const currentOffset = slideOffset + dragOffsetPercent;
+
               return (
                 <div
                   ref={flipbookRef}
@@ -430,15 +491,22 @@ export default function FlipbookCatalog({
                     transform: isZoomed ? 'scale(1.5)' : 'scale(1)',
                     transformOrigin: 'center center',
                     transition: 'transform 0.3s ease',
+                    touchAction: 'pan-y pinch-zoom', // Permitir scroll vertical pero controlar horizontal
+                    userSelect: 'none', // Prevenir selección de texto durante el swipe
                   }}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                  onTouchCancel={onTouchCancel}
                 >
                   <div
                     className="page-slider-container"
                     style={{
                       width: isDouble ? `${Math.ceil(images.length / 2) * 100}%` : `${images.length * 100}%`,
                       height: '100%',
-                      transform: `translateX(${slideOffset}%)`,
-                      transition: 'transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)',
+                      transform: `translateX(${currentOffset}%)`,
+                      transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      willChange: isDragging ? 'transform' : 'auto',
                     }}
                   >
                     {isDouble ? (
