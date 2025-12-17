@@ -18,6 +18,7 @@ export default function FlipbookCatalog({
   const [containerSize, setContainerSize] = useState({ width: 600, height: 800 });
   const [flipDirection, setFlipDirection] = useState(null); // 'next' | 'prev' | null
   const [isMobile, setIsMobile] = useState(false);
+  const [slideOffset, setSlideOffset] = useState(0);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
