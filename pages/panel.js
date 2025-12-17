@@ -1020,6 +1020,46 @@ export default function PanelDeControl() {
     });
   };
 
+  const handleDeleteAllImages = async () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar ZIP e Imágenes',
+      message: `¿Estás seguro de que quieres eliminar el archivo ZIP "${config?.zipFilename}" y todas las ${config?.numPages || 0} imágenes del catálogo? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      confirmText: 'Eliminar Todo',
+      onConfirm: async () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        try {
+          setMessage('Eliminando imágenes del catálogo...');
+          const res = await fetch('/api/delete-catalog-images', {
+            method: 'DELETE',
+          });
+          
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+            throw new Error(errorData.error || 'Error al eliminar imágenes');
+          }
+          
+          const data = await res.json();
+          setMessage(`✓ ${data.deletedImages || 0} imágenes eliminadas correctamente`);
+          
+          // Recargar configuración
+          const configRes = await fetch('/api/catalog-config');
+          if (configRes.ok) {
+            const newConfig = await configRes.json();
+            setConfig(newConfig);
+            setThumbnails([]);
+          }
+          
+          setTimeout(() => setMessage(null), 3000);
+        } catch (err) {
+          console.error('[panel] Error al eliminar imágenes:', err);
+          setError(`Error al eliminar imágenes: ${err.message}`);
+        }
+      },
+    });
+  };
+
   const handleDeleteAllHotspots = async () => {
     setConfirmModal({
       isOpen: true,
