@@ -50,11 +50,15 @@ body {
   height: 100%;
 }
 
-/* Animación de entrada para páginas nuevas */
-@keyframes slideInFromRight {
+/* Animaciones de transición página por página */
+.page-transition {
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes pageSlideInLeft {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(-30px);
   }
   to {
     opacity: 1;
@@ -62,10 +66,10 @@ body {
   }
 }
 
-@keyframes slideInFromLeft {
+@keyframes pageSlideInRight {
   from {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(30px);
   }
   to {
     opacity: 1;
@@ -73,12 +77,42 @@ body {
   }
 }
 
-.slide-in-right {
-  animation: slideInFromRight 0.4s ease-out;
+@keyframes pageSlideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
 }
 
-.slide-in-left {
-  animation: slideInFromLeft 0.4s ease-out;
+@keyframes pageSlideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+.page-slide-in-left {
+  animation: pageSlideInLeft 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-slide-in-right {
+  animation: pageSlideInRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-slide-out-left {
+  animation: pageSlideOutLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.page-slide-out-right {
+  animation: pageSlideOutRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 /* Animaciones personalizadas */
