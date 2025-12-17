@@ -90,9 +90,6 @@ export default function FlipbookCatalog({
     })();
     
     setCurrentPage(newPage);
-    // Calcular offset para el slider
-    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
-    setSlideOffset(-newPage * 100 / pages);
   };
 
   const handleNextPage = () => {
@@ -107,9 +104,6 @@ export default function FlipbookCatalog({
     })();
     
     setCurrentPage(newPage);
-    // Calcular offset para el slider
-    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
-    setSlideOffset(-newPage * 100 / pages);
   };
 
   const toggleZoom = () => {
@@ -130,14 +124,16 @@ export default function FlipbookCatalog({
     return () => clearTimeout(timeoutId);
   }, [flipDirection]);
 
-  // Actualizar offset cuando cambia la página
+  // Actualizar offset cuando cambia la página - calcular correctamente para transición suave
   useEffect(() => {
-    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
-    if (viewMode === 'double') {
+    if (!isMobile && viewMode === 'double') {
+      // En modo double: cada par de páginas ocupa 100% del contenedor visible
       const base = currentPage - (currentPage % 2);
-      setSlideOffset(-base * 50); // En modo double, cada "slide" es 50% del ancho
+      const pairIndex = base / 2; // Índice del par (0, 1, 2, ...)
+      setSlideOffset(-pairIndex * 100); // Mover un 100% del contenedor por cada par
     } else {
-      setSlideOffset(-currentPage * 100); // En modo single, cada slide es 100% del ancho
+      // En modo single: cada página ocupa 100% del contenedor visible
+      setSlideOffset(-currentPage * 100); // Mover un 100% del contenedor por cada página
     }
   }, [currentPage, isMobile, viewMode]);
 
@@ -494,7 +490,7 @@ export default function FlipbookCatalog({
                         <div
                           key={idx}
                           className="page-slide-item w-full h-full bg-white flex items-center justify-center cursor-pointer"
-                          style={{ width: `${100 / images.length}%` }}
+                          style={{ width: `${100 / images.length}%`, flexShrink: 0 }}
                           onClick={handleClickSinglePage}
                         >
                           <img
