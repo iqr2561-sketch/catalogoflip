@@ -789,6 +789,60 @@ export default function PanelDeControl() {
       setMessage('Leyendo archivo Excel...');
       setError(null);
 
+      const normalizeHeaderKey = (k) => {
+        return (k || '')
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // quitar acentos
+          .replace(/\s+/g, ' ');
+      };
+
+      const getRowValue = (row, keys) => {
+        if (!row) return undefined;
+        const direct = new Map(Object.entries(row));
+        // mapa normalizado para soportar encabezados con acentos/variantes
+        const normalized = new Map();
+        for (const [k, v] of direct.entries()) normalized.set(normalizeHeaderKey(k), v);
+        for (const key of keys) {
+          const v = normalized.get(normalizeHeaderKey(key));
+          if (v !== undefined) return v;
+        }
+        return undefined;
+      };
+
+      const hasValue = (v) => {
+        if (v === null || v === undefined) return false;
+        if (typeof v === 'string') return v.trim() !== '';
+        return true; // number, boolean, etc.
+      };
+
+      const parsePrice = (raw) => {
+        if (!hasValue(raw)) return 0;
+        if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0;
+
+        let s = raw.toString().trim();
+        // quitar moneda y espacios
+        s = s.replace(/[^\d.,-]/g, '');
+
+        // Casos miles/decimales:
+        // 45.000,50 -> 45000.50
+        if (s.includes('.') && s.includes(',')) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else if (s.includes('.') && !s.includes(',')) {
+          // 45.000 -> 45000 (miles)
+          if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+        } else if (s.includes(',') && !s.includes('.')) {
+          // 45,000 -> 45000 (miles)  OR  45000,5 -> 45000.5
+          if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g, '');
+          else s = s.replace(',', '.');
+        }
+
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : 0;
+      };
+
       // Leer archivo
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -822,17 +876,23 @@ export default function PanelDeControl() {
       // Primero, procesar todas las filas para encontrar el precio base de cada producto
       const preciosBasePorProducto = new Map();
       data.forEach((row) => {
-        const nombreProducto = (row['Producto'] || row['producto'] || '').toString().trim();
+        const nombreProducto = (getRowValue(row, ['Producto', 'producto']) || '').toString().trim();
         if (!nombreProducto) return;
         
-        let precioBaseRaw = row['Precio Base'] || row['precio base'] || row['PrecioBase'] || row['Precio Base (COP)'] || row['precio base (cop)'] || '';
-        if (typeof precioBaseRaw === 'string') {
-          precioBaseRaw = precioBaseRaw.replace(/[^\d.,]/g, '').replace(',', '.');
-        }
-        const precioBase = precioBaseRaw && !isNaN(parseFloat(precioBaseRaw)) ? parseFloat(precioBaseRaw) : null;
+        const precioBaseRaw = getRowValue(row, [
+          'Precio Base',
+          'PrecioBase',
+          'Precio Base (COP)',
+          'Precio COP',
+          'Precio (COP)',
+          'Precio',
+          'precio base',
+          'precio cop',
+        ]);
+        const precioBase = hasValue(precioBaseRaw) ? parsePrice(precioBaseRaw) : null;
         
         if (precioBase !== null && precioBase !== undefined) {
-          const key = nombreProducto.toLowerCase();
+          const key = nombreProducto.toLowerCase().trim();
           if (!preciosBasePorProducto.has(key) || preciosBasePorProducto.get(key) === null) {
             preciosBasePorProducto.set(key, precioBase);
           }
@@ -841,46 +901,63 @@ export default function PanelDeControl() {
 
       // Procesar cada fila del Excel
       data.forEach((row) => {
-        const nombreProducto = (row['Producto'] || row['producto'] || '').toString().trim();
-        // Buscar precio base - puede venir como número o string con formato de moneda
-        let precioBaseRaw = row['Precio Base'] || row['precio base'] || row['PrecioBase'] || row['Precio Base (COP)'] || row['precio base (cop)'] || '';
-        // Limpiar el precio base (remover símbolos de moneda, espacios, etc.)
-        if (typeof precioBaseRaw === 'string') {
-          precioBaseRaw = precioBaseRaw.replace(/[^\d.,]/g, '').replace(',', '.');
-        }
-        const precioBase = precioBaseRaw && !isNaN(parseFloat(precioBaseRaw)) ? parseFloat(precioBaseRaw) : 0;
+        const nombreProducto = (getRowValue(row, ['Producto', 'producto']) || '').toString().trim();
+        const precioBaseRaw = getRowValue(row, [
+          'Precio Base',
+          'PrecioBase',
+          'Precio Base (COP)',
+          'Precio COP',
+          'Precio (COP)',
+          'Precio',
+          'precio base',
+          'precio cop',
+        ]);
+        const precioBaseProvided = hasValue(precioBaseRaw);
+        const precioBase = precioBaseProvided ? parsePrice(precioBaseRaw) : 0;
         
-        const nombreVariacion = (row['Variación'] || row['variación'] || row['Variacion'] || '').toString().trim();
+        const nombreVariacion = (getRowValue(row, ['Variación', 'Variacion', 'variación', 'variacion']) || '').toString().trim();
         
         // Buscar precio de variación - puede venir como número o string con formato de moneda
-        let precioVariacionRaw = row['Precio Variación'] || row['precio variación'] || row['PrecioVariacion'] || row['Precio Variacion'] || row['Precio Variación'] || '';
-        if (typeof precioVariacionRaw === 'string') {
-          precioVariacionRaw = precioVariacionRaw.replace(/[^\d.,]/g, '').replace(',', '.');
-        }
-        const precioVariacion = precioVariacionRaw && !isNaN(parseFloat(precioVariacionRaw)) ? parseFloat(precioVariacionRaw) : 0;
+        const precioVariacionRaw = getRowValue(row, [
+          'Precio Variación',
+          'Precio Variacion',
+          'PrecioVariacion',
+          'precio variación',
+          'precio variacion',
+        ]);
+        const precioVariacionProvided = hasValue(precioVariacionRaw);
+        const precioVariacion = precioVariacionProvided ? parsePrice(precioVariacionRaw) : 0;
         
         // Buscar precios mayorista y minorista
-        let precioMayoristaRaw = row['Precio Mayorista (≥50)'] || row['Precio Mayorista'] || row['precio mayorista'] || row['PrecioMayorista'] || '';
-        if (typeof precioMayoristaRaw === 'string') {
-          precioMayoristaRaw = precioMayoristaRaw.replace(/[^\d.,]/g, '').replace(',', '.');
-        }
-        const precioMayorista = precioMayoristaRaw && !isNaN(parseFloat(precioMayoristaRaw)) ? parseFloat(precioMayoristaRaw) : 0;
+        const precioMayoristaRaw = getRowValue(row, [
+          'Precio Mayorista (≥50)',
+          'Precio Mayorista (>=50)',
+          'Precio Mayorista',
+          'PrecioMayorista',
+          'precio mayorista',
+        ]);
+        const precioMayoristaProvided = hasValue(precioMayoristaRaw);
+        const precioMayorista = precioMayoristaProvided ? parsePrice(precioMayoristaRaw) : 0;
         
-        let precioMinoristaRaw = row['Precio Minorista (10-50)'] || row['Precio Minorista'] || row['precio minorista'] || row['PrecioMinorista'] || '';
-        if (typeof precioMinoristaRaw === 'string') {
-          precioMinoristaRaw = precioMinoristaRaw.replace(/[^\d.,]/g, '').replace(',', '.');
-        }
-        const precioMinorista = precioMinoristaRaw && !isNaN(parseFloat(precioMinoristaRaw)) ? parseFloat(precioMinoristaRaw) : 0;
+        const precioMinoristaRaw = getRowValue(row, [
+          'Precio Minorista (10-50)',
+          'Precio Minorista (10–50)',
+          'Precio Minorista',
+          'PrecioMinorista',
+          'precio minorista',
+        ]);
+        const precioMinoristaProvided = hasValue(precioMinoristaRaw);
+        const precioMinorista = precioMinoristaProvided ? parsePrice(precioMinoristaRaw) : 0;
 
         if (!nombreProducto) return; // Saltar filas sin nombre de producto
 
-        const key = nombreProducto.toLowerCase();
+        const key = nombreProducto.toLowerCase().trim();
         let producto = productosMap.get(key);
 
         // Si el producto no existe, crearlo
         if (!producto) {
-          // Usar precio base de esta fila o del mapa de precios base
-          const precioBaseFinal = precioBase || preciosBasePorProducto.get(key) || 0;
+          // Usar precio base de esta fila si fue provisto; si no, el del mapa
+          const precioBaseFinal = precioBaseProvided ? precioBase : (preciosBasePorProducto.get(key) || 0);
           producto = {
             id: `producto_${Date.now()}_${Math.random().toString(36).substring(7)}`,
             nombre: nombreProducto,
@@ -892,8 +969,10 @@ export default function PanelDeControl() {
           productosMap.set(key, producto);
           productosActualizados++;
         } else {
-          // Actualizar precio base si hay uno disponible (de esta fila o del mapa)
-          const precioBaseFinal = precioBase || preciosBasePorProducto.get(key);
+          // Actualizar precio base:
+          // - si viene explícito en la fila, usarlo (incluso si es 0)
+          // - si no viene, usar el precio base detectado para ese producto (si existe)
+          const precioBaseFinal = precioBaseProvided ? precioBase : preciosBasePorProducto.get(key);
           if (precioBaseFinal !== null && precioBaseFinal !== undefined && precioBaseFinal !== producto.precio) {
             producto.precio = precioBaseFinal;
             productosActualizados++;
@@ -914,13 +993,13 @@ export default function PanelDeControl() {
             let nuevoPrecioMinorista = variacionExistente.precioMinorista;
             
             // Si hay precios mayorista/minorista específicos en el Excel, usarlos (incluso si son 0)
-            if (precioMayoristaRaw && precioMayoristaRaw.toString().trim() !== '') {
+            if (precioMayoristaProvided) {
               nuevoPrecioMayorista = precioMayorista || 0;
               if (variacionExistente.precioMayorista !== nuevoPrecioMayorista) {
                 actualizado = true;
               }
             }
-            if (precioMinoristaRaw && precioMinoristaRaw.toString().trim() !== '') {
+            if (precioMinoristaProvided) {
               nuevoPrecioMinorista = precioMinorista || 0;
               if (variacionExistente.precioMinorista !== nuevoPrecioMinorista) {
                 actualizado = true;
@@ -928,7 +1007,7 @@ export default function PanelDeControl() {
             }
             
             // Si no hay precios específicos pero hay precio de variación, usarlo para ambos
-            if (precioVariacionRaw && precioVariacionRaw.toString().trim() !== '' && !precioMayoristaRaw && !precioMinoristaRaw) {
+            if (precioVariacionProvided && !precioMayoristaProvided && !precioMinoristaProvided) {
               const nuevoPrecio = precioVariacion || 0;
               if (variacionExistente.precioMinorista !== nuevoPrecio || variacionExistente.precioMayorista !== nuevoPrecio) {
                 nuevoPrecioMinorista = nuevoPrecio;
@@ -961,12 +1040,12 @@ export default function PanelDeControl() {
               producto.variaciones = [];
             }
             // Determinar los precios: si hay mayorista/minorista específicos, usarlos; si no, usar precioVariacion para ambos
-            const precioMayoristaFinal = (precioMayoristaRaw && precioMayoristaRaw.toString().trim() !== '') 
+            const precioMayoristaFinal = (precioMayoristaProvided) 
               ? precioMayorista 
-              : ((precioVariacionRaw && precioVariacionRaw.toString().trim() !== '') ? precioVariacion : 0);
-            const precioMinoristaFinal = (precioMinoristaRaw && precioMinoristaRaw.toString().trim() !== '') 
+              : (precioVariacionProvided ? precioVariacion : 0);
+            const precioMinoristaFinal = (precioMinoristaProvided) 
               ? precioMinorista 
-              : ((precioVariacionRaw && precioVariacionRaw.toString().trim() !== '') ? precioVariacion : 0);
+              : (precioVariacionProvided ? precioVariacion : 0);
             
             producto.variaciones.push({
               nombre: nombreVariacion,
