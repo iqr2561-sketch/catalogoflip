@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Toast from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
+import * as XLSX from 'xlsx';
 
 export default function PanelDeControl() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function PanelDeControl() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion'
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'lista-precios'
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
@@ -696,6 +697,207 @@ export default function PanelDeControl() {
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       setError('No se pudieron guardar los cambios. Revisa la consola para más detalles.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Exportar a Excel
+  const handleExportToExcel = () => {
+    if (!config || !config.productos || config.productos.length === 0) {
+      setError('No hay productos para exportar');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      // Preparar datos para Excel
+      const excelData = [];
+      
+      config.productos.forEach((producto) => {
+        // Fila para el producto base
+        excelData.push({
+          'Producto': producto.nombre || '',
+          'Precio Base': producto.precio || 0,
+          'Variación': '',
+          'Precio Variación': ''
+        });
+
+        // Filas para cada variación
+        if (producto.variaciones && producto.variaciones.length > 0) {
+          producto.variaciones.forEach((variacion) => {
+            excelData.push({
+              'Producto': producto.nombre || '',
+              'Precio Base': producto.precio || 0,
+              'Variación': variacion.nombre || '',
+              'Precio Variación': variacion.precio || 0
+            });
+          });
+        }
+      });
+
+      // Crear workbook y worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Lista de Precios');
+
+      // Ajustar ancho de columnas
+      const colWidths = [
+        { wch: 30 }, // Producto
+        { wch: 15 }, // Precio Base
+        { wch: 30 }, // Variación
+        { wch: 18 }  // Precio Variación
+      ];
+      ws['!cols'] = colWidths;
+
+      // Generar archivo Excel
+      const fileName = `lista_precios_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      setMessage('✓ Excel exportado correctamente');
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      console.error('Error al exportar Excel:', err);
+      setError('Error al exportar el archivo Excel');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Importar desde Excel
+  const handleImportFromExcel = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      setError('Por favor, selecciona un archivo Excel válido (.xlsx o .xls)');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage('Leyendo archivo Excel...');
+      setError(null);
+
+      // Leer archivo
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      if (!data || data.length === 0) {
+        throw new Error('El archivo Excel está vacío o no tiene datos válidos');
+      }
+
+      setMessage('Procesando datos...');
+
+      // Procesar datos y actualizar productos
+      const productosMap = new Map();
+      let productosActualizados = 0;
+      let variacionesAgregadas = 0;
+      let variacionesActualizadas = 0;
+
+      // Primero, crear un mapa de productos existentes
+      config.productos.forEach((p) => {
+        productosMap.set(p.nombre?.toLowerCase().trim(), p);
+      });
+
+      // Procesar cada fila del Excel
+      data.forEach((row) => {
+        const nombreProducto = (row['Producto'] || row['producto'] || '').toString().trim();
+        const precioBase = parseFloat(row['Precio Base'] || row['precio base'] || row['PrecioBase'] || 0);
+        const nombreVariacion = (row['Variación'] || row['variación'] || row['Variacion'] || '').toString().trim();
+        const precioVariacion = parseFloat(row['Precio Variación'] || row['precio variación'] || row['PrecioVariacion'] || row['Precio Variacion'] || 0);
+
+        if (!nombreProducto) return; // Saltar filas sin nombre de producto
+
+        const key = nombreProducto.toLowerCase();
+        let producto = productosMap.get(key);
+
+        // Si el producto no existe, crearlo
+        if (!producto) {
+          producto = {
+            id: `producto_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            nombre: nombreProducto,
+            precio: precioBase || 0,
+            imagen: '',
+            descripcion: '',
+            variaciones: []
+          };
+          productosMap.set(key, producto);
+          productosActualizados++;
+        } else {
+          // Actualizar precio base si es diferente
+          if (precioBase && precioBase !== producto.precio) {
+            producto.precio = precioBase;
+            productosActualizados++;
+          }
+        }
+
+        // Si hay una variación en esta fila
+        if (nombreVariacion) {
+          // Buscar si la variación ya existe
+          const variacionExistente = producto.variaciones?.find(
+            (v) => v.nombre?.toLowerCase().trim() === nombreVariacion.toLowerCase().trim()
+          );
+
+          if (variacionExistente) {
+            // Actualizar precio de variación existente
+            if (precioVariacion !== undefined && precioVariacion !== variacionExistente.precio) {
+              variacionExistente.precio = precioVariacion;
+              variacionesActualizadas++;
+            }
+          } else {
+            // Agregar nueva variación
+            if (!producto.variaciones) {
+              producto.variaciones = [];
+            }
+            producto.variaciones.push({
+              nombre: nombreVariacion,
+              precio: precioVariacion || 0
+            });
+            variacionesAgregadas++;
+          }
+        }
+      });
+
+      // Actualizar config con los productos procesados
+      const productosActualizadosArray = Array.from(productosMap.values());
+      
+      setConfig((prev) => ({
+        ...prev,
+        productos: productosActualizadosArray
+      }));
+
+      // Guardar en la base de datos
+      const res = await fetch('/api/catalog-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...config,
+          productos: productosActualizadosArray
+        }, null, 2),
+      });
+
+      if (!res.ok) {
+        throw new Error('Error al guardar los cambios');
+      }
+
+      setMessage(
+        `✓ Importación completada: ${productosActualizados} productos actualizados, ${variacionesAgregadas} variaciones agregadas, ${variacionesActualizadas} variaciones actualizadas`
+      );
+      setTimeout(() => setMessage(null), 5000);
+
+      // Limpiar input
+      e.target.value = '';
+    } catch (err) {
+      console.error('Error al importar Excel:', err);
+      setError(`Error al importar Excel: ${err.message || 'Error desconocido'}`);
       setTimeout(() => setError(null), 5000);
     } finally {
       setSaving(false);
@@ -1934,6 +2136,17 @@ export default function PanelDeControl() {
               }`}
             >
               Configuración
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('lista-precios')}
+              className={`px-4 py-2 rounded-xl transition-colors ${
+                activeTab === 'lista-precios'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Lista de Precios
             </button>
           </div>
 
