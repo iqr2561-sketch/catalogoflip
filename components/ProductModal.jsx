@@ -20,19 +20,17 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     }
   }, [isOpen, producto]);
   
-  // Calcular precio basado en variaciones seleccionadas
+  // Calcular precio basado en variaciones seleccionadas (sistema simplificado)
   const calcularPrecio = () => {
     if (!producto.variaciones || producto.variaciones.length === 0) {
       return producto.precio || 0;
     }
     
     let precioTotal = producto.precio || 0;
+    // Sistema simplificado: cada variación tiene un precio directo
     (producto.variaciones || []).forEach((variacion) => {
-      const valorSeleccionado = variacion.valores?.find(
-        (v) => v.nombre === variacionesSeleccionadas[variacion.nombre]
-      );
-      if (valorSeleccionado) {
-        precioTotal += valorSeleccionado.precio || 0;
+      if (variacionesSeleccionadas[variacion.nombre]) {
+        precioTotal += variacion.precio || 0;
       }
     });
     
@@ -113,7 +111,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
             {producto.nombre}
           </h2>
 
-          {/* Variaciones */}
+          {/* Variaciones (Sistema Simplificado) */}
           {(producto.variaciones || []).length > 0 && (
             <div className="mb-6 space-y-4">
               {(producto.variaciones || []).map((variacion, variacionIndex) => (
@@ -121,29 +119,47 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                   <label className="block text-sm font-semibold text-gray-800 mb-2">
                     {variacion.nombre}
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {(variacion.valores || []).map((valor, valorIndex) => (
-                      <button
-                        key={valorIndex}
-                        type="button"
-                        onClick={() => {
-                          setVariacionesSeleccionadas((prev) => ({
-                            ...prev,
-                            [variacion.nombre]: valor.nombre,
-                          }));
-                        }}
-                        className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                          variacionesSeleccionadas[variacion.nombre] === valor.nombre
-                            ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
-                        }`}
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isSelected = variacionesSeleccionadas[variacion.nombre] === variacion.nombre;
+                        setVariacionesSeleccionadas((prev) => {
+                          if (isSelected) {
+                            const newState = { ...prev };
+                            delete newState[variacion.nombre];
+                            return newState;
+                          } else {
+                            return {
+                              ...prev,
+                              [variacion.nombre]: variacion.nombre,
+                            };
+                          }
+                        });
+                      }}
+                      className={`px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                        variacionesSeleccionadas[variacion.nombre] === variacion.nombre
+                          ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
+                      }`}
+                    >
+                      <svg
+                        className={`w-5 h-5 ${variacionesSeleccionadas[variacion.nombre] === variacion.nombre ? 'text-primary-600' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <div className="text-sm">{valor.nombre}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          ${(valor.precio || 0).toLocaleString()}
-                        </div>
-                      </button>
-                    ))}
+                        {variacionesSeleccionadas[variacion.nombre] === variacion.nombre ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        )}
+                      </svg>
+                      <span className="text-sm">Incluir {variacion.nombre}</span>
+                      <span className="text-xs text-gray-500 ml-auto">
+                        +${(variacion.precio || 0).toLocaleString()}
+                      </span>
+                    </button>
                   </div>
                 </div>
               ))}
