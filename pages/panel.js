@@ -922,6 +922,10 @@ export default function PanelDeControl() {
                 if (configRes.ok) {
                   const newConfig = await configRes.json();
                   setConfig(newConfig);
+                  // Cargar miniaturas después de actualizar configuración
+                  if (newConfig.numPages) {
+                    setTimeout(() => loadThumbnails(newConfig.numPages), 1000);
+                  }
                 }
               } catch (err) {
                 console.error('[panel] Error al recargar configuración:', err);
