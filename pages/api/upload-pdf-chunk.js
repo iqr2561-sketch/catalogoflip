@@ -262,15 +262,23 @@ export default async function handler(req, res) {
           { upsert: true }
         );
 
-        return sendJsonResponse(200, {
-          ok: true,
-          message: 'PDF cargado exitosamente. Genera las imágenes desde el panel.',
-          filename: 'catalogo.pdf',
-          size: pdfBuffer.length,
-          totalChunks,
-          assembled: true,
-          storedIn: 'mongo',
-        });
+          return sendJsonResponse(200, {
+            ok: true,
+            message: 'PDF cargado exitosamente. Genera las imágenes desde el panel.',
+            filename: 'catalogo.pdf',
+            size: pdfBuffer.length,
+            totalChunks,
+            assembled: true,
+            storedIn: 'mongo',
+          });
+        } catch (assembleError) {
+          console.error('[upload-pdf-chunk] Error al ensamblar PDF:', {
+            error: assembleError.message,
+            name: assembleError.name,
+            stack: assembleError.stack,
+          });
+          throw assembleError;
+        }
       }
 
       return sendJsonResponse(200, {
