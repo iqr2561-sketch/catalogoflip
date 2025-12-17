@@ -955,9 +955,11 @@ export default function PanelDeControl() {
               ...v,
               [field]:
                 field === 'precioBase'
-                  ? Number.isNaN(parseInt(value, 10))
+                  ? value === '' || value === null || value === undefined
                     ? 0
-                    : parseInt(value, 10)
+                    : Number.isNaN(parseFloat(value.toString().replace(',', '.')))
+                      ? 0
+                      : parseFloat(value.toString().replace(',', '.'))
                   : value,
             }
           : v
@@ -1050,7 +1052,11 @@ export default function PanelDeControl() {
                 i === variacionIndex
                   ? {
                       ...v,
-                      precio: Number.isNaN(parseInt(precio, 10)) ? 0 : parseInt(precio, 10),
+                      precio: precio === '' || precio === null || precio === undefined 
+                        ? 0 
+                        : Number.isNaN(parseFloat(precio.toString().replace(',', '.'))) 
+                          ? 0 
+                          : parseFloat(precio.toString().replace(',', '.')),
                     }
                   : v
               ),
@@ -1098,7 +1104,7 @@ export default function PanelDeControl() {
                 ...(p.variaciones || []),
                 {
                   nombre: 'Nueva variación',
-                  precio: 0, // Sistema simplificado: solo nombre y precio
+                  precio: 0.00, // Sistema simplificado: solo nombre y precio (con decimales)
                 },
               ],
             }
@@ -2249,48 +2255,24 @@ export default function PanelDeControl() {
                                   </button>
                                 </div>
                                 
-                                <div className="space-y-2">
-                                  {(variacion.valores || []).map((valor, valorIndex) => (
-                                    <div key={valorIndex} className="flex items-center gap-2 bg-white rounded p-2 border border-gray-200">
-                                      <input
-                                        type="text"
-                                        value={valor.nombre || ''}
-                                        onChange={(e) => handleValorVariacionChange(producto.id, variacionIndex, valorIndex, 'nombre', e.target.value)}
-                                        placeholder="Nombre del valor (ej: Pequeña)"
-                                        className="flex-1 px-2 py-1 text-xs text-gray-700 bg-transparent border-0 focus:ring-0"
-                                      />
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-500">$</span>
-                                        <input
-                                          type="number"
-                                          value={valor.precio || 0}
-                                          onChange={(e) => handleValorVariacionChange(producto.id, variacionIndex, valorIndex, 'precio', e.target.value)}
-                                          placeholder="0"
-                                          className="w-20 px-2 py-1 text-xs text-gray-700 bg-gray-50 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                        />
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteValorVariacion(producto.id, variacionIndex, valorIndex)}
-                                        className="px-1.5 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                        title="Eliminar valor"
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  ))}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddValorVariacion(producto.id, variacionIndex)}
-                                    className="w-full px-2 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded border border-primary-200 transition-colors flex items-center justify-center gap-1"
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Agregar Valor
-                                  </button>
+                                {/* Sistema simplificado: precio directo en la variación */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">Precio:</label>
+                                  <div className="flex items-center gap-1 flex-1">
+                                    <span className="text-xs text-gray-500">$</span>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      step="0.01"
+                                      value={variacion.precio !== undefined && variacion.precio !== null ? variacion.precio.toString().replace('.', ',') : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9,]/g, '').replace(',', '.');
+                                        handleUpdateVariacionPrecio(producto.id, variacionIndex, value);
+                                      }}
+                                      placeholder="0,00"
+                                      className="flex-1 px-2 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -2451,10 +2433,15 @@ export default function PanelDeControl() {
                                   $
                                 </span>
                                 <input
-                                  type="number"
-                                  value={variacion.precioBase || 0}
-                                  onChange={(e) => handleVariacionGlobalChange(index, 'precioBase', e.target.value)}
-                                  placeholder="0"
+                                  type="text"
+                                  inputMode="decimal"
+                                  step="0.01"
+                                  value={variacion.precioBase !== undefined && variacion.precioBase !== null ? variacion.precioBase.toString().replace('.', ',') : ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9,]/g, '').replace(',', '.');
+                                    handleVariacionGlobalChange(index, 'precioBase', value);
+                                  }}
+                                  placeholder="0,00"
                                   className="w-full pl-6 pr-2 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                                 />
                               </div>
