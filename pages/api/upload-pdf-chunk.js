@@ -88,6 +88,8 @@ export default async function handler(req, res) {
     }
     
     console.log(`[upload-pdf-chunk] Recibiendo chunk ${chunkIndex + 1}/${totalChunks} de ${filename} (${chunkData.length} chars)`);
+    console.log(`[upload-pdf-chunk] MongoDB URI configurada: ${mongoUri ? 'Sí' : 'No'}`);
+    console.log(`[upload-pdf-chunk] Entorno serverless: ${process.env.VERCEL ? 'Vercel' : process.env.AWS_LAMBDA_FUNCTION_NAME ? 'AWS Lambda' : 'No'}`);
     
     const useMongo = Boolean(mongoUri);
     let mongoClient = null;
@@ -95,18 +97,25 @@ export default async function handler(req, res) {
     
     if (useMongo) {
       try {
+        console.log('[upload-pdf-chunk] Intentando conectar a MongoDB...');
         const clientPromise = getMongoClient();
         if (clientPromise) {
           mongoClient = await clientPromise;
           db = mongoClient.db();
+          console.log('[upload-pdf-chunk] ✓ Conexión a MongoDB exitosa');
+        } else {
+          console.warn('[upload-pdf-chunk] getMongoClient() retornó null');
         }
       } catch (mongoError) {
         console.error('[upload-pdf-chunk] Error al conectar a MongoDB:', {
           error: mongoError.message,
           name: mongoError.name,
+          stack: mongoError.stack,
         });
         // Continuar con fallback a filesystem si MongoDB falla
       }
+    } else {
+      console.warn('[upload-pdf-chunk] MongoDB no configurado, usando fallback a filesystem');
     }
 
     // Ruta de almacenamiento temporal local cuando no hay Mongo
@@ -138,24 +147,35 @@ export default async function handler(req, res) {
     }
 
     if (useMongo && db) {
-      // Guardar el chunk en colección temporal
-      const chunksCollection = db.collection('pdf_upload_chunks');
-      await chunksCollection.updateOne(
-        { sessionId, chunkIndex },
-        {
-          $set: {
-            sessionId,
-            chunkIndex,
-            totalChunks,
-            chunkData,
-            filename,
-            uploadedAt: new Date(),
+      try {
+        // Guardar el chunk en colección temporal
+        const chunksCollection = db.collection('pdf_upload_chunks');
+        console.log(`[upload-pdf-chunk] Guardando chunk ${chunkIndex + 1}/${totalChunks} en MongoDB...`);
+        
+        await chunksCollection.updateOne(
+          { sessionId, chunkIndex },
+          {
+            $set: {
+              sessionId,
+              chunkIndex,
+              totalChunks,
+              chunkData,
+              filename,
+              uploadedAt: new Date(),
+            },
           },
-        },
-        { upsert: true }
-      );
+          { upsert: true }
+        );
 
-      console.log(`[upload-pdf-chunk] Chunk ${chunkIndex + 1}/${totalChunks} guardado (Mongo)`);      
+        console.log(`[upload-pdf-chunk] ✓ Chunk ${chunkIndex + 1}/${totalChunks} guardado en MongoDB`);
+      } catch (mongoWriteError) {
+        console.error('[upload-pdf-chunk] Error al escribir chunk en MongoDB:', {
+          error: mongoWriteError.message,
+          name: mongoWriteError.name,
+          code: mongoWriteError.code,
+        });
+        throw mongoWriteError;
+      }      
 
       if (chunkIndex === totalChunks - 1) {
         console.log(`[upload-pdf-chunk] Último chunk recibido, ensamblando archivo...`);
@@ -187,8 +207,21 @@ export default async function handler(req, res) {
           });
         }
 
+        console.log('[upload-pdf-chunk] Subiendo PDF a GridFS...');
         const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
         const { Readable } = require('stream');
+        
+        // Eliminar PDF anterior si existe
+        try {
+          const existingFiles = await bucket.find({ filename: 'catalogo.pdf' }).toArray();
+          if (existingFiles.length > 0) {
+            console.log('[upload-pdf-chunk] Eliminando PDF anterior...');
+            await bucket.delete(existingFiles[0]._id);
+          }
+        } catch (deleteError) {
+          console.warn('[upload-pdf-chunk] No se pudo eliminar PDF anterior (puede no existir):', deleteError.message);
+        }
+        
         const uploadStream = bucket.openUploadStream('catalogo.pdf', {
           contentType: 'application/pdf',
         });
@@ -199,8 +232,14 @@ export default async function handler(req, res) {
         readable.pipe(uploadStream);
 
         await new Promise((resolve, reject) => {
-          uploadStream.on('finish', resolve);
-          uploadStream.on('error', reject);
+          uploadStream.on('finish', () => {
+            console.log('[upload-pdf-chunk] ✓ PDF subido a GridFS exitosamente');
+            resolve();
+          });
+          uploadStream.on('error', (err) => {
+            console.error('[upload-pdf-chunk] Error al subir a GridFS:', err);
+            reject(err);
+          });
         });
 
         await chunksCollection.deleteMany({ sessionId });
