@@ -544,7 +544,7 @@ export default function FlipbookCatalog({
 
           <button
             onClick={handleNextPage}
-            disabled={currentPage === images.length - 1}
+            disabled={currentPage >= (numPages - 1)}
             className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
               currentPage === images.length - 1
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'

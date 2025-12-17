@@ -289,104 +289,104 @@ export default async function handler(req, res) {
     });
   }
 
-    // Fallback sin Mongo: guardar chunks en filesystem temporal
-    // Solo usar filesystem si el directorio existe y es escribible
-    if (!fs.existsSync(tmpDir)) {
-      return sendJsonResponse(500, {
-        error: 'No se puede usar el sistema de archivos como fallback',
-        details: 'El directorio temporal no existe y MongoDB no está disponible',
-        hint: 'Configura MONGODB_URI para habilitar la subida de PDFs',
-      });
-    }
-    
-    try {
-      const partPath = path.join(tmpDir, `${sessionId}-${chunkIndex}.part`);
-      fs.writeFileSync(partPath, chunkData, 'utf8');
-      console.log(`[upload-pdf-chunk] Chunk ${chunkIndex + 1}/${totalChunks} guardado en filesystem`);
-    } catch (writeError) {
-      console.error('[upload-pdf-chunk] Error al escribir chunk en filesystem:', writeError);
-      return sendJsonResponse(500, {
-        error: 'Error al guardar el chunk en el sistema de archivos',
-        details: writeError.message,
-        hint: 'Configura MONGODB_URI para usar almacenamiento en base de datos',
-      });
-    }
+  // Fallback sin Mongo: guardar chunks en filesystem temporal
+  // Solo usar filesystem si el directorio existe y es escribible
+  if (!fs.existsSync(tmpDir)) {
+    return sendJsonResponse(500, {
+      error: 'No se puede usar el sistema de archivos como fallback',
+      details: 'El directorio temporal no existe y MongoDB no está disponible',
+      hint: 'Configura MONGODB_URI para habilitar la subida de PDFs',
+    });
+  }
+  
+  try {
+    const partPath = path.join(tmpDir, `${sessionId}-${chunkIndex}.part`);
+    fs.writeFileSync(partPath, chunkData, 'utf8');
+    console.log(`[upload-pdf-chunk] Chunk ${chunkIndex + 1}/${totalChunks} guardado en filesystem`);
+  } catch (writeError) {
+    console.error('[upload-pdf-chunk] Error al escribir chunk en filesystem:', writeError);
+    return sendJsonResponse(500, {
+      error: 'Error al guardar el chunk en el sistema de archivos',
+      details: writeError.message,
+      hint: 'Configura MONGODB_URI para usar almacenamiento en base de datos',
+    });
+  }
 
-    if (chunkIndex === totalChunks - 1) {
-      // Ensamblar desde disco
-      const buffers = [];
-      for (let i = 0; i < totalChunks; i++) {
-        const p = path.join(tmpDir, `${sessionId}-${i}.part`);
-        if (!fs.existsSync(p)) {
-          return sendJsonResponse(400, { error: `Falta el chunk ${i + 1}/${totalChunks}` });
-        }
-        try {
-          buffers.push(Buffer.from(fs.readFileSync(p, 'utf8'), 'base64'));
-        } catch (readError) {
-          console.error(`[upload-pdf-chunk] Error al leer chunk ${i + 1}:`, readError);
-          return sendJsonResponse(500, { 
-            error: `Error al leer el chunk ${i + 1}/${totalChunks}`,
-            details: readError.message,
-          });
-        }
+  if (chunkIndex === totalChunks - 1) {
+    // Ensamblar desde disco
+    const buffers = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const p = path.join(tmpDir, `${sessionId}-${i}.part`);
+      if (!fs.existsSync(p)) {
+        return sendJsonResponse(400, { error: `Falta el chunk ${i + 1}/${totalChunks}` });
       }
-      const pdfBuffer = Buffer.concat(buffers);
-
-      if (pdfBuffer.length === 0) {
-        return sendJsonResponse(400, { error: 'El buffer del PDF está vacío después del ensamblaje' });
-      }
-
-      const header = pdfBuffer.slice(0, 4).toString();
-      if (header !== '%PDF') {
-        return sendJsonResponse(400, { error: 'El archivo no es un PDF válido', receivedHeader: header });
-      }
-
-      // En entornos serverless, no podemos escribir en process.cwd()
-      // Guardar en /tmp o devolver error si no es posible
-      const targetPath = isServerless 
-        ? path.join('/tmp', 'catalogo.pdf')
-        : path.join(process.cwd(), 'catalogo.pdf');
-      
       try {
-        fs.writeFileSync(targetPath, pdfBuffer);
-        console.log(`[upload-pdf-chunk] PDF guardado en: ${targetPath}`);
-      } catch (writeError) {
-        console.error('[upload-pdf-chunk] Error al guardar PDF final:', writeError);
-        return sendJsonResponse(500, {
-          error: 'Error al guardar el PDF final',
-          details: writeError.message,
-          hint: 'En entornos serverless, se requiere MongoDB para almacenar PDFs',
+        buffers.push(Buffer.from(fs.readFileSync(p, 'utf8'), 'base64'));
+      } catch (readError) {
+        console.error(`[upload-pdf-chunk] Error al leer chunk ${i + 1}:`, readError);
+        return sendJsonResponse(500, { 
+          error: `Error al leer el chunk ${i + 1}/${totalChunks}`,
+          details: readError.message,
         });
       }
+    }
+    const pdfBuffer = Buffer.concat(buffers);
 
-      // Limpiar partes
-      for (let i = 0; i < totalChunks; i++) {
-        const p = path.join(tmpDir, `${sessionId}-${i}.part`);
-        try {
-          if (fs.existsSync(p)) fs.unlinkSync(p);
-        } catch (unlinkError) {
-          console.warn(`[upload-pdf-chunk] No se pudo eliminar chunk ${i + 1}:`, unlinkError);
-        }
-      }
+    if (pdfBuffer.length === 0) {
+      return sendJsonResponse(400, { error: 'El buffer del PDF está vacío después del ensamblaje' });
+    }
 
-      return sendJsonResponse(200, {
-        ok: true,
-        message: 'PDF cargado en filesystem. Genera las imágenes desde el panel.',
-        filename: 'catalogo.pdf',
-        size: pdfBuffer.length,
-        totalChunks,
-        assembled: true,
-        storedIn: 'filesystem',
+    const header = pdfBuffer.slice(0, 4).toString();
+    if (header !== '%PDF') {
+      return sendJsonResponse(400, { error: 'El archivo no es un PDF válido', receivedHeader: header });
+    }
+
+    // En entornos serverless, no podemos escribir en process.cwd()
+    // Guardar en /tmp o devolver error si no es posible
+    const targetPath = isServerless 
+      ? path.join('/tmp', 'catalogo.pdf')
+      : path.join(process.cwd(), 'catalogo.pdf');
+    
+    try {
+      fs.writeFileSync(targetPath, pdfBuffer);
+      console.log(`[upload-pdf-chunk] PDF guardado en: ${targetPath}`);
+    } catch (writeError) {
+      console.error('[upload-pdf-chunk] Error al guardar PDF final:', writeError);
+      return sendJsonResponse(500, {
+        error: 'Error al guardar el PDF final',
+        details: writeError.message,
+        hint: 'En entornos serverless, se requiere MongoDB para almacenar PDFs',
       });
+    }
+
+    // Limpiar partes
+    for (let i = 0; i < totalChunks; i++) {
+      const p = path.join(tmpDir, `${sessionId}-${i}.part`);
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch (unlinkError) {
+        console.warn(`[upload-pdf-chunk] No se pudo eliminar chunk ${i + 1}:`, unlinkError);
+      }
     }
 
     return sendJsonResponse(200, {
       ok: true,
-      message: `Chunk ${chunkIndex + 1}/${totalChunks} recibido`,
-      chunkIndex,
+      message: 'PDF cargado en filesystem. Genera las imágenes desde el panel.',
+      filename: 'catalogo.pdf',
+      size: pdfBuffer.length,
       totalChunks,
+      assembled: true,
       storedIn: 'filesystem',
     });
+  }
+
+  return sendJsonResponse(200, {
+    ok: true,
+    message: `Chunk ${chunkIndex + 1}/${totalChunks} recibido`,
+    chunkIndex,
+    totalChunks,
+    storedIn: 'filesystem',
+  });
     
   } catch (error) {
     const errorDetails = {
