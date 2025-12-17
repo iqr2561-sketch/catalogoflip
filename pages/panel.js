@@ -1318,6 +1318,14 @@ export default function PanelDeControl() {
         productos: updatedProductos,
       };
       
+      // Debug: verificar que las variaciones se agregaron
+      const productoActualizado = updatedProductos.find(p => p.id === productoId);
+      console.log('[panel] Variación agregada. Producto actualizado:', {
+        id: productoActualizado?.id,
+        nombre: productoActualizado?.nombre,
+        variaciones: productoActualizado?.variaciones
+      });
+      
       // Guardar automáticamente
       (async () => {
         try {
@@ -1328,11 +1336,20 @@ export default function PanelDeControl() {
             body: JSON.stringify(updatedConfig, null, 2),
           });
           if (res.ok) {
+            const responseData = await res.json();
+            console.log('[panel] Variación guardada en BD:', responseData);
             setMessage('✓ Variación agregada correctamente');
             setTimeout(() => setMessage(null), 2000);
+          } else {
+            const errorData = await res.json().catch(() => ({}));
+            console.error('[panel] Error al guardar variación:', errorData);
+            setError('Error al guardar la variación. Revisa la consola.');
+            setTimeout(() => setError(null), 3000);
           }
         } catch (err) {
           console.error('[panel] Error al guardar variación:', err);
+          setError('Error al guardar la variación. Revisa la consola.');
+          setTimeout(() => setError(null), 3000);
         } finally {
           setSaving(false);
         }
