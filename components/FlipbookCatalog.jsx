@@ -438,6 +438,7 @@ export default function FlipbookCatalog({
                       width: isDouble ? `${Math.ceil(images.length / 2) * 100}%` : `${images.length * 100}%`,
                       height: '100%',
                       transform: `translateX(${slideOffset}%)`,
+                      transition: 'transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)',
                     }}
                   >
                     {isDouble ? (
