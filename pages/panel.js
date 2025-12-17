@@ -4023,7 +4023,7 @@ export default function PanelDeControl() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Cotización USD → COP
+                        Cotización USD → Pesos
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm font-medium">
@@ -4066,11 +4066,11 @@ export default function PanelDeControl() {
                           className="w-full pl-20 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium"
                         />
                         <span className="absolute inset-y-0 right-3 flex items-center text-gray-500 text-sm font-medium">
-                          COP
+                          Pesos
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
-                        Esta cotización se usa para convertir precios de USD a COP en el catálogo
+                        Esta cotización se usa para convertir precios de USD a Pesos en el catálogo
                       </p>
                     </div>
                     <div>
@@ -4148,18 +4148,18 @@ export default function PanelDeControl() {
                               : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                           }`}
                         >
-                          COP
+                          Pesos
                         </button>
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
-                        Selecciona si quieres mostrar los precios en dólares o pesos colombianos
+                        Selecciona si quieres mostrar los precios en dólares o Pesos
                       </p>
                     </div>
                   </div>
                   {config.cotizacionDolar && config.cotizacionDolar !== 1 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-800">
-                        <strong>Ejemplo:</strong> Si un producto cuesta $10 USD, se mostrará como ${(10 * (config.cotizacionDolar || 1)).toLocaleString()} COP cuando esté activada la opción de mostrar en pesos.
+                        <strong>Ejemplo:</strong> Si un producto cuesta $10 USD, se mostrará como ${(10 * (config.cotizacionDolar || 1)).toLocaleString()} Pesos cuando esté activada la opción de mostrar en Pesos.
                       </p>
                     </div>
                   )}

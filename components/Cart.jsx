@@ -39,7 +39,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
       ? precio * cotizacion 
       : precio;
     const simbolo = mostrarPesos ? '' : 'USD $';
-    const moneda = mostrarPesos ? ' COP' : '';
+    const moneda = mostrarPesos ? ' Pesos' : '';
     return `${simbolo}${precioFinal.toLocaleString()}${moneda}`;
   };
 

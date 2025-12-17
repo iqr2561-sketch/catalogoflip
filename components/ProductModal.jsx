@@ -173,7 +173,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                             <>+${((tipoPrecioDefault === 'mayorista' 
                               ? (variacion.precioMayorista || 0)
                               : (variacion.precioMinorista || 0)
-                            ) * cotizacionDolar).toLocaleString()} COP</>
+                            ) * cotizacionDolar).toLocaleString()} Pesos</>
                           ) : (
                             <>+USD ${(tipoPrecioDefault === 'mayorista' 
                               ? (variacion.precioMayorista || 0)
@@ -186,7 +186,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                             (≈ ${((tipoPrecioDefault === 'mayorista' 
                               ? (variacion.precioMayorista || 0)
                               : (variacion.precioMinorista || 0)
-                            ) * cotizacionDolar).toLocaleString()} COP)
+                            ) * cotizacionDolar).toLocaleString()} Pesos)
                           </span>
                         )}
                         {mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
@@ -250,7 +250,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
               {mostrarPreciosEnPesos ? (
                 <>
                   <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                    ${(precioFinal * cotizacionDolar).toLocaleString()} COP
+                    ${(precioFinal * cotizacionDolar).toLocaleString()} Pesos
                   </span>
                   {cotizacionDolar && cotizacionDolar !== 1 && (
                     <span className="text-2xl md:text-3xl font-bold text-gray-500">
@@ -265,7 +265,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                   </span>
                   {cotizacionDolar && cotizacionDolar !== 1 && (
                     <span className="text-2xl md:text-3xl font-bold text-gray-500">
-                      ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
+                      ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} Pesos
                     </span>
                   )}
                 </>
@@ -274,7 +274,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
             {(producto.variaciones || []).length > 0 && producto.precio > 0 && (
               <span className="mt-1 block text-xs text-gray-500">
                 Precio base: {mostrarPreciosEnPesos 
-                  ? `${((producto.precio || 0) * cotizacionDolar).toLocaleString()} COP`
+                  ? `${((producto.precio || 0) * cotizacionDolar).toLocaleString()} Pesos`
                   : `USD ${producto.precio.toLocaleString()}`
                 }
               </span>
