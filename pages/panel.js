@@ -50,6 +50,8 @@ export default function PanelDeControl() {
         variacionesGlobales: data.variacionesGlobales || [], // Variaciones globales predefinidas
         cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar (por defecto 1)
         tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
+        mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
+        imagenGeneralProductos: data.imagenGeneralProductos || '', // Imagen general para productos sin imagen
       };
       setConfig(normalized);
       
@@ -2873,6 +2875,202 @@ export default function PanelDeControl() {
                     </div>
                   )}
                 </div>
+
+                {/* Imagen General para Productos */}
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-5 border border-purple-200 shadow-sm">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">Imagen General para Productos</h3>
+                    <p className="text-sm text-gray-600">
+                      Esta imagen se usará para todos los productos que no tengan una imagen específica asignada
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Vista previa de la imagen actual */}
+                    {config.imagenGeneralProductos && (
+                      <div className="relative inline-block">
+                        <img
+                          src={config.imagenGeneralProductos}
+                          alt="Imagen general de productos"
+                          className="w-32 h-32 object-contain rounded-lg border-2 border-gray-200 bg-gray-50"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setConfig((prev) => ({
+                              ...prev,
+                              imagenGeneralProductos: ''
+                            }));
+                            try {
+                              setSaving(true);
+                              const res = await fetch('/api/catalog-config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  ...config,
+                                  imagenGeneralProductos: ''
+                                }, null, 2),
+                              });
+                              if (res.ok) {
+                                await loadConfig();
+                                setMessage('✓ Imagen general eliminada');
+                                setTimeout(() => setMessage(null), 3000);
+                              }
+                            } catch (err) {
+                              console.error('[panel] Error al eliminar imagen:', err);
+                              setError('Error al eliminar la imagen');
+                              setTimeout(() => setError(null), 3000);
+                            } finally {
+                              setSaving(false);
+                            }
+                          }}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          title="Eliminar imagen"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Input para URL de imagen */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        URL de la Imagen
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={config.imagenGeneralProductos || ''}
+                          onChange={(e) => {
+                            setConfig((prev) => ({
+                              ...prev,
+                              imagenGeneralProductos: e.target.value
+                            }));
+                            // Guardar automáticamente después de un delay
+                            clearTimeout(window.saveImagenGeneralTimeout);
+                            window.saveImagenGeneralTimeout = setTimeout(async () => {
+                              try {
+                                setSaving(true);
+                                const res = await fetch('/api/catalog-config', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    ...config,
+                                    imagenGeneralProductos: e.target.value
+                                  }, null, 2),
+                                });
+                                if (res.ok) {
+                                  await loadConfig();
+                                }
+                              } catch (err) {
+                                console.error('[panel] Error al guardar imagen:', err);
+                              } finally {
+                                setSaving(false);
+                              }
+                            }, 1000);
+                          }}
+                          placeholder="https://ejemplo.com/imagen.jpg o /imagen.jpg"
+                          className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Ingresa la URL completa de la imagen o una ruta relativa desde la carpeta public
+                      </p>
+                    </div>
+
+                    {/* Opción para subir archivo */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        O sube una imagen desde tu computadora
+                      </label>
+                      <div className="border-2 border-dashed border-purple-300 rounded-xl p-4 text-center hover:border-purple-400 transition-colors bg-white">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            // Validar tipo de archivo
+                            if (!file.type.startsWith('image/')) {
+                              setError('Por favor, selecciona un archivo de imagen válido');
+                              setTimeout(() => setError(null), 5000);
+                              return;
+                            }
+
+                            try {
+                              setSaving(true);
+                              setMessage('Subiendo imagen...');
+
+                              // Convertir a base64 para guardar como data URL
+                              const reader = new FileReader();
+                              reader.onloadend = async () => {
+                                const base64String = reader.result;
+                                setConfig((prev) => ({
+                                  ...prev,
+                                  imagenGeneralProductos: base64String
+                                }));
+
+                                // Guardar en la configuración
+                                const res = await fetch('/api/catalog-config', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    ...config,
+                                    imagenGeneralProductos: base64String
+                                  }, null, 2),
+                                });
+
+                                if (res.ok) {
+                                  await loadConfig();
+                                  setMessage('✓ Imagen general guardada correctamente');
+                                  setTimeout(() => setMessage(null), 3000);
+                                } else {
+                                  throw new Error('Error al guardar la imagen');
+                                }
+                              };
+                              reader.onerror = () => {
+                                throw new Error('Error al leer el archivo');
+                              };
+                              reader.readAsDataURL(file);
+                            } catch (err) {
+                              console.error('[panel] Error al subir imagen:', err);
+                              setError(`Error al subir imagen: ${err.message || 'Error desconocido'}`);
+                              setTimeout(() => setError(null), 5000);
+                            } finally {
+                              setSaving(false);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="hidden"
+                          id="imagen-general-upload"
+                        />
+                        <label
+                          htmlFor="imagen-general-upload"
+                          className="cursor-pointer flex flex-col items-center gap-2"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">
+                            Haz clic para seleccionar imagen
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Formatos: JPG, PNG, GIF, WebP
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Cargar PDF - OCULTO */}
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm" style={{ display: 'none' }}>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -3736,6 +3934,156 @@ export default function PanelDeControl() {
                       </div>
                     </label>
                   </div>
+                </div>
+              </div>
+
+              {/* Configuración de Cotización del Dólar */}
+              <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-5 border border-purple-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Cotización del Dólar</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Cotización USD → COP
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm font-medium">
+                          1 USD =
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={config.cotizacionDolar || 1}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || 1;
+                            setConfig((prev) => ({
+                              ...prev,
+                              cotizacionDolar: value
+                            }));
+                            // Guardar automáticamente
+                            setTimeout(async () => {
+                              try {
+                                setSaving(true);
+                                const res = await fetch('/api/catalog-config', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    ...config,
+                                    cotizacionDolar: value
+                                  }, null, 2),
+                                });
+                                if (res.ok) {
+                                  console.log('[panel] Cotización del dólar guardada');
+                                }
+                              } catch (err) {
+                                console.error('[panel] Error al guardar cotización:', err);
+                              } finally {
+                                setSaving(false);
+                              }
+                            }, 1000);
+                          }}
+                          placeholder="4000"
+                          className="w-full pl-20 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium"
+                        />
+                        <span className="absolute inset-y-0 right-3 flex items-center text-gray-500 text-sm font-medium">
+                          COP
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Esta cotización se usa para convertir precios de USD a COP en el catálogo
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Mostrar precios en
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfig((prev) => ({
+                              ...prev,
+                              mostrarPreciosEnPesos: false
+                            }));
+                            setTimeout(async () => {
+                              try {
+                                setSaving(true);
+                                const res = await fetch('/api/catalog-config', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    ...config,
+                                    mostrarPreciosEnPesos: false
+                                  }, null, 2),
+                                });
+                                if (res.ok) {
+                                  await loadConfig();
+                                }
+                              } catch (err) {
+                                console.error('[panel] Error al guardar:', err);
+                              } finally {
+                                setSaving(false);
+                              }
+                            }, 500);
+                          }}
+                          className={`flex-1 px-4 py-2.5 rounded-lg border-2 transition-colors font-semibold text-sm ${
+                            !config.mostrarPreciosEnPesos
+                              ? 'border-primary-600 bg-primary-600 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          USD
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfig((prev) => ({
+                              ...prev,
+                              mostrarPreciosEnPesos: true
+                            }));
+                            setTimeout(async () => {
+                              try {
+                                setSaving(true);
+                                const res = await fetch('/api/catalog-config', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    ...config,
+                                    mostrarPreciosEnPesos: true
+                                  }, null, 2),
+                                });
+                                if (res.ok) {
+                                  await loadConfig();
+                                }
+                              } catch (err) {
+                                console.error('[panel] Error al guardar:', err);
+                              } finally {
+                                setSaving(false);
+                              }
+                            }, 500);
+                          }}
+                          className={`flex-1 px-4 py-2.5 rounded-lg border-2 transition-colors font-semibold text-sm ${
+                            config.mostrarPreciosEnPesos
+                              ? 'border-primary-600 bg-primary-600 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          COP
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Selecciona si quieres mostrar los precios en dólares o pesos colombianos
+                      </p>
+                    </div>
+                  </div>
+                  {config.cotizacionDolar && config.cotizacionDolar !== 1 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-800">
+                        <strong>Ejemplo:</strong> Si un producto cuesta $10 USD, se mostrará como ${(10 * (config.cotizacionDolar || 1)).toLocaleString()} COP cuando esté activada la opción de mostrar en pesos.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

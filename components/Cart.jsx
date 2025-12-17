@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useCartStore from '../store/cartStore';
 
-export default function Cart({ whatsappNumber = null }) {
+export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostrarPreciosEnPesos = false, imagenGeneralProductos = '' }) {
   const productos = useCartStore((state) => state.productos);
   const eliminarProducto = useCartStore((state) => state.eliminarProducto);
   const actualizarCantidad = useCartStore((state) => state.actualizarCantidad);
@@ -9,23 +9,83 @@ export default function Cart({ whatsappNumber = null }) {
   const getTotal = useCartStore((state) => state.getTotal);
   const [isOpen, setIsOpen] = useState(false);
   const [whatsappNum, setWhatsappNum] = useState(whatsappNumber);
+  const [config, setConfig] = useState({ cotizacionDolar: 1, mostrarPreciosEnPesos: false, imagenGeneralProductos: '' });
 
-  // Cargar número de WhatsApp desde la configuración si no se pasa como prop
+  // Cargar configuración desde la API
   useEffect(() => {
-    if (!whatsappNum) {
-      fetch('/api/catalog-config')
-        .then(res => res.json())
-        .then(data => {
-          if (data.whatsappNumber) {
-            setWhatsappNum(data.whatsappNumber);
-          }
-        })
-        .catch(err => console.error('Error al cargar WhatsApp:', err));
-    }
-  }, [whatsappNum]);
+    fetch('/api/catalog-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.whatsappNumber && !whatsappNum) {
+          setWhatsappNum(data.whatsappNumber);
+        }
+        setConfig({
+          cotizacionDolar: data.cotizacionDolar || cotizacionDolar || 1,
+          mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || mostrarPreciosEnPesos || false,
+          imagenGeneralProductos: data.imagenGeneralProductos || imagenGeneralProductos || ''
+        });
+      })
+      .catch(err => console.error('Error al cargar configuración:', err));
+  }, [whatsappNum, cotizacionDolar, mostrarPreciosEnPesos, imagenGeneralProductos]);
 
   const total = getTotal();
   const itemCount = productos.reduce((sum, p) => sum + (p.cantidad || 1), 0);
+
+  // Función helper para formatear precios
+  const formatearPrecio = (precio) => {
+    const mostrarPesos = config.mostrarPreciosEnPesos || mostrarPreciosEnPesos;
+    const cotizacion = config.cotizacionDolar || cotizacionDolar || 1;
+    const precioFinal = mostrarPesos 
+      ? precio * cotizacion 
+      : precio;
+    const simbolo = mostrarPesos ? '' : 'USD $';
+    const moneda = mostrarPesos ? ' COP' : '';
+    return `${simbolo}${precioFinal.toLocaleString()}${moneda}`;
+  };
+
+  // Formato de precio específico para el mensaje de WhatsApp (siempre con $ y 2 decimales)
+  const formatearPrecioWhatsapp = (precio) => {
+    const mostrarPesos = config.mostrarPreciosEnPesos || mostrarPreciosEnPesos;
+    const cotizacion = config.cotizacionDolar || cotizacionDolar || 1;
+    const precioFinal = mostrarPesos ? (precio || 0) * cotizacion : (precio || 0);
+    return `$${Number(precioFinal || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const numeroEmoji = (n) => {
+    const map = {
+      1: '1️⃣',
+      2: '2️⃣',
+      3: '3️⃣',
+      4: '4️⃣',
+      5: '5️⃣',
+      6: '6️⃣',
+      7: '7️⃣',
+      8: '8️⃣',
+      9: '9️⃣',
+      10: '🔟',
+    };
+    return map[n] || `${n}️⃣`;
+  };
+
+  const construirTituloProductoParaWhatsapp = (producto) => {
+    // Si viene como "Nombre (Variación)" lo convertimos a "Nombre – Variación"
+    if (typeof producto?.nombre === 'string') {
+      const m = producto.nombre.match(/^(.*)\s+\((.*)\)\s*$/);
+      if (m && m[1] && m[2]) return `${m[1]} – ${m[2]}`;
+    }
+
+    // Si hay variación seleccionada, intentamos armar "Producto – Variación"
+    const variaciones = producto?.variacionesSeleccionadas;
+    if (variaciones && typeof variaciones === 'object' && Object.keys(variaciones).length > 0) {
+      const firstValue = Object.values(variaciones)[0];
+      if (firstValue) return `${producto?.nombre || 'Producto'} – ${firstValue}`;
+    }
+
+    return producto?.nombre || 'Producto';
+  };
 
   const handleCheckout = () => {
     if (!whatsappNum) {
@@ -34,24 +94,24 @@ export default function Cart({ whatsappNumber = null }) {
     }
 
     // Construir mensaje de WhatsApp
-    let mensaje = '🛒 *Pedido del Catálogo*\n\n';
+    let mensaje = '🧾 *Detalle del pedido*\n\n';
+
     productos.forEach((producto, index) => {
-      const subtotal = (producto.precio || 0) * (producto.cantidad || 1);
-      mensaje += `${index + 1}. *${producto.nombre}*\n`;
-      
-      // Mostrar variaciones seleccionadas si existen
-      if (producto.variacionesSeleccionadas && Object.keys(producto.variacionesSeleccionadas).length > 0) {
-        Object.entries(producto.variacionesSeleccionadas).forEach(([variacionNombre, valorNombre]) => {
-          mensaje += `   ${variacionNombre}: ${valorNombre}\n`;
-        });
-      }
-      
-      mensaje += `   Cantidad: ${producto.cantidad || 1}\n`;
-      mensaje += `   Precio unitario: $${(producto.precio || 0).toLocaleString()}\n`;
-      mensaje += `   Subtotal: $${subtotal.toLocaleString()}\n\n`;
+      const cantidad = producto.cantidad || 1;
+      const precioUnitario = producto.precio || 0;
+      const subtotal = precioUnitario * cantidad;
+      const titulo = construirTituloProductoParaWhatsapp(producto);
+
+      mensaje += `${numeroEmoji(index + 1)} *${titulo}*\n`;
+      mensaje += `• Cantidad: ${cantidad}\n`;
+      mensaje += `• Precio unitario: ${formatearPrecioWhatsapp(precioUnitario)}\n`;
+      mensaje += `• Subtotal: ${formatearPrecioWhatsapp(subtotal)}\n\n`;
     });
-    mensaje += `💰 *Total: $${total.toLocaleString()}*\n\n`;
-    mensaje += 'Gracias por tu pedido! 🎉';
+
+    mensaje += '────────────────────\n';
+    mensaje += `💰 *Total del pedido:* ${formatearPrecioWhatsapp(total)}\n`;
+    mensaje += '────────────────────\n\n';
+    mensaje += '🙏 Gracias por tu pedido. Estamos preparando tu compra.';
 
     // Codificar el mensaje para URL
     const mensajeEncoded = encodeURIComponent(mensaje);
@@ -144,9 +204,9 @@ export default function Cart({ whatsappNumber = null }) {
                     >
                       {/* Imagen más pequeña en móvil */}
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {producto.imagen ? (
+                        {(producto.imagen || config.imagenGeneralProductos) ? (
                           <img
-                            src={producto.imagen}
+                            src={producto.imagen || config.imagenGeneralProductos}
                             alt={producto.nombre}
                             className="w-full h-full object-cover"
                           />
@@ -162,7 +222,7 @@ export default function Cart({ whatsappNumber = null }) {
                         </h3>
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <p className="text-primary-600 font-bold text-sm md:text-base">
-                            ${producto.precio.toLocaleString()}
+                            {formatearPrecio(producto.precio || 0)}
                           </p>
                           {/* Cantidad visible y separada del nombre */}
                           <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-gray-200">
@@ -219,7 +279,7 @@ export default function Cart({ whatsappNumber = null }) {
                         </div>
                         {/* Subtotal */}
                         <p className="text-xs text-gray-500">
-                          Subtotal: ${((producto.precio || 0) * (producto.cantidad || 1)).toLocaleString()}
+                          Subtotal: {formatearPrecio((producto.precio || 0) * (producto.cantidad || 1))}
                         </p>
                       </div>
 
@@ -255,7 +315,7 @@ export default function Cart({ whatsappNumber = null }) {
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-semibold text-gray-700">Total:</span>
                   <span className="text-2xl font-bold text-primary-600">
-                    ${total.toLocaleString()}
+                    {formatearPrecio(total)}
                   </span>
                 </div>
                 <div className="flex gap-3">

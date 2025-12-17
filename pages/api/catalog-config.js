@@ -100,6 +100,8 @@ async function getFromMongoDB() {
       variacionesGlobales: catalog.variacionesGlobales || [], // Incluir variaciones globales
       cotizacionDolar: catalog.cotizacionDolar || 1, // Cotización del dólar
       tipoPrecioDefault: catalog.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
+      mostrarPreciosEnPesos: catalog.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
+      imagenGeneralProductos: catalog.imagenGeneralProductos || '', // Imagen general para productos sin imagen
       productos: productos.map(p => ({
         id: p._id.toString(),
         nombre: p.nombre,
@@ -160,6 +162,8 @@ async function saveToMongoDB(data) {
         variacionesGlobales: data.variacionesGlobales || [], // Guardar variaciones globales
         cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar
         tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
+        mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
+        imagenGeneralProductos: data.imagenGeneralProductos || '', // Imagen general para productos sin imagen
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -172,6 +176,10 @@ async function saveToMongoDB(data) {
             pdf: data.pdf || catalog.pdf,
             whatsappNumber: data.whatsappNumber || catalog.whatsappNumber,
             numPages: data.numPages || catalog.numPages,
+            cotizacionDolar: data.cotizacionDolar !== undefined ? data.cotizacionDolar : catalog.cotizacionDolar,
+            tipoPrecioDefault: data.tipoPrecioDefault || catalog.tipoPrecioDefault,
+            mostrarPreciosEnPesos: data.mostrarPreciosEnPesos !== undefined ? data.mostrarPreciosEnPesos : catalog.mostrarPreciosEnPesos,
+            imagenGeneralProductos: data.imagenGeneralProductos !== undefined ? data.imagenGeneralProductos : catalog.imagenGeneralProductos,
             updatedAt: new Date(),
           },
         }

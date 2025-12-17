@@ -154,9 +154,16 @@ export default function CatalogPage() {
             whatsappNumber={catalogConfig.whatsappNumber || null}
             cotizacionDolar={catalogConfig.cotizacionDolar || 1}
             tipoPrecioDefault={catalogConfig.tipoPrecioDefault || 'minorista'}
+            mostrarPreciosEnPesos={catalogConfig.mostrarPreciosEnPesos || false}
+            imagenGeneralProductos={catalogConfig.imagenGeneralProductos || ''}
           />
         )}
-        <Cart whatsappNumber={catalogConfig?.whatsappNumber || null} />
+        <Cart 
+          whatsappNumber={catalogConfig?.whatsappNumber || null}
+          cotizacionDolar={catalogConfig?.cotizacionDolar || 1}
+          mostrarPreciosEnPesos={catalogConfig?.mostrarPreciosEnPesos || false}
+          imagenGeneralProductos={catalogConfig?.imagenGeneralProductos || ''}
+        />
       </main>
     </>
   );

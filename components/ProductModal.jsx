@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useCartStore from '../store/cartStore';
 
-export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null, cotizacionDolar = 1, tipoPrecioDefault = 'minorista' }) {
+export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null, cotizacionDolar = 1, tipoPrecioDefault = 'minorista', mostrarPreciosEnPesos = false, imagenGeneralProductos = '' }) {
   const agregarProducto = useCartStore((state) => state.agregarProducto);
   const [imageError, setImageError] = useState(false);
   const [variacionesSeleccionadas, setVariacionesSeleccionadas] = useState({});
@@ -132,9 +132,9 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
 
           {/* Imagen del producto - Más pequeña */}
           <div className="w-full h-32 md:h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden rounded-t-2xl">
-            {!imageError && producto.imagen ? (
+            {!imageError && (producto.imagen || imagenGeneralProductos) ? (
               <img
-                src={producto.imagen}
+                src={producto.imagen || imagenGeneralProductos}
                 alt={producto.nombre}
                 className="w-full h-full object-contain"
                 onError={() => setImageError(true)}
@@ -169,17 +169,32 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                       </label>
                       <p className="text-sm text-gray-600">
                         Precio adicional: <span className="font-semibold text-primary-600">
-                          +USD ${(tipoPrecioDefault === 'mayorista' 
-                            ? (variacion.precioMayorista || 0)
-                            : (variacion.precioMinorista || 0)
-                          ).toLocaleString()}
+                          {mostrarPreciosEnPesos ? (
+                            <>+${((tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || 0)
+                              : (variacion.precioMinorista || 0)
+                            ) * cotizacionDolar).toLocaleString()} COP</>
+                          ) : (
+                            <>+USD ${(tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || 0)
+                              : (variacion.precioMinorista || 0)
+                            ).toLocaleString()}</>
+                          )}
                         </span>
-                        {cotizacionDolar && cotizacionDolar !== 1 && (
+                        {!mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
                           <span className="text-xs text-gray-500 ml-2">
                             (≈ ${((tipoPrecioDefault === 'mayorista' 
                               ? (variacion.precioMayorista || 0)
                               : (variacion.precioMinorista || 0)
                             ) * cotizacionDolar).toLocaleString()} COP)
+                          </span>
+                        )}
+                        {mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
+                          <span className="text-xs text-gray-500 ml-2">
+                            (≈ USD ${((tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || 0)
+                              : (variacion.precioMinorista || 0)
+                            )).toLocaleString()})
                           </span>
                         )}
                       </p>
@@ -232,18 +247,36 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
           {/* Precio */}
           <div className="mb-6">
             <div className="flex items-baseline gap-2">
-              <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                USD ${precioFinal.toLocaleString()}
-              </span>
-              {cotizacionDolar && cotizacionDolar !== 1 && (
-                <span className="text-2xl md:text-3xl font-bold text-gray-500">
-                  ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
-                </span>
+              {mostrarPreciosEnPesos ? (
+                <>
+                  <span className="block text-4xl md:text-5xl font-bold text-primary-600">
+                    ${(precioFinal * cotizacionDolar).toLocaleString()} COP
+                  </span>
+                  {cotizacionDolar && cotizacionDolar !== 1 && (
+                    <span className="text-2xl md:text-3xl font-bold text-gray-500">
+                      ≈ USD ${precioFinal.toLocaleString()}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="block text-4xl md:text-5xl font-bold text-primary-600">
+                    USD ${precioFinal.toLocaleString()}
+                  </span>
+                  {cotizacionDolar && cotizacionDolar !== 1 && (
+                    <span className="text-2xl md:text-3xl font-bold text-gray-500">
+                      ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
+                    </span>
+                  )}
+                </>
               )}
             </div>
             {(producto.variaciones || []).length > 0 && producto.precio > 0 && (
               <span className="mt-1 block text-xs text-gray-500">
-                Precio base: USD ${producto.precio.toLocaleString()}
+                Precio base: {mostrarPreciosEnPesos 
+                  ? `${((producto.precio || 0) * cotizacionDolar).toLocaleString()} COP`
+                  : `USD ${producto.precio.toLocaleString()}`
+                }
               </span>
             )}
           </div>

@@ -10,6 +10,8 @@ export default function FlipbookCatalog({
   whatsappNumber = null,
   cotizacionDolar = 1,
   tipoPrecioDefault = 'minorista',
+  mostrarPreciosEnPesos = false,
+  imagenGeneralProductos = '',
 }) {
   const flipbookRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -975,6 +977,8 @@ export default function FlipbookCatalog({
         whatsappNumber={whatsappNumber}
         cotizacionDolar={cotizacionDolar}
         tipoPrecioDefault={tipoPrecioDefault}
+        mostrarPreciosEnPesos={mostrarPreciosEnPesos}
+        imagenGeneralProductos={imagenGeneralProductos}
       />
     </div>
   );
