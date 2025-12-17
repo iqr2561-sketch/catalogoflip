@@ -861,8 +861,9 @@ export default function PanelDeControl() {
           productosMap.set(key, producto);
           productosActualizados++;
         } else {
-          // Actualizar precio base si hay uno en esta fila y es diferente
-          if (precioBase > 0 && precioBase !== producto.precio) {
+          // Actualizar precio base si hay uno en esta fila (incluso si es 0, para permitir limpiar precios)
+          // Solo actualizar si el precio base viene explícitamente en esta fila (no vacío)
+          if (precioBaseRaw && precioBaseRaw.toString().trim() !== '' && precioBase !== producto.precio) {
             producto.precio = precioBase;
             productosActualizados++;
           }
@@ -876,23 +877,35 @@ export default function PanelDeControl() {
           );
 
           if (variacionExistente) {
-            // Actualizar precios de variación existente
+            // Actualizar precios de variación existente - SIEMPRE actualizar si vienen del Excel
             let actualizado = false;
-            // Si hay precios mayorista/minorista específicos, usarlos
-            if (precioMayorista > 0) {
-              variacionExistente.precioMayorista = precioMayorista;
-              actualizado = true;
+            
+            // Si hay precios mayorista/minorista específicos en el Excel, usarlos (incluso si son 0)
+            if (precioMayoristaRaw && precioMayoristaRaw.toString().trim() !== '') {
+              const nuevoPrecioMayorista = precioMayorista || 0;
+              if (variacionExistente.precioMayorista !== nuevoPrecioMayorista) {
+                variacionExistente.precioMayorista = nuevoPrecioMayorista;
+                actualizado = true;
+              }
             }
-            if (precioMinorista > 0) {
-              variacionExistente.precioMinorista = precioMinorista;
-              actualizado = true;
+            if (precioMinoristaRaw && precioMinoristaRaw.toString().trim() !== '') {
+              const nuevoPrecioMinorista = precioMinorista || 0;
+              if (variacionExistente.precioMinorista !== nuevoPrecioMinorista) {
+                variacionExistente.precioMinorista = nuevoPrecioMinorista;
+                actualizado = true;
+              }
             }
+            
             // Si no hay precios específicos pero hay precio de variación, usarlo para ambos
-            if (precioVariacion > 0 && !precioMayorista && !precioMinorista) {
-              variacionExistente.precioMinorista = precioVariacion;
-              variacionExistente.precioMayorista = precioVariacion;
-              actualizado = true;
+            if (precioVariacionRaw && precioVariacionRaw.toString().trim() !== '' && !precioMayoristaRaw && !precioMinoristaRaw) {
+              const nuevoPrecio = precioVariacion || 0;
+              if (variacionExistente.precioMinorista !== nuevoPrecio || variacionExistente.precioMayorista !== nuevoPrecio) {
+                variacionExistente.precioMinorista = nuevoPrecio;
+                variacionExistente.precioMayorista = nuevoPrecio;
+                actualizado = true;
+              }
             }
+            
             if (actualizado) variacionesActualizadas++;
           } else {
             // Agregar nueva variación
@@ -900,8 +913,12 @@ export default function PanelDeControl() {
               producto.variaciones = [];
             }
             // Determinar los precios: si hay mayorista/minorista específicos, usarlos; si no, usar precioVariacion para ambos
-            const precioMayoristaFinal = precioMayorista > 0 ? precioMayorista : (precioVariacion > 0 ? precioVariacion : 0);
-            const precioMinoristaFinal = precioMinorista > 0 ? precioMinorista : (precioVariacion > 0 ? precioVariacion : 0);
+            const precioMayoristaFinal = (precioMayoristaRaw && precioMayoristaRaw.toString().trim() !== '') 
+              ? precioMayorista 
+              : ((precioVariacionRaw && precioVariacionRaw.toString().trim() !== '') ? precioVariacion : 0);
+            const precioMinoristaFinal = (precioMinoristaRaw && precioMinoristaRaw.toString().trim() !== '') 
+              ? precioMinorista 
+              : ((precioVariacionRaw && precioVariacionRaw.toString().trim() !== '') ? precioVariacion : 0);
             
             producto.variaciones.push({
               nombre: nombreVariacion,
@@ -936,6 +953,9 @@ export default function PanelDeControl() {
       if (!res.ok) {
         throw new Error('Error al guardar los cambios');
       }
+
+      // Recargar configuración desde el servidor para asegurar que los cambios se reflejen
+      await loadConfig();
 
       setMessage(
         `✓ Importación completada: ${productosActualizados} productos actualizados, ${variacionesAgregadas} variaciones agregadas, ${variacionesActualizadas} variaciones actualizadas`
