@@ -84,7 +84,7 @@ export default function CatalogPage() {
     );
   }
 
-  if (!loading && images.length === 0) {
+  if (!loading && !pdfUrl) {
     return (
       <>
         <Head>
@@ -94,9 +94,9 @@ export default function CatalogPage() {
           <ConfigButton />
           <div className="text-center max-w-md mx-4">
             <div className="text-5xl mb-4">📄</div>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">No se pudieron generar páginas del catálogo</h1>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">No se pudo cargar el catálogo</h1>
             <p className="text-gray-600 mb-4">
-              No se pudo cargar el PDF o no contiene páginas válidas.
+              No se encontró el PDF del catálogo. Por favor, sube un PDF desde el panel de administración.
             </p>
             <button
               onClick={() => window.location.reload()}
