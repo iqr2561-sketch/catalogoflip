@@ -856,7 +856,8 @@ export default function PanelDeControl() {
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      // raw:false ayuda a normalizar valores con formato (ej. moneda) y defval evita undefined
+      const data = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: '' });
 
       if (!data || data.length === 0) {
         throw new Error('El archivo Excel está vacío o no tiene datos válidos');
@@ -937,23 +938,31 @@ export default function PanelDeControl() {
         const precioVariacion = precioVariacionProvided ? parsePrice(precioVariacionRaw) : 0;
         
         // Buscar precios mayorista y minorista
-        const precioMayoristaRaw = getRowValue(row, [
+        const precioMayoristaRaw = getRowValue(
+          row,
+          [
           'Precio Mayorista (≥50)',
           'Precio Mayorista (>=50)',
           'Precio Mayorista',
           'PrecioMayorista',
           'precio mayorista',
-        ], ['precio mayorista']);
+          ],
+          ['precio mayorista', 'mayorista']
+        );
         const precioMayoristaProvided = hasValue(precioMayoristaRaw);
         const precioMayorista = precioMayoristaProvided ? parsePrice(precioMayoristaRaw) : 0;
         
-        const precioMinoristaRaw = getRowValue(row, [
+        const precioMinoristaRaw = getRowValue(
+          row,
+          [
           'Precio Minorista (10-50)',
           'Precio Minorista (10–50)',
           'Precio Minorista',
           'PrecioMinorista',
           'precio minorista',
-        ], ['precio minorista']);
+          ],
+          ['precio minorista', 'minorista']
+        );
         const precioMinoristaProvided = hasValue(precioMinoristaRaw);
         const precioMinorista = precioMinoristaProvided ? parsePrice(precioMinoristaRaw) : 0;
 
