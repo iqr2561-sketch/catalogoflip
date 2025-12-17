@@ -98,22 +98,39 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('[generate-pdf-images] Iniciando generación de imágenes...');
+    
     const clientPromise = getMongoClient();
     const mongoClient = clientPromise ? await clientPromise : null;
     const db = mongoClient ? mongoClient.db() : null;
 
+    console.log(`[generate-pdf-images] MongoDB conectado: ${db ? 'Sí' : 'No'}`);
+
     const pdfData = await getPdfBuffer(db);
     if (!pdfData) {
+      console.error('[generate-pdf-images] No se encontró el PDF');
       return sendJsonResponse(404, {
         error: 'No se encontró el PDF en el servidor',
         hint: 'Sube un PDF primero y vuelve a intentar generar las imágenes',
       });
     }
 
-    console.log(`[generate-pdf-images] Fuente de PDF: ${pdfData.source}`);
+    console.log(`[generate-pdf-images] Fuente de PDF: ${pdfData.source}, Tamaño: ${pdfData.buffer.length} bytes`);
     console.log('[generate-pdf-images] Generando imágenes del PDF...');
-    const images = await pdfToImagesServer(pdfData.buffer, 1.5);
-    console.log(`[generate-pdf-images] ${images.length} imágenes generadas exitosamente`);
+    
+    let images;
+    try {
+      images = await pdfToImagesServer(pdfData.buffer, 1.5);
+      console.log(`[generate-pdf-images] ${images.length} imágenes generadas exitosamente`);
+    } catch (conversionError) {
+      console.error('[generate-pdf-images] Error al convertir PDF a imágenes:', {
+        message: conversionError.message,
+        name: conversionError.name,
+        stack: conversionError.stack,
+        logs: conversionError.logs || [],
+      });
+      throw conversionError;
+    }
 
     let storedIn = [];
 
@@ -199,15 +216,36 @@ export default async function handler(req, res) {
       storedIn,
     });
   } catch (error) {
-    console.error('[generate-pdf-images] Error crítico:', {
+    const errorDetails = {
       message: error.message,
       name: error.name,
       stack: error.stack,
-    });
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Agregar logs adicionales si están disponibles
+    if (error.logs && Array.isArray(error.logs)) {
+      errorDetails.logs = error.logs;
+    }
+    
+    console.error('[generate-pdf-images] Error crítico:', errorDetails);
+    
+    // Mensaje más descriptivo
+    let errorMessage = 'Error al generar imágenes del PDF';
+    if (error.message) {
+      errorMessage += `: ${error.message}`;
+    }
+    
+    // Verificar si es un error de dependencias
+    if (error.message && (error.message.includes('canvas') || error.message.includes('Cannot find module'))) {
+      errorMessage += '. El módulo canvas puede no estar disponible en este entorno.';
+    }
+    
     return sendJsonResponse(500, {
       ok: false,
-      error: 'Error al generar imágenes del PDF',
+      error: errorMessage,
       details: error.message,
+      hint: 'Las imágenes se generarán automáticamente en la primera carga del catálogo',
     });
   }
 }
