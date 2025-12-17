@@ -66,23 +66,35 @@ export default function PanelDeControl() {
   }, []);
 
   const loadThumbnails = async (numPages) => {
-    if (!numPages || numPages === 0) return;
+    if (!numPages || numPages === 0) {
+      setThumbnails([]);
+      return;
+    }
     
     setLoadingThumbnails(true);
     try {
+      console.log(`[panel] Cargando ${numPages} miniaturas...`);
       const thumbnailPromises = [];
       for (let i = 1; i <= Math.min(numPages, 100); i++) { // Limitar a 100 para no sobrecargar
         thumbnailPromises.push(
-          fetch(`/api/catalog-thumbnail/${i}`)
-            .then(res => res.ok ? `/api/catalog-thumbnail/${i}` : null)
+          fetch(`/api/catalog-thumbnail/${i}`, { cache: 'no-cache' })
+            .then(res => {
+              if (res.ok) {
+                return `/api/catalog-thumbnail/${i}`;
+              }
+              return null;
+            })
             .catch(() => null)
         );
       }
       
       const results = await Promise.all(thumbnailPromises);
-      setThumbnails(results.filter(Boolean));
+      const validThumbnails = results.filter(Boolean);
+      console.log(`[panel] ${validThumbnails.length} miniaturas cargadas de ${numPages} páginas`);
+      setThumbnails(validThumbnails);
     } catch (error) {
       console.error('[panel] Error al cargar miniaturas:', error);
+      setThumbnails([]);
     } finally {
       setLoadingThumbnails(false);
     }
@@ -785,6 +797,10 @@ export default function PanelDeControl() {
     if (configRes.ok) {
       const newConfig = await configRes.json();
       setConfig(newConfig);
+      // Cargar miniaturas después de actualizar configuración
+      if (newConfig.numPages) {
+        setTimeout(() => loadThumbnails(newConfig.numPages), 500);
+      }
     }
 
     // Limpiar después de un delay
@@ -1772,7 +1788,14 @@ export default function PanelDeControl() {
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
-                        <p>No hay miniaturas disponibles. Sube un ZIP con imágenes para generarlas.</p>
+                        <p className="mb-2">No hay miniaturas disponibles.</p>
+                        <p className="text-sm">Las miniaturas se generan automáticamente al subir un ZIP con imágenes.</p>
+                        <button
+                          onClick={() => loadThumbnails(config.numPages)}
+                          className="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                        >
+                          Intentar cargar de nuevo
+                        </button>
                       </div>
                     )}
                   </div>
