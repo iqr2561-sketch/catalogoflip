@@ -59,16 +59,55 @@ export default async function handler(req, res) {
     }
     
     const buffer = Buffer.concat(chunks);
-    const data = JSON.parse(buffer.toString());
+    
+    // Parsear JSON con mejor manejo de errores
+    let data;
+    try {
+      const jsonString = buffer.toString('utf8');
+      data = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('[upload-pdf-chunk] Error al parsear JSON:', {
+        error: parseError.message,
+        bufferLength: buffer.length,
+        preview: buffer.toString('utf8').substring(0, 200),
+      });
+      return sendJsonResponse(400, { 
+        error: 'Error al parsear los datos JSON',
+        details: parseError.message,
+      });
+    }
     
     const { chunkIndex, totalChunks, chunkData, filename, sessionId } = data;
+    
+    // Validar datos requeridos
+    if (chunkIndex === undefined || totalChunks === undefined || !chunkData || !filename || !sessionId) {
+      return sendJsonResponse(400, {
+        error: 'Datos incompletos',
+        received: { chunkIndex, totalChunks, hasChunkData: !!chunkData, filename, sessionId },
+      });
+    }
     
     console.log(`[upload-pdf-chunk] Recibiendo chunk ${chunkIndex + 1}/${totalChunks} de ${filename} (${chunkData.length} chars)`);
     
     const useMongo = Boolean(mongoUri);
-    const clientPromise = useMongo ? getMongoClient() : null;
-    const mongoClient = clientPromise ? await clientPromise : null;
-    const db = mongoClient ? mongoClient.db() : null;
+    let mongoClient = null;
+    let db = null;
+    
+    if (useMongo) {
+      try {
+        const clientPromise = getMongoClient();
+        if (clientPromise) {
+          mongoClient = await clientPromise;
+          db = mongoClient.db();
+        }
+      } catch (mongoError) {
+        console.error('[upload-pdf-chunk] Error al conectar a MongoDB:', {
+          error: mongoError.message,
+          name: mongoError.name,
+        });
+        // Continuar con fallback a filesystem si MongoDB falla
+      }
+    }
 
     // Ruta de almacenamiento temporal local cuando no hay Mongo
     const tmpDir = path.join(process.cwd(), '.tmp', 'pdf-chunks');
@@ -232,35 +271,43 @@ export default async function handler(req, res) {
     });
     
   } catch (error) {
-    console.error('[upload-pdf-chunk] Error crítico:', {
-      message: error.message,
-      name: error.name,
+    const errorDetails = {
+      message: error.message || 'Error desconocido',
+      name: error.name || 'Error',
       stack: error.stack,
       timestamp: new Date().toISOString(),
-    });
+    };
+    
+    console.error('[upload-pdf-chunk] Error crítico:', errorDetails);
     
     // Intentar limpiar chunks en caso de error
     try {
       if (mongoUri) {
         const clientPromise = getMongoClient();
-        const mongoClient = await clientPromise;
-        const db = mongoClient.db();
-        const chunksCollection = db.collection('pdf_upload_chunks');
-        const deletedCount = await chunksCollection.deleteMany({ 
-          uploadedAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) } // Older than 10 minutes
-        });
-        console.log(`[upload-pdf-chunk] Limpieza: ${deletedCount.deletedCount} chunks antiguos eliminados`);
+        if (clientPromise) {
+          const mongoClient = await clientPromise;
+          const db = mongoClient.db();
+          const chunksCollection = db.collection('pdf_upload_chunks');
+          const deletedCount = await chunksCollection.deleteMany({ 
+            uploadedAt: { $lt: new Date(Date.now() - 10 * 60 * 1000) } // Older than 10 minutes
+          });
+          console.log(`[upload-pdf-chunk] Limpieza: ${deletedCount.deletedCount} chunks antiguos eliminados`);
+        }
       }
     } catch (cleanupError) {
       console.error('[upload-pdf-chunk] Error al limpiar chunks:', cleanupError);
     }
     
+    // Mensaje de error más descriptivo
+    const errorMessage = error.message || error.toString() || 'Error desconocido al procesar el chunk';
+    
     return sendJsonResponse(500, {
       ok: false,
-      error: `Error al procesar el chunk: ${error.name}`,
-      details: error.message,
+      error: `Error al procesar el chunk: ${errorMessage}`,
+      errorType: error.name || 'Error',
+      details: error.message || error.toString(),
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      hint: 'Verifica los logs del servidor para más detalles',
+      hint: 'Verifica los logs del servidor para más detalles. Si el problema persiste, verifica la conexión a MongoDB o el tamaño del archivo.',
     });
   }
 }
