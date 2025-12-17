@@ -2120,32 +2120,72 @@ export default function PanelDeControl() {
               </div>
             </div>
 
-            {/* Botones para eliminar masivamente */}
-            <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-              {selectedHotspots.size > 0 && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                  <span className="text-sm text-red-700 font-semibold">
-                    {selectedHotspots.size} marcador(es) seleccionado(s)
-                  </span>
+            {/* Botones para gestionar marcadores masivamente */}
+            <div className="mb-4 space-y-3">
+              {/* Sección para ocultar/mostrar todos */}
+              <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 border border-blue-200 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Gestionar Visibilidad de Marcadores</h3>
+                <div className="flex items-center gap-3 flex-wrap">
                   <button
                     type="button"
-                    onClick={handleBulkDeleteHotspots}
-                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                    onClick={handleHideAllHotspots}
+                    className="px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700 transition-colors flex items-center gap-2"
+                    title="Ocultar todos los marcadores"
                   >
-                    Eliminar Seleccionados
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                    Ocultar Todos
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleShowAllHotspots}
+                    className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                    title="Mostrar todos los marcadores"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Mostrar Todos
+                  </button>
+                  <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <span className="font-semibold">
+                      {config.hotspots.filter(h => h.enabled).length} visibles
+                    </span>
+                    <span>de</span>
+                    <span className="font-semibold">{config.hotspots.length} total</span>
+                  </div>
                 </div>
-              )}
-              {config.hotspots && config.hotspots.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleDeleteAllHotspots}
-                  className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold hover:bg-red-800 transition-colors border-2 border-red-800"
-                  title="Eliminar todos los marcadores"
-                >
-                  🗑️ Eliminar Todos los Marcadores
-                </button>
-              )}
+              </div>
+
+              {/* Botones para eliminar masivamente */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                {selectedHotspots.size > 0 && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                    <span className="text-sm text-red-700 font-semibold">
+                      {selectedHotspots.size} marcador(es) seleccionado(s)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleBulkDeleteHotspots}
+                      className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                    >
+                      Eliminar Seleccionados
+                    </button>
+                  </div>
+                )}
+                {config.hotspots && config.hotspots.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteAllHotspots}
+                    className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold hover:bg-red-800 transition-colors border-2 border-red-800"
+                    title="Eliminar todos los marcadores"
+                  >
+                    🗑️ Eliminar Todos los Marcadores
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Paginación de hotspots */}
