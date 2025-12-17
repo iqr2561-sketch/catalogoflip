@@ -37,8 +37,9 @@ export default function ConfigModal({ isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-900/60 via-gray-800/50 to-gray-900/60 backdrop-blur-md"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-br from-gray-900/60 via-gray-800/50 to-gray-900/60 backdrop-blur-md"
       onClick={handleBackdropClick}
+      style={{ zIndex: 2000 }}
     >
       <div className="relative w-full max-w-md mx-4 rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20 animate-slideUp overflow-hidden">
         {/* Decorative gradient overlay */}
