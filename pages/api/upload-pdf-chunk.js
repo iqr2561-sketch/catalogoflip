@@ -147,9 +147,11 @@ export default async function handler(req, res) {
     }
 
     if (useMongo && db) {
+      // Definir chunksCollection fuera del try para que esté disponible en todo el bloque
+      const chunksCollection = db.collection('pdf_upload_chunks');
+      
       try {
         // Guardar el chunk en colección temporal
-        const chunksCollection = db.collection('pdf_upload_chunks');
         console.log(`[upload-pdf-chunk] Guardando chunk ${chunkIndex + 1}/${totalChunks} en MongoDB...`);
         
         await chunksCollection.updateOne(
@@ -179,7 +181,9 @@ export default async function handler(req, res) {
 
       if (chunkIndex === totalChunks - 1) {
         console.log(`[upload-pdf-chunk] Último chunk recibido, ensamblando archivo...`);
-        const allChunks = await chunksCollection
+        
+        try {
+          const allChunks = await chunksCollection
           .find({ sessionId })
           .sort({ chunkIndex: 1 })
           .toArray();
