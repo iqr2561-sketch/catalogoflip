@@ -2366,11 +2366,15 @@ export default function PanelDeControl() {
                           <div className="mt-2 pt-2 border-t border-gray-200">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[10px] font-semibold text-gray-500 uppercase">Variaciones:</span>
-                              {(producto.variaciones || []).map((variacion, variacionIndex) => (
-                                <span key={variacionIndex} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
-                                  {variacion.nombre} ({(variacion.valores || []).length} opciones)
-                                </span>
-                              ))}
+                              {(producto.variaciones || []).length === 0 ? (
+                                <span className="text-xs text-gray-400 italic">Sin variaciones</span>
+                              ) : (
+                                (producto.variaciones || []).map((variacion, variacionIndex) => (
+                                  <span key={variacionIndex} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                                    {variacion.nombre} (+${(variacion.precio || 0).toLocaleString()})
+                                  </span>
+                                ))
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleAddVariacion(producto.id)}
