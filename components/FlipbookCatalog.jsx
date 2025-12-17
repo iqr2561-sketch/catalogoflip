@@ -449,7 +449,7 @@ export default function FlipbookCatalog({
                         const isCurrent = leftIdx === baseIndex || rightIdx === baseIndex;
                         
                         return (
-                          <div key={i} className="page-slide-item flex" style={{ width: `${100 / Math.ceil(images.length / 2)}%` }}>
+                          <div key={i} className="page-slide-item flex" style={{ width: `${100 / Math.ceil(images.length / 2)}%`, flexShrink: 0 }}>
                             {images[leftIdx] && (
                               <div
                                 className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer border-r border-gray-200"
