@@ -716,15 +716,7 @@ export default function PanelDeControl() {
       const excelData = [];
       
       config.productos.forEach((producto) => {
-        // Fila para el producto base
-        excelData.push({
-          'Producto': producto.nombre || '',
-          'Precio Base': producto.precio || 0,
-          'Variación': '',
-          'Precio Variación': ''
-        });
-
-        // Filas para cada variación
+        // Si el producto tiene variaciones, agregar una fila por cada variación
         if (producto.variaciones && producto.variaciones.length > 0) {
           producto.variaciones.forEach((variacion) => {
             excelData.push({
@@ -733,6 +725,14 @@ export default function PanelDeControl() {
               'Variación': variacion.nombre || '',
               'Precio Variación': variacion.precio || 0
             });
+          });
+        } else {
+          // Si no tiene variaciones, agregar solo la fila del producto base
+          excelData.push({
+            'Producto': producto.nombre || '',
+            'Precio Base': producto.precio || 0,
+            'Variación': '',
+            'Precio Variación': ''
           });
         }
       });
