@@ -238,6 +238,78 @@ export default function PanelDeControl() {
     }));
   };
 
+  const handleHideAllHotspots = async () => {
+    setConfig((prev) => ({
+      ...prev,
+      hotspots: prev.hotspots.map((h) => ({ ...h, enabled: false })),
+    }));
+    
+    // Guardar automáticamente
+    setSaving(true);
+    try {
+      const updatedConfig = {
+        ...config,
+        hotspots: config.hotspots.map((h) => ({ ...h, enabled: false })),
+      };
+      
+      const res = await fetch('/api/catalog-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedConfig),
+      });
+      
+      if (res.ok) {
+        setMessage('✓ Todos los marcadores han sido ocultados');
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setError('✗ Error al ocultar marcadores. Intenta nuevamente.');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('[panel] Error al ocultar marcadores:', err);
+      setError('✗ Error de conexión. Intenta nuevamente.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShowAllHotspots = async () => {
+    setConfig((prev) => ({
+      ...prev,
+      hotspots: prev.hotspots.map((h) => ({ ...h, enabled: true })),
+    }));
+    
+    // Guardar automáticamente
+    setSaving(true);
+    try {
+      const updatedConfig = {
+        ...config,
+        hotspots: config.hotspots.map((h) => ({ ...h, enabled: true })),
+      };
+      
+      const res = await fetch('/api/catalog-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedConfig),
+      });
+      
+      if (res.ok) {
+        setMessage('✓ Todos los marcadores han sido mostrados');
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setError('✗ Error al mostrar marcadores. Intenta nuevamente.');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('[panel] Error al mostrar marcadores:', err);
+      setError('✗ Error de conexión. Intenta nuevamente.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleHotspotFieldChange = (index, field, value) => {
     const num = parseFloat(value);
     const safe =
