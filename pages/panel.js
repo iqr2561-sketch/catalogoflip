@@ -144,6 +144,7 @@ export default function PanelDeControl() {
           precio: 0,
           imagen: '',
           descripcion: '',
+          variaciones: [], // Array de variaciones
         });
       }
 
@@ -1756,6 +1757,99 @@ export default function PanelDeControl() {
                     )}
 
                     {/* Campo de página eliminado: los hotspots se agregan manualmente */}
+                    
+                    {/* Sección de Variaciones */}
+                    {viewMode === 'grid' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-gray-700">Variaciones del Producto</h4>
+                          <button
+                            type="button"
+                            onClick={() => handleAddVariacion(producto.id)}
+                            className="px-3 py-1.5 text-xs font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg border border-primary-200 transition-colors flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Agregar Variación
+                          </button>
+                        </div>
+                        
+                        {(producto.variaciones || []).length === 0 ? (
+                          <p className="text-xs text-gray-500 italic">No hay variaciones. Agrega una para ofrecer diferentes opciones (ej: Tamaño, Color, etc.)</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {(producto.variaciones || []).map((variacion, variacionIndex) => (
+                              <div key={variacionIndex} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <div className="flex items-center justify-between mb-2">
+                                  <input
+                                    type="text"
+                                    value={variacion.nombre || ''}
+                                    onChange={(e) => handleVariacionChange(producto.id, variacionIndex, 'nombre', e.target.value)}
+                                    placeholder="Nombre de la variación (ej: Tamaño de hoja)"
+                                    className="flex-1 px-2 py-1 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteVariacion(producto.id, variacionIndex)}
+                                    className="ml-2 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar variación"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  {(variacion.valores || []).map((valor, valorIndex) => (
+                                    <div key={valorIndex} className="flex items-center gap-2 bg-white rounded p-2 border border-gray-200">
+                                      <input
+                                        type="text"
+                                        value={valor.nombre || ''}
+                                        onChange={(e) => handleValorVariacionChange(producto.id, variacionIndex, valorIndex, 'nombre', e.target.value)}
+                                        placeholder="Nombre del valor (ej: Pequeña)"
+                                        className="flex-1 px-2 py-1 text-xs text-gray-700 bg-transparent border-0 focus:ring-0"
+                                      />
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">$</span>
+                                        <input
+                                          type="number"
+                                          value={valor.precio || 0}
+                                          onChange={(e) => handleValorVariacionChange(producto.id, variacionIndex, valorIndex, 'precio', e.target.value)}
+                                          placeholder="0"
+                                          className="w-20 px-2 py-1 text-xs text-gray-700 bg-gray-50 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                        />
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteValorVariacion(producto.id, variacionIndex, valorIndex)}
+                                        className="px-1.5 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                        title="Eliminar valor"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddValorVariacion(producto.id, variacionIndex)}
+                                    className="w-full px-2 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded border border-primary-200 transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Agregar Valor
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Botón eliminar en vista lista */}
                     {viewMode === 'list' && (

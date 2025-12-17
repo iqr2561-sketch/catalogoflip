@@ -5,17 +5,31 @@ const useCartStore = create((set) => ({
   
   agregarProducto: (producto, cantidad = 1) => {
     set((state) => {
-      // Verificar si el producto ya existe en el carrito
-      const existe = state.productos.find((p) => p.id === producto.id);
+      // Crear una clave única basada en ID y variaciones seleccionadas
+      const variacionesKey = producto.variacionesSeleccionadas 
+        ? JSON.stringify(producto.variacionesSeleccionadas)
+        : '';
+      const claveUnica = `${producto.id}_${variacionesKey}`;
+      
+      // Verificar si el producto con las mismas variaciones ya existe en el carrito
+      const existe = state.productos.find((p) => {
+        const pVariacionesKey = p.variacionesSeleccionadas 
+          ? JSON.stringify(p.variacionesSeleccionadas)
+          : '';
+        return `${p.id}_${pVariacionesKey}` === claveUnica;
+      });
       
       if (existe) {
         // Si existe, incrementar la cantidad
         return {
-          productos: state.productos.map((p) =>
-            p.id === producto.id
+          productos: state.productos.map((p) => {
+            const pVariacionesKey = p.variacionesSeleccionadas 
+              ? JSON.stringify(p.variacionesSeleccionadas)
+              : '';
+            return `${p.id}_${pVariacionesKey}` === claveUnica
               ? { ...p, cantidad: (p.cantidad || 1) + (cantidad || 1) }
-              : p
-          ),
+              : p;
+          }),
         };
       } else {
         // Si no existe, agregarlo con cantidad 1

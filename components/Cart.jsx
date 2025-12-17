@@ -38,6 +38,14 @@ export default function Cart({ whatsappNumber = null }) {
     productos.forEach((producto, index) => {
       const subtotal = (producto.precio || 0) * (producto.cantidad || 1);
       mensaje += `${index + 1}. *${producto.nombre}*\n`;
+      
+      // Mostrar variaciones seleccionadas si existen
+      if (producto.variacionesSeleccionadas && Object.keys(producto.variacionesSeleccionadas).length > 0) {
+        Object.entries(producto.variacionesSeleccionadas).forEach(([variacionNombre, valorNombre]) => {
+          mensaje += `   ${variacionNombre}: ${valorNombre}\n`;
+        });
+      }
+      
       mensaje += `   Cantidad: ${producto.cantidad || 1}\n`;
       mensaje += `   Precio unitario: $${(producto.precio || 0).toLocaleString()}\n`;
       mensaje += `   Subtotal: $${subtotal.toLocaleString()}\n\n`;
