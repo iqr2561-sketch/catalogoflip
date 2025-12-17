@@ -33,8 +33,9 @@ function getMongoClient() {
 
 export const config = {
   api: {
-    bodyParser: false,
-    responseLimit: '100mb',
+    bodyParser: {
+      sizeLimit: '100mb',
+    },
   },
 };
 

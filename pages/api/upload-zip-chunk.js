@@ -221,6 +221,15 @@ export default async function handler(req, res) {
 
           const imageUrls = [];
           const imagesBucket = new GridFSBucket(db, { bucketName: 'catalog_images' });
+          const thumbnailsBucket = new GridFSBucket(db, { bucketName: 'catalog_thumbnails' });
+          
+          // Importar sharp dinámicamente para generar miniaturas
+          let sharp;
+          try {
+            sharp = require('sharp');
+          } catch (sharpError) {
+            console.warn('[upload-zip-chunk] Sharp no disponible, no se generarán miniaturas:', sharpError.message);
+          }
 
           // Eliminar imágenes antiguas
           try {
@@ -251,6 +260,34 @@ export default async function handler(req, res) {
 
             imageUrls.push(`/api/catalog-image/${pageNumber}`);
             console.log(`[upload-zip-chunk] ✓ Imagen ${pageNumber}/${imageEntries.length} guardada`);
+
+            // Generar miniatura si sharp está disponible
+            if (sharp) {
+              try {
+                const thumbnailBuffer = await sharp(imageBuffer)
+                  .resize(300, null, {
+                    withoutEnlargement: true,
+                    fit: 'inside',
+                  })
+                  .jpeg({ quality: 85, progressive: true })
+                  .toBuffer();
+
+                const thumbnailFilename = `catalog_page_${String(pageNumber).padStart(3, '0')}.jpg`;
+                const thumbnailUploadStream = thumbnailsBucket.openUploadStream(thumbnailFilename, {
+                  contentType: 'image/jpeg',
+                });
+
+                await new Promise((resolve, reject) => {
+                  thumbnailUploadStream.on('finish', resolve);
+                  thumbnailUploadStream.on('error', reject);
+                  thumbnailUploadStream.end(thumbnailBuffer);
+                });
+
+                console.log(`[upload-zip-chunk] ✓ Miniatura ${pageNumber}/${imageEntries.length} generada`);
+              } catch (thumbnailError) {
+                console.warn(`[upload-zip-chunk] Error al generar miniatura ${pageNumber}:`, thumbnailError.message);
+              }
+            }
           }
 
           await chunksCollection.deleteMany({ sessionId });

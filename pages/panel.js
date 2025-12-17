@@ -22,6 +22,8 @@ export default function PanelDeControl() {
   const [zipFile, setZipFile] = useState(null);
   const [zipUploading, setZipUploading] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
+  const [thumbnails, setThumbnails] = useState([]);
+  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
   const [bulkHotspotCount, setBulkHotspotCount] = useState(1);
   const [bulkHotspotStartPage, setBulkHotspotStartPage] = useState(1);
@@ -47,7 +49,11 @@ export default function PanelDeControl() {
           })),
         };
         setConfig(normalized);
-        // Inicializar página final con null (se calculará dinámicamente)
+        
+        // Cargar miniaturas si hay imágenes
+        if (normalized.numPages && normalized.useImages) {
+          loadThumbnails(normalized.numPages);
+        }
       } catch (err) {
         console.error('Error al cargar configuración:', err);
         setError('No se pudo cargar la configuración del catálogo.');
@@ -58,6 +64,29 @@ export default function PanelDeControl() {
 
     loadConfig();
   }, []);
+
+  const loadThumbnails = async (numPages) => {
+    if (!numPages || numPages === 0) return;
+    
+    setLoadingThumbnails(true);
+    try {
+      const thumbnailPromises = [];
+      for (let i = 1; i <= Math.min(numPages, 100); i++) { // Limitar a 100 para no sobrecargar
+        thumbnailPromises.push(
+          fetch(`/api/catalog-thumbnail/${i}`)
+            .then(res => res.ok ? `/api/catalog-thumbnail/${i}` : null)
+            .catch(() => null)
+        );
+      }
+      
+      const results = await Promise.all(thumbnailPromises);
+      setThumbnails(results.filter(Boolean));
+    } catch (error) {
+      console.error('[panel] Error al cargar miniaturas:', error);
+    } finally {
+      setLoadingThumbnails(false);
+    }
+  };
 
   const handleProductoChange = (id, field, value) => {
     setConfig((prev) => {
@@ -776,7 +805,7 @@ export default function PanelDeControl() {
       setError('Por favor, selecciona un archivo ZIP válido.');
       return;
     }
-
+    
     // Validar tamaño máximo
     const maxSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSize) {
@@ -1279,10 +1308,10 @@ export default function PanelDeControl() {
           <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Productos</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Productos</h2>
                 <p className="text-gray-600 text-sm">
-                  Edita el precio y la descripción que se muestran en el modal de cada producto.
-                </p>
+              Edita el precio y la descripción que se muestran en el modal de cada producto.
+            </p>
               </div>
               <div className="flex items-center gap-3">
                 {config.productos && config.productos.length > 0 && (
@@ -1692,7 +1721,62 @@ export default function PanelDeControl() {
                       ✓ Archivo seleccionado: {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
                     </div>
                   )}
+                  {zipUploading && (
+                    <div className="mt-2 text-sm text-blue-600">
+                      ⏳ Procesando imágenes...
+                    </div>
+                  )}
                 </div>
+
+                {/* Sección de Miniaturas */}
+                {config?.numPages && config?.useImages && (
+                  <div className="bg-white rounded-xl shadow-md p-6 mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-gray-800">
+                        📸 Miniaturas del Catálogo ({config.numPages} páginas)
+                      </h3>
+                      <button
+                        onClick={() => loadThumbnails(config.numPages)}
+                        disabled={loadingThumbnails}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                      >
+                        {loadingThumbnails ? 'Cargando...' : '🔄 Actualizar'}
+                      </button>
+                    </div>
+                    
+                    {loadingThumbnails ? (
+                      <div className="text-center py-8">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                        <p className="mt-2 text-gray-600">Cargando miniaturas...</p>
+                      </div>
+                    ) : thumbnails.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-96 overflow-y-auto">
+                        {thumbnails.map((thumbnail, index) => (
+                          <div
+                            key={index}
+                            className="relative group cursor-pointer hover:scale-105 transition-transform"
+                            style={{ maxWidth: '8cm' }}
+                          >
+                            <img
+                              src={thumbnail}
+                              alt={`Página ${index + 1}`}
+                              className="w-full h-auto rounded-lg shadow-md border-2 border-gray-200 group-hover:border-primary-400 transition-colors"
+                              style={{ maxWidth: '8cm', height: 'auto' }}
+                              loading="lazy"
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs text-center py-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                              Página {index + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No hay miniaturas disponibles. Sube un ZIP con imágenes para generarlas.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* WhatsApp Number */}
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
@@ -2231,14 +2315,14 @@ export default function PanelDeControl() {
 
               {/* Agregar marcadores individuales */}
               <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleAddHotspot}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 transition-colors"
-                >
-                  <span className="text-lg leading-none">+</span>
+            <button
+              type="button"
+              onClick={handleAddHotspot}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 transition-colors"
+            >
+              <span className="text-lg leading-none">+</span>
                   Añadir marcador
-                </button>
+            </button>
               </div>
 
             </div>
