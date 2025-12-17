@@ -158,10 +158,13 @@ export default async function handler(req, res) {
         console.log(`[upload-zip-chunk] Último chunk recibido, ensamblando ZIP...`);
         
         try {
+          // Usar find sin sort para evitar problemas de memoria, ordenar en memoria
           const allChunks = await chunksCollection
             .find({ sessionId })
-            .sort({ chunkIndex: 1 })
             .toArray();
+          
+          // Ordenar en memoria en lugar de en MongoDB
+          allChunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
 
           if (allChunks.length !== totalChunks) {
             return sendJsonResponse(400, {
