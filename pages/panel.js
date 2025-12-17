@@ -694,6 +694,77 @@ export default function PanelDeControl() {
     }
   };
 
+  const handleZipResponse = async (res) => {
+    console.log('[panel] Respuesta del servidor:', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+
+    if (!res.ok) {
+      let errorData;
+      try {
+        const text = await res.text();
+        console.error('[panel] Respuesta de error del servidor (texto):', text);
+        try {
+          errorData = JSON.parse(text);
+          console.error('[panel] Respuesta de error del servidor (JSON):', errorData);
+        } catch (parseError) {
+          console.error('[panel] No se pudo parsear la respuesta como JSON:', parseError);
+          errorData = { error: text || `Error HTTP ${res.status}: ${res.statusText}` };
+        }
+      } catch (readError) {
+        console.error('[panel] Error al leer la respuesta:', readError);
+        errorData = { 
+          error: `Error HTTP ${res.status}: ${res.statusText}`,
+          details: readError.message 
+        };
+      }
+      
+      const errorMessage = errorData.error || errorData.message || `Error al subir el ZIP (HTTP ${res.status})`;
+      const errorDetails = errorData.details ? ` - ${errorData.details}` : '';
+      const errorHint = errorData.hint ? `\n\n💡 ${errorData.hint}` : '';
+      
+      console.error('[panel] Error completo:', {
+        message: errorMessage,
+        details: errorData.details,
+        hint: errorData.hint,
+        fullError: errorData,
+        status: res.status,
+      });
+      
+      throw new Error(`${errorMessage}${errorDetails}${errorHint}`);
+    }
+
+    let data;
+    try {
+      const text = await res.text();
+      console.log('[panel] Respuesta exitosa del servidor (texto):', text.substring(0, 200));
+      data = JSON.parse(text);
+      console.log('[panel] ZIP subido exitosamente:', data);
+    } catch (parseError) {
+      console.error('[panel] Error al parsear respuesta exitosa:', parseError);
+      throw new Error('Error al procesar la respuesta del servidor');
+    }
+
+    setMessage(`✓ ${data.numPages || 0} imágenes cargadas exitosamente`);
+    setError(null);
+
+    // Recargar configuración
+    const configRes = await fetch('/api/catalog-config');
+    if (configRes.ok) {
+      const newConfig = await configRes.json();
+      setConfig(newConfig);
+    }
+
+    // Limpiar después de un delay
+    setTimeout(() => {
+      setMessage(null);
+      setZipFile(null);
+    }, 3000);
+  };
+
   const handleZipUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -725,85 +796,105 @@ export default function PanelDeControl() {
 
     try {
       console.log(`[panel] Iniciando subida de ZIP: ${file.name} (${file.size} bytes)`);
-      setMessage('Subiendo ZIP y procesando imágenes...');
-
-      // Usar FormData para subir directamente (más simple y eficiente)
-      const formData = new FormData();
-      formData.append('zip', file);
-
-      const res = await fetch('/api/upload-zip-simple', {
-        method: 'POST',
-        body: formData,
-      });
-
-      console.log('[panel] Respuesta del servidor:', {
-        status: res.status,
-        statusText: res.statusText,
-        ok: res.ok,
-        headers: Object.fromEntries(res.headers.entries()),
-      });
-
-      if (!res.ok) {
-        let errorData;
-        try {
-          const text = await res.text();
-          console.error('[panel] Respuesta de error del servidor (texto):', text);
-          try {
-            errorData = JSON.parse(text);
-            console.error('[panel] Respuesta de error del servidor (JSON):', errorData);
-          } catch (parseError) {
-            console.error('[panel] No se pudo parsear la respuesta como JSON:', parseError);
-            errorData = { error: text || `Error HTTP ${res.status}: ${res.statusText}` };
-          }
-        } catch (readError) {
-          console.error('[panel] Error al leer la respuesta:', readError);
-          errorData = { 
-            error: `Error HTTP ${res.status}: ${res.statusText}`,
-            details: readError.message 
-          };
-        }
+      
+      // Vercel tiene límite de 4.5MB por petición, necesitamos usar chunks para archivos grandes
+      const MAX_CHUNK_SIZE = 2 * 1024 * 1024; // 2MB por chunk (por debajo del límite de Vercel)
+      
+      if (file.size <= MAX_CHUNK_SIZE) {
+        // Archivo pequeño, subir directamente
+        console.log('[panel] Archivo pequeño, subiendo directamente...');
+        setMessage('Subiendo ZIP y procesando imágenes...');
         
-        const errorMessage = errorData.error || errorData.message || `Error al subir el ZIP (HTTP ${res.status})`;
-        const errorDetails = errorData.details ? ` - ${errorData.details}` : '';
-        const errorHint = errorData.hint ? `\n\n💡 ${errorData.hint}` : '';
+        const formData = new FormData();
+        formData.append('zip', file);
         
-        console.error('[panel] Error completo:', {
-          message: errorMessage,
-          details: errorData.details,
-          hint: errorData.hint,
-          fullError: errorData,
-          status: res.status,
+        const res = await fetch('/api/upload-zip-simple', {
+          method: 'POST',
+          body: formData,
         });
         
-        throw new Error(`${errorMessage}${errorDetails}${errorHint}`);
+        await handleZipResponse(res);
+      } else {
+        // Archivo grande, usar chunks
+        console.log('[panel] Archivo grande, usando chunks...');
+        const totalChunks = Math.ceil(file.size / MAX_CHUNK_SIZE);
+        const sessionId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        
+        console.log(`[panel] Archivo dividido en ${totalChunks} chunks de ~${(MAX_CHUNK_SIZE / 1024 / 1024).toFixed(2)}MB`);
+        setMessage(`Subiendo ZIP: 0/${totalChunks} partes...`);
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Subir cada chunk
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * MAX_CHUNK_SIZE;
+          const end = Math.min(start + MAX_CHUNK_SIZE, file.size);
+          const chunkArray = uint8Array.slice(start, end);
+          
+          // Convertir a base64
+          let binary = '';
+          for (let j = 0; j < chunkArray.length; j++) {
+            binary += String.fromCharCode(chunkArray[j]);
+          }
+          const chunkBase64 = btoa(binary);
+          
+          console.log(`[panel] Subiendo chunk ZIP ${i + 1}/${totalChunks} (${chunkArray.length} bytes)`);
+          setMessage(`Subiendo ZIP: ${i + 1}/${totalChunks} partes...`);
+          
+          const res = await fetch('/api/upload-zip-chunk', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionId,
+              chunkIndex: i,
+              totalChunks,
+              chunkData: chunkBase64,
+              filename: file.name,
+            }),
+          });
+          
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+            throw new Error(errorData.error || `Error al subir chunk ${i + 1}/${totalChunks}`);
+          }
+          
+          const data = await res.json();
+          console.log(`[panel] Chunk ZIP ${i + 1}/${totalChunks} subido exitosamente`);
+          
+          // Si es el último chunk y se ensambló correctamente
+          if (data.assembled) {
+            console.log(`[panel] ZIP ensamblado exitosamente en el servidor`);
+            setMessage(`✓ ${data.numPages || 0} imágenes cargadas exitosamente`);
+            setError(null);
+
+            // Recargar configuración
+            setTimeout(async () => {
+              try {
+                const configRes = await fetch('/api/catalog-config');
+                if (configRes.ok) {
+                  const newConfig = await configRes.json();
+                  setConfig(newConfig);
+                }
+              } catch (err) {
+                console.error('[panel] Error al recargar configuración:', err);
+              }
+            }, 1000);
+
+            // Limpiar después de un delay
+            setTimeout(() => {
+              setMessage(null);
+              setZipFile(null);
+            }, 3000);
+            
+            return; // Salir del loop
+          }
+        }
       }
 
-      let data;
-      try {
-        const text = await res.text();
-        console.log('[panel] Respuesta exitosa del servidor (texto):', text.substring(0, 200));
-        data = JSON.parse(text);
-        console.log('[panel] ZIP subido exitosamente:', data);
-      } catch (parseError) {
-        console.error('[panel] Error al parsear respuesta exitosa:', parseError);
-        throw new Error('Error al procesar la respuesta del servidor');
-      }
-
-      setMessage(`✓ ${data.numPages || 0} imágenes cargadas exitosamente`);
-      setError(null);
-
-      // Recargar configuración
-      const configRes = await fetch('/api/catalog-config');
-      if (configRes.ok) {
-        const newConfig = await configRes.json();
-        setConfig(newConfig);
-      }
-
-      // Limpiar después de un delay
-      setTimeout(() => {
-        setMessage(null);
-        setZipFile(null);
-      }, 3000);
+      await handleZipResponse(res);
 
     } catch (err) {
       console.error('[panel] Error al subir ZIP:', err);
