@@ -4,7 +4,6 @@ import useCartStore from '../store/cartStore';
 export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null, cotizacionDolar = 1, tipoPrecioDefault = 'minorista' }) {
   const agregarProducto = useCartStore((state) => state.agregarProducto);
   const [imageError, setImageError] = useState(false);
-  const [cantidad, setCantidad] = useState(1);
   const [variacionesSeleccionadas, setVariacionesSeleccionadas] = useState({});
   
   // Resetear selecciones cuando cambia el producto o se abre el modal
@@ -47,18 +46,53 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
   
   const precioFinal = calcularPrecio();
 
-  const handleComprar = () => {
-    const qty = Math.max(1, cantidad || 1);
+  const handleAgregar = () => {
+    // Si no hay variaciones, agregar el producto base
+    if (!producto.variaciones || producto.variaciones.length === 0) {
+      const productoBase = {
+        ...producto,
+        precio: precioFinal,
+        variacionesSeleccionadas: {},
+      };
+      agregarProducto(productoBase, 1);
+      onClose();
+      return;
+    }
 
-    // Crear objeto de producto con variaciones seleccionadas
-    const productoConVariaciones = {
-      ...producto,
-      precio: precioFinal,
-      variacionesSeleccionadas: { ...variacionesSeleccionadas },
-    };
+    // Si hay variaciones seleccionadas, agregar cada una como item separado
+    const variacionesActivas = Object.keys(variacionesSeleccionadas).filter(
+      key => variacionesSeleccionadas[key] === key
+    );
 
-    // Siempre guardar en el carrito con la cantidad elegida
-    agregarProducto(productoConVariaciones, qty);
+    if (variacionesActivas.length === 0) {
+      // Si no hay variaciones seleccionadas, agregar solo el producto base
+      const productoBase = {
+        ...producto,
+        precio: producto.precio || 0,
+        variacionesSeleccionadas: {},
+      };
+      agregarProducto(productoBase, 1);
+    } else {
+      // Agregar cada variación como un item separado
+      variacionesActivas.forEach((nombreVariacion) => {
+        const variacion = producto.variaciones.find(v => v.nombre === nombreVariacion);
+        if (variacion) {
+          const precioVariacion = tipoPrecioDefault === 'mayorista' 
+            ? (variacion.precioMayorista || 0)
+            : (variacion.precioMinorista || 0);
+          
+          const precioTotal = (producto.precio || 0) + precioVariacion;
+          
+          const productoConVariacion = {
+            ...producto,
+            precio: precioTotal,
+            variacionesSeleccionadas: { [nombreVariacion]: nombreVariacion },
+          };
+          
+          agregarProducto(productoConVariacion, 1);
+        }
+      });
+    }
 
     onClose();
   };
@@ -195,66 +229,23 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
             </div>
           )}
 
-          {/* Precio + cantidad (agrupados para que se vean juntos en móvil) */}
-          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:gap-6">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                  USD ${precioFinal.toLocaleString()}
-                </span>
-                {cotizacionDolar && cotizacionDolar !== 1 && (
-                  <span className="text-2xl md:text-3xl font-bold text-gray-500">
-                    ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
-                  </span>
-                )}
-              </div>
-              <span className="mt-1 inline-block text-sm font-semibold text-gray-600">
-                x {Math.max(1, cantidad || 1)} unidad
-                {Math.max(1, cantidad || 1) > 1 ? 'es' : ''}
+          {/* Precio */}
+          <div className="mb-6">
+            <div className="flex items-baseline gap-2">
+              <span className="block text-4xl md:text-5xl font-bold text-primary-600">
+                USD ${precioFinal.toLocaleString()}
               </span>
-              {(producto.variaciones || []).length > 0 && producto.precio > 0 && (
-                <span className="mt-1 block text-xs text-gray-500">
-                  Precio base: USD ${producto.precio.toLocaleString()}
+              {cotizacionDolar && cotizacionDolar !== 1 && (
+                <span className="text-2xl md:text-3xl font-bold text-gray-500">
+                  ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
                 </span>
               )}
             </div>
-
-            {/* Cantidad */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-800 mb-2">Cantidad</h3>
-              <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2">
-              <button
-                type="button"
-                onClick={() => setCantidad((prev) => Math.max(1, (prev || 1) - 1))}
-                className="w-8 h-8 flex items-center justify-center bg-white hover:bg-gray-100 rounded-full shadow-sm transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={cantidad}
-                onChange={(e) => setCantidad(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                className="w-14 text-center bg-transparent border-0 focus:ring-0 font-semibold text-gray-900"
-              />
-              <button
-                type="button"
-                onClick={() => setCantidad((prev) => (prev || 1) + 1)}
-                className="w-8 h-8 flex items-center justify-center bg-white hover:bg-gray-100 rounded-full shadow-sm transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+            {(producto.variaciones || []).length > 0 && producto.precio > 0 && (
+              <span className="mt-1 block text-xs text-gray-500">
+                Precio base: USD ${producto.precio.toLocaleString()}
+              </span>
+            )}
           </div>
 
           {producto.descripcion && (
@@ -264,9 +255,9 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
             </div>
           )}
 
-          {/* Botón Comprar */}
+          {/* Botón Agregar */}
           <button
-            onClick={handleComprar}
+            onClick={handleAgregar}
             className="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center gap-2"
           >
             <>
@@ -280,10 +271,10 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  d="M12 4v16m8-8H4"
                 />
               </svg>
-              Agregar al Carrito
+              Agregar
             </>
           </button>
         </div>
