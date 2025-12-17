@@ -214,43 +214,7 @@ export default function FlipbookCatalog({
     }
   }, [currentPage, images, numPages, loadedImages]);
 
-  // Limpiar canvas no visibles para evitar memory leaks
-  useEffect(() => {
-    if (!pdfDoc && !images) return;
-
-    const cleanup = () => {
-      // Mantener solo las páginas visibles y adyacentes
-      const keepPages = new Set();
-      
-      // Página actual
-      keepPages.add(currentPage);
-      
-      // Páginas adyacentes (hasta 2 adelante y 1 atrás)
-      for (let i = -1; i <= 2; i++) {
-        const pageIndex = currentPage + i;
-        if (pageIndex >= 0 && pageIndex < numPages) {
-          keepPages.add(pageIndex);
-        }
-      }
-
-      // Limpiar canvas de páginas no necesarias
-      Object.keys(canvasRefs.current).forEach(pageIndexStr => {
-        const pageIndex = parseInt(pageIndexStr);
-        if (!keepPages.has(pageIndex)) {
-          const canvas = canvasRefs.current[pageIndex];
-          if (canvas) {
-            const context = canvas.getContext('2d');
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            // No eliminamos la referencia, solo limpiamos el canvas
-          }
-        }
-      });
-    };
-
-    // Limpiar después de un delay para no hacerlo en cada cambio
-    const timeoutId = setTimeout(cleanup, 5000);
-    return () => clearTimeout(timeoutId);
-  }, [currentPage, pdfDoc, numPages]);
+  // No necesitamos limpiar canvas - solo usamos imágenes JPG nativas
 
   const handlePrevPage = () => {
     if (isTransitioning) return;
