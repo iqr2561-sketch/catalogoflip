@@ -4,11 +4,10 @@ import FlipbookCatalog from '../components/FlipbookCatalog';
 import Cart from '../components/Cart';
 import ConfigButton from '../components/ConfigButton';
 import ErrorDisplay from '../components/ErrorDisplay';
-import { pdfToImages } from '../lib/pdfToImages';
 import catalogData from '../data/catalog.json'; // Fallback
 
 export default function CatalogPage() {
-  const [images, setImages] = useState([]);
+  const [pdfUrl, setPdfUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [catalogConfig, setCatalogConfig] = useState(null);
@@ -18,52 +17,31 @@ export default function CatalogPage() {
   useEffect(() => {
     const loadCatalogConfig = async () => {
       try {
+        setLoadingProgress('Cargando configuración...');
         const response = await fetch('/api/catalog-config');
         if (response.ok) {
           const data = await response.json();
           setCatalogConfig(data);
+          // Obtener URL del PDF directamente
+          const pdfUrl = data.pdf || '/api/catalogo';
+          setPdfUrl(pdfUrl);
         } else {
           console.warn('[catalog] No se pudo cargar desde API, usando JSON estático');
           setCatalogConfig(catalogData);
+          setPdfUrl('/api/catalogo');
         }
       } catch (err) {
         console.error('[catalog] Error al cargar configuración:', err);
         setCatalogConfig(catalogData);
+        setPdfUrl('/api/catalogo');
+      } finally {
+        setLoading(false);
+        setLoadingProgress('');
       }
     };
 
     loadCatalogConfig();
   }, []);
-
-  // Convertir PDF a imágenes (con cache automático en localStorage)
-  useEffect(() => {
-    if (!catalogConfig) return;
-
-    const loadImages = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        setLoadingProgress('Cargando catálogo...');
-        
-        console.log('[catalog] Convirtiendo PDF a imágenes...');
-        const pdfUrl = catalogConfig.pdf || '/api/catalogo';
-        
-        setLoadingProgress('Convirtiendo PDF (esto puede tardar la primera vez)...');
-        const pdfImages = await pdfToImages(pdfUrl);
-        
-        console.log(`[catalog] ✓ ${pdfImages.length} páginas cargadas`);
-        setImages(pdfImages);
-        setLoadingProgress('');
-      } catch (err) {
-        console.error('[catalog] Error al cargar catálogo:', err);
-        setError(`Error al cargar el catálogo: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadImages();
-  }, [catalogConfig]);
 
   if (loading) {
     return (
@@ -143,9 +121,9 @@ export default function CatalogPage() {
       <main className="relative">
         <ConfigButton />
 
-        {catalogConfig && (
+        {catalogConfig && pdfUrl && (
           <FlipbookCatalog
-            images={images}
+            pdfUrl={pdfUrl}
             hotspots={catalogConfig.hotspots || []}
             productos={catalogConfig.productos || []}
             whatsappNumber={catalogConfig.whatsappNumber || null}

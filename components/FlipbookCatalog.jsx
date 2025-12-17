@@ -3,7 +3,7 @@ import Hotspot from './Hotspot';
 import ProductModal from './ProductModal';
 
 export default function FlipbookCatalog({
-  images,
+  pdfUrl,
   hotspots = [],
   productos = [],
   whatsappNumber = null,
@@ -21,6 +21,68 @@ export default function FlipbookCatalog({
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Estados para PDF y renderizado
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [numPages, setNumPages] = useState(0);
+  const [renderedPages, setRenderedPages] = useState(new Set()); // Páginas ya renderizadas
+  const [loading, setLoading] = useState(true);
+  const canvasRefs = useRef({}); // Referencias a los canvas de cada página
+  const renderQueue = useRef(new Set()); // Cola de páginas pendientes de renderizar
+
+  // Cargar PDF y configurar PDF.js
+  useEffect(() => {
+    if (!pdfUrl || typeof window === 'undefined') return;
+
+    let mounted = true;
+
+    const loadPDF = async () => {
+      try {
+        setLoading(true);
+        console.log('[FlipbookCatalog] Cargando PDF desde:', pdfUrl);
+
+        // Importar PDF.js dinámicamente
+        const pdfjsLib = await import('pdfjs-dist');
+        
+        // Configurar worker de PDF.js
+        const pdfjsVersion = pdfjsLib.version || '4.10.38';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 
+          `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
+
+        // Cargar el PDF
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error(`Error al cargar PDF: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        
+        const loadingTask = pdfjsLib.getDocument({ 
+          data: arrayBuffer,
+          verbosity: 0,
+        });
+        
+        const pdf = await loadingTask.promise;
+        
+        if (!mounted) return;
+        
+        console.log(`[FlipbookCatalog] PDF cargado: ${pdf.numPages} páginas`);
+        setPdfDoc(pdf);
+        setNumPages(pdf.numPages);
+        setLoading(false);
+      } catch (error) {
+        console.error('[FlipbookCatalog] Error al cargar PDF:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPDF();
+
+    return () => {
+      mounted = false;
+    };
+  }, [pdfUrl]);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
@@ -81,6 +143,145 @@ export default function FlipbookCatalog({
     setIsModalOpen(true);
   };
 
+  // Función para renderizar una página a canvas
+  const renderPageToCanvas = async (pageNum, canvas, mobile = isMobile) => {
+    if (!pdfDoc || !canvas) return;
+
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      
+      // Escala adaptativa: mobile 1.1, desktop 1.5
+      const scale = mobile ? 1.1 : 1.5;
+      const viewport = page.getViewport({ scale });
+      
+      // Ajustar tamaño del canvas
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      const context = canvas.getContext('2d');
+      
+      // Fondo blanco
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Renderizar página
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+      };
+      
+      await page.render(renderContext).promise;
+      
+      // Marcar como renderizada
+      setRenderedPages(prev => new Set([...prev, pageNum - 1]));
+      renderQueue.current.delete(pageNum - 1);
+      
+      console.log(`[FlipbookCatalog] ✓ Página ${pageNum} renderizada`);
+    } catch (error) {
+      console.error(`[FlipbookCatalog] Error al renderizar página ${pageNum}:`, error);
+      renderQueue.current.delete(pageNum - 1);
+    }
+  };
+
+  // Renderizar páginas iniciales (lazy loading)
+  useEffect(() => {
+    if (!pdfDoc || !containerSize.width || numPages === 0) return;
+
+    const initialPages = isMobile ? [0, 1] : [0, 1, 2]; // Mobile: 2 páginas, Desktop: 3 páginas
+    
+    initialPages.forEach(pageIndex => {
+      if (pageIndex < numPages && !renderedPages.has(pageIndex) && !renderQueue.current.has(pageIndex)) {
+        renderQueue.current.add(pageIndex);
+        // Usar setTimeout para asegurar que el canvas esté montado
+        setTimeout(() => {
+          const canvas = canvasRefs.current[pageIndex];
+          if (canvas) {
+            renderPageToCanvas(pageIndex + 1, canvas, isMobile);
+          }
+        }, 100);
+      }
+    });
+  }, [pdfDoc, containerSize.width, numPages, isMobile, renderedPages]);
+
+  // Renderizar páginas adyacentes cuando cambia la página actual
+  useEffect(() => {
+    if (!pdfDoc || numPages === 0) return;
+
+    // Páginas a pre-renderizar alrededor de la actual
+    const pagesToRender = [];
+    
+    // Página actual
+    if (currentPage < numPages && !renderedPages.has(currentPage)) {
+      pagesToRender.push(currentPage);
+    }
+    
+    // Páginas siguientes (hasta 2 adelante)
+    for (let i = 1; i <= 2; i++) {
+      const nextPage = currentPage + i;
+      if (nextPage < numPages && !renderedPages.has(nextPage)) {
+        pagesToRender.push(nextPage);
+      }
+    }
+    
+    // Páginas anteriores (hasta 1 atrás)
+    const prevPage = currentPage - 1;
+    if (prevPage >= 0 && !renderedPages.has(prevPage)) {
+      pagesToRender.push(prevPage);
+    }
+
+    // Renderizar páginas pendientes
+    pagesToRender.forEach(pageIndex => {
+      if (!renderQueue.current.has(pageIndex)) {
+        renderQueue.current.add(pageIndex);
+        // Usar setTimeout para asegurar que el canvas esté montado
+        setTimeout(() => {
+          const canvas = canvasRefs.current[pageIndex];
+          if (canvas) {
+            renderPageToCanvas(pageIndex + 1, canvas, isMobile);
+          }
+        }, 100);
+      }
+    });
+  }, [currentPage, pdfDoc, numPages, renderedPages, isMobile]);
+
+  // Limpiar canvas no visibles para evitar memory leaks
+  useEffect(() => {
+    if (!pdfDoc) return;
+
+    const cleanup = () => {
+      // Mantener solo las páginas visibles y adyacentes
+      const keepPages = new Set();
+      
+      // Página actual
+      keepPages.add(currentPage);
+      
+      // Páginas adyacentes (hasta 2 adelante y 1 atrás)
+      for (let i = -1; i <= 2; i++) {
+        const pageIndex = currentPage + i;
+        if (pageIndex >= 0 && pageIndex < numPages) {
+          keepPages.add(pageIndex);
+        }
+      }
+
+      // Limpiar canvas de páginas no necesarias
+      Object.keys(canvasRefs.current).forEach(pageIndexStr => {
+        const pageIndex = parseInt(pageIndexStr);
+        if (!keepPages.has(pageIndex)) {
+          const canvas = canvasRefs.current[pageIndex];
+          if (canvas) {
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            // No eliminamos la referencia, solo limpiamos el canvas
+          }
+        }
+      });
+    };
+
+    // Limpiar después de un delay para no hacerlo en cada cambio
+    const timeoutId = setTimeout(cleanup, 5000);
+    return () => clearTimeout(timeoutId);
+  }, [currentPage, pdfDoc, numPages]);
+
   const handlePrevPage = () => {
     if (isTransitioning) return;
     
@@ -107,15 +308,15 @@ export default function FlipbookCatalog({
   };
 
   const handleNextPage = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || !numPages) return;
     
     const newPage = (() => {
       if (!isMobile && viewMode === 'double') {
         const base = currentPage - (currentPage % 2);
         const target = base + 2;
-        return target >= images.length ? currentPage : target;
+        return target >= numPages ? currentPage : target;
       }
-      return Math.min(images.length - 1, currentPage + 1);
+      return Math.min(numPages - 1, currentPage + 1);
     })();
     
     if (newPage === currentPage) return;
@@ -136,12 +337,12 @@ export default function FlipbookCatalog({
     setIsZoomed(!isZoomed);
   };
 
-  // Asegurar que la página actual sea válida cuando cambian imágenes o modo de vista
+  // Asegurar que la página actual sea válida cuando cambia el número de páginas
   useEffect(() => {
-    if (currentPage >= images.length && images.length > 0) {
-      setCurrentPage(0);
+    if (numPages > 0 && currentPage >= numPages) {
+      setCurrentPage(Math.max(0, numPages - 1));
     }
-  }, [images.length, currentPage]);
+  }, [numPages, currentPage]);
 
   // Gestos táctiles para móvil - Swipe
   const minSwipeDistance = 50; // Distancia mínima para considerar un swipe
@@ -170,7 +371,7 @@ export default function FlipbookCatalog({
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe && currentPage < images.length - 1) {
+    if (isLeftSwipe && currentPage < numPages - 1) {
       handleNextPage();
     } else if (isRightSwipe && currentPage > 0) {
       handlePrevPage();
@@ -189,7 +390,7 @@ export default function FlipbookCatalog({
   const isDouble = !isMobile && viewMode === 'double';
   const baseIndex = isDouble ? currentPage - (currentPage % 2) : currentPage;
   const leftPageNum = baseIndex + 1;
-  const rightPageNum = isDouble && baseIndex + 1 < images.length ? baseIndex + 2 : null;
+  const rightPageNum = isDouble && baseIndex + 1 < numPages ? baseIndex + 2 : null;
   
   const visiblePageNumbers = isDouble 
     ? [leftPageNum, rightPageNum].filter(Boolean)
@@ -279,15 +480,15 @@ export default function FlipbookCatalog({
 
           <div className="px-6 py-3 bg-white rounded-xl shadow-lg">
             <span className="text-gray-700 font-semibold">
-              Página {currentPage + 1} de {images.length}
+              Página {currentPage + 1} de {numPages || 0}
             </span>
           </div>
 
           <button
             onClick={handleNextPage}
-            disabled={currentPage === images.length - 1}
+            disabled={currentPage >= (numPages - 1)}
             className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-              currentPage === images.length - 1
+              currentPage >= (numPages - 1)
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
             }`}
@@ -337,7 +538,7 @@ export default function FlipbookCatalog({
 
           <div className="flex-1 px-4 py-2 bg-white rounded-xl shadow-md text-center">
             <span className="text-gray-700 font-semibold text-sm">
-              {currentPage + 1} / {images.length}
+              {currentPage + 1} / {numPages || 0}
             </span>
           </div>
 
@@ -449,18 +650,18 @@ export default function FlipbookCatalog({
               };
 
               const handleClickRightPage = () => {
-                if (isDouble && rightIndex !== null && rightIndex < images.length - 1) {
+                if (isDouble && rightIndex !== null && rightIndex < numPages - 1) {
                   handleNextPage();
                 }
               };
 
               const handleClickSinglePage = (event) => {
-                if (!images.length) return;
+                if (!numPages) return;
                 const rect = event.currentTarget.getBoundingClientRect();
                 const clickX = event.clientX - rect.left;
                 const isRightSide = clickX > rect.width / 2;
 
-                if (isRightSide && currentPage < images.length - 1) {
+                if (isRightSide && currentPage < numPages - 1) {
                   handleNextPage();
                 } else if (!isRightSide && currentPage > 0) {
                   handlePrevPage();
@@ -487,55 +688,99 @@ export default function FlipbookCatalog({
                   onTouchCancel={onTouchCancel}
                 >
                   {isDouble ? (
-                    // Modo double: mostrar par de páginas actual
+                    // Modo double: mostrar par de páginas actual con canvas
                     <div className="flex w-full h-full">
-                      {images[baseIndex] && (
+                      {baseIndex < numPages && (
                         <div
-                          className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer border-r border-gray-200"
+                          className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer border-r border-gray-200 relative"
                           onClick={handleClickLeftPage}
                         >
-                          <img
-                            src={images[baseIndex]}
-                            alt={`Página ${baseIndex + 1}`}
+                          <canvas
+                            ref={(el) => {
+                              if (el) canvasRefs.current[baseIndex] = el;
+                            }}
                             className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
                               flipDirection === 'prev' ? 'page-slide-in-left' : 
                               flipDirection === 'next' ? 'page-slide-out-left' : ''
                             }`}
-                            style={{ maxWidth: '100%', maxHeight: '100%' }}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%',
+                              display: renderedPages.has(baseIndex) ? 'block' : 'none'
+                            }}
                           />
+                          {!renderedPages.has(baseIndex) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                              <div className="text-center">
+                                <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
-                      {baseIndex + 1 < images.length && images[baseIndex + 1] && (
+                      {baseIndex + 1 < numPages && (
                         <div
-                          className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer"
+                          className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer relative"
                           onClick={handleClickRightPage}
                         >
-                          <img
-                            src={images[baseIndex + 1]}
-                            alt={`Página ${baseIndex + 2}`}
+                          <canvas
+                            ref={(el) => {
+                              if (el) canvasRefs.current[baseIndex + 1] = el;
+                            }}
                             className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
                               flipDirection === 'prev' ? 'page-slide-in-right' : 
                               flipDirection === 'next' ? 'page-slide-out-right' : ''
                             }`}
-                            style={{ maxWidth: '100%', maxHeight: '100%' }}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%',
+                              display: renderedPages.has(baseIndex + 1) ? 'block' : 'none'
+                            }}
                           />
+                          {!renderedPages.has(baseIndex + 1) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                              <div className="text-center">
+                                <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   ) : (
-                    // Modo single: mostrar solo la página actual
-                    <div className="w-full h-full flex items-center justify-center">
-                      {images[currentPage] && (
-                        <img
-                          src={images[currentPage]}
-                          alt={`Página ${currentPage + 1}`}
-                          className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
-                            flipDirection === 'prev' ? 'page-slide-in-right' : 
-                            flipDirection === 'next' ? 'page-slide-in-left' : ''
-                          }`}
-                          style={{ maxWidth: '100%', maxHeight: '100%' }}
-                          onClick={handleClickSinglePage}
-                        />
+                    // Modo single: mostrar solo la página actual con canvas
+                    <div className="w-full h-full flex items-center justify-center relative">
+                      {loading && currentPage === 0 ? (
+                        <div className="text-center">
+                          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mb-4"></div>
+                          <p className="text-gray-600">Cargando primera página...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <canvas
+                            ref={(el) => {
+                              if (el) canvasRefs.current[currentPage] = el;
+                            }}
+                            className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                              flipDirection === 'prev' ? 'page-slide-in-right' : 
+                              flipDirection === 'next' ? 'page-slide-in-left' : ''
+                            }`}
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '100%',
+                              display: renderedPages.has(currentPage) ? 'block' : 'none'
+                            }}
+                            onClick={handleClickSinglePage}
+                          />
+                          {!renderedPages.has(currentPage) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                              <div className="text-center">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600 mb-2"></div>
+                                <p className="text-gray-600 text-sm">Cargando página {currentPage + 1}...</p>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -643,9 +888,9 @@ export default function FlipbookCatalog({
       </div>
 
       {/* Indicadores de página (dots) - Móvil */}
-      {isMobile && images.length > 1 && (
+      {isMobile && numPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-2 flex-wrap px-4">
-          {images.map((_, idx) => (
+          {Array.from({ length: numPages }, (_, idx) => (
             <button
               key={idx}
               onClick={() => {
