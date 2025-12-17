@@ -231,6 +231,75 @@ export default function PanelDeControl() {
     });
   };
 
+  const handleDeleteAllProductos = async () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Todos los Productos',
+      message: `¿Estás seguro de que quieres eliminar TODOS los ${config.productos.length} productos? Esta acción también eliminará todos los marcadores asociados. Esta acción no se puede deshacer.`,
+      onConfirm: () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+        deleteAllProductos();
+      }
+    });
+  };
+
+  const deleteAllProductos = async () => {
+    setConfig((prev) => {
+      const count = prev.productos.length;
+      const updatedConfig = {
+        ...prev,
+        productos: [],
+        hotspots: [], // También eliminar todos los marcadores ya que dependen de productos
+      };
+
+      // Guardar automáticamente después de eliminar
+      (async () => {
+        try {
+          setSaving(true);
+          setMessage(null);
+          setError(null);
+          
+          console.log('[panel] Guardando configuración después de eliminar todos los productos:', {
+            productosEliminados: count,
+            productosRestantes: 0,
+            hotspotsEliminados: prev.hotspots.length,
+            timestamp: new Date().toISOString()
+          });
+          
+          const res = await fetch('/api/catalog-config', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedConfig, null, 2),
+          });
+
+          const result = await res.json();
+          
+          if (res.ok && result.ok) {
+            console.log('[panel] Guardado exitoso:', result);
+            setMessage(`✓ Todos los productos y marcadores han sido eliminados correctamente`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            console.error('[panel] Error al guardar:', result);
+            setError(`✗ No se pudieron eliminar los productos. Intenta nuevamente.`);
+            setTimeout(() => setError(null), 8000);
+          }
+        } catch (err) {
+          console.error('[panel] Error al guardar después de eliminar:', err);
+          setError(`✗ Error de conexión. Intenta nuevamente.`);
+          setTimeout(() => setError(null), 8000);
+        } finally {
+          setSaving(false);
+        }
+      })();
+
+      return updatedConfig;
+    });
+  };
+
   const handleHotspotToggle = (index, enabled) => {
     setConfig((prev) => ({
       ...prev,
