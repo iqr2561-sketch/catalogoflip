@@ -49,6 +49,8 @@ export default function PanelDeControl() {
             ...h,
           })),
           variacionesGlobales: data.variacionesGlobales || [], // Variaciones globales predefinidas
+          cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar (por defecto 1)
+          tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
         };
         setConfig(normalized);
         
@@ -723,7 +725,8 @@ export default function PanelDeControl() {
               'Producto': producto.nombre || '',
               'Precio Base': producto.precio || 0,
               'Variación': variacion.nombre || '',
-              'Precio Variación': variacion.precio || 0
+              'Precio Mayorista (≥50)': variacion.precioMayorista || variacion.precio || 0,
+              'Precio Minorista (10-50)': variacion.precioMinorista || variacion.precio || 0
             });
           });
         } else {
@@ -732,7 +735,8 @@ export default function PanelDeControl() {
             'Producto': producto.nombre || '',
             'Precio Base': producto.precio || 0,
             'Variación': '',
-            'Precio Variación': ''
+            'Precio Mayorista (≥50)': '',
+            'Precio Minorista (10-50)': ''
           });
         }
       });
@@ -747,7 +751,8 @@ export default function PanelDeControl() {
         { wch: 30 }, // Producto
         { wch: 15 }, // Precio Base
         { wch: 30 }, // Variación
-        { wch: 18 }  // Precio Variación
+        { wch: 20 }, // Precio Mayorista
+        { wch: 20 }  // Precio Minorista
       ];
       ws['!cols'] = colWidths;
 
@@ -808,9 +813,35 @@ export default function PanelDeControl() {
       // Procesar cada fila del Excel
       data.forEach((row) => {
         const nombreProducto = (row['Producto'] || row['producto'] || '').toString().trim();
-        const precioBase = parseFloat(row['Precio Base'] || row['precio base'] || row['PrecioBase'] || 0);
+        // Buscar precio base - puede venir como número o string con formato de moneda
+        let precioBaseRaw = row['Precio Base'] || row['precio base'] || row['PrecioBase'] || row['Precio Base (COP)'] || row['precio base (cop)'] || '';
+        // Limpiar el precio base (remover símbolos de moneda, espacios, etc.)
+        if (typeof precioBaseRaw === 'string') {
+          precioBaseRaw = precioBaseRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        }
+        const precioBase = precioBaseRaw && !isNaN(parseFloat(precioBaseRaw)) ? parseFloat(precioBaseRaw) : 0;
+        
         const nombreVariacion = (row['Variación'] || row['variación'] || row['Variacion'] || '').toString().trim();
-        const precioVariacion = parseFloat(row['Precio Variación'] || row['precio variación'] || row['PrecioVariacion'] || row['Precio Variacion'] || 0);
+        
+        // Buscar precio de variación - puede venir como número o string con formato de moneda
+        let precioVariacionRaw = row['Precio Variación'] || row['precio variación'] || row['PrecioVariacion'] || row['Precio Variacion'] || row['Precio Variación'] || '';
+        if (typeof precioVariacionRaw === 'string') {
+          precioVariacionRaw = precioVariacionRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        }
+        const precioVariacion = precioVariacionRaw && !isNaN(parseFloat(precioVariacionRaw)) ? parseFloat(precioVariacionRaw) : 0;
+        
+        // Buscar precios mayorista y minorista
+        let precioMayoristaRaw = row['Precio Mayorista (≥50)'] || row['Precio Mayorista'] || row['precio mayorista'] || row['PrecioMayorista'] || '';
+        if (typeof precioMayoristaRaw === 'string') {
+          precioMayoristaRaw = precioMayoristaRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        }
+        const precioMayorista = precioMayoristaRaw && !isNaN(parseFloat(precioMayoristaRaw)) ? parseFloat(precioMayoristaRaw) : 0;
+        
+        let precioMinoristaRaw = row['Precio Minorista (10-50)'] || row['Precio Minorista'] || row['precio minorista'] || row['PrecioMinorista'] || '';
+        if (typeof precioMinoristaRaw === 'string') {
+          precioMinoristaRaw = precioMinoristaRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        }
+        const precioMinorista = precioMinoristaRaw && !isNaN(parseFloat(precioMinoristaRaw)) ? parseFloat(precioMinoristaRaw) : 0;
 
         if (!nombreProducto) return; // Saltar filas sin nombre de producto
 
@@ -830,8 +861,8 @@ export default function PanelDeControl() {
           productosMap.set(key, producto);
           productosActualizados++;
         } else {
-          // Actualizar precio base si es diferente
-          if (precioBase && precioBase !== producto.precio) {
+          // Actualizar precio base si hay uno en esta fila y es diferente
+          if (precioBase > 0 && precioBase !== producto.precio) {
             producto.precio = precioBase;
             productosActualizados++;
           }
@@ -845,19 +876,37 @@ export default function PanelDeControl() {
           );
 
           if (variacionExistente) {
-            // Actualizar precio de variación existente
-            if (precioVariacion !== undefined && precioVariacion !== variacionExistente.precio) {
-              variacionExistente.precio = precioVariacion;
-              variacionesActualizadas++;
+            // Actualizar precios de variación existente
+            let actualizado = false;
+            // Si hay precios mayorista/minorista específicos, usarlos
+            if (precioMayorista > 0) {
+              variacionExistente.precioMayorista = precioMayorista;
+              actualizado = true;
             }
+            if (precioMinorista > 0) {
+              variacionExistente.precioMinorista = precioMinorista;
+              actualizado = true;
+            }
+            // Si no hay precios específicos pero hay precio de variación, usarlo para ambos
+            if (precioVariacion > 0 && !precioMayorista && !precioMinorista) {
+              variacionExistente.precioMinorista = precioVariacion;
+              variacionExistente.precioMayorista = precioVariacion;
+              actualizado = true;
+            }
+            if (actualizado) variacionesActualizadas++;
           } else {
             // Agregar nueva variación
             if (!producto.variaciones) {
               producto.variaciones = [];
             }
+            // Determinar los precios: si hay mayorista/minorista específicos, usarlos; si no, usar precioVariacion para ambos
+            const precioMayoristaFinal = precioMayorista > 0 ? precioMayorista : (precioVariacion > 0 ? precioVariacion : 0);
+            const precioMinoristaFinal = precioMinorista > 0 ? precioMinorista : (precioVariacion > 0 ? precioVariacion : 0);
+            
             producto.variaciones.push({
               nombre: nombreVariacion,
-              precio: precioVariacion || 0
+              precioMayorista: precioMayoristaFinal,
+              precioMinorista: precioMinoristaFinal
             });
             variacionesAgregadas++;
           }
@@ -1207,7 +1256,8 @@ export default function PanelDeControl() {
                 ...(p.variaciones || []),
                 {
                   nombre: variacionGlobal.nombre,
-                  precio: variacionGlobal.precioBase, // Precio inicial desde la variación global
+                  precioMayorista: variacionGlobal.precioBase || 0, // Precio mayorista inicial
+                  precioMinorista: variacionGlobal.precioBase || 0, // Precio minorista inicial (mismo que mayorista por defecto)
                 },
               ],
             }
@@ -1243,8 +1293,8 @@ export default function PanelDeControl() {
     });
   };
 
-  // Actualizar precio de variación en producto
-  const handleUpdateVariacionPrecio = (productoId, variacionIndex, precio) => {
+  // Actualizar precio de variación en producto (ahora soporta mayorista/minorista)
+  const handleUpdateVariacionPrecio = (productoId, variacionIndex, tipoPrecio, precio) => {
     setConfig((prev) => {
       const updatedProductos = prev.productos.map((p) =>
         p.id === productoId
@@ -1254,7 +1304,7 @@ export default function PanelDeControl() {
                 i === variacionIndex
                   ? {
                       ...v,
-                      precio: precio === '' || precio === null || precio === undefined 
+                      [tipoPrecio]: precio === '' || precio === null || precio === undefined 
                         ? 0 
                         : Number.isNaN(parseFloat(precio.toString().replace(',', '.'))) 
                           ? 0 
@@ -1306,7 +1356,8 @@ export default function PanelDeControl() {
                 ...(p.variaciones || []),
                 {
                   nombre: 'Nueva variación',
-                  precio: 0.00, // Sistema simplificado: solo nombre y precio (con decimales)
+                  precioMayorista: 0.00, // Precio mayorista (a partir de 50 unidades)
+                  precioMinorista: 0.00, // Precio minorista (entre 10-50 unidades)
                 },
               ],
             }
@@ -2386,11 +2437,16 @@ export default function PanelDeControl() {
                               {(producto.variaciones || []).length === 0 ? (
                                 <span className="text-xs text-gray-400 italic">Sin variaciones</span>
                               ) : (
-                                (producto.variaciones || []).map((variacion, variacionIndex) => (
-                                  <span key={variacionIndex} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
-                                    {variacion.nombre} (+${(variacion.precio || 0).toLocaleString()})
-                                  </span>
-                                ))
+                                (producto.variaciones || []).map((variacion, variacionIndex) => {
+                                  const precioMostrar = (config?.tipoPrecioDefault || 'minorista') === 'mayorista' 
+                                    ? (variacion.precioMayorista || variacion.precio || 0)
+                                    : (variacion.precioMinorista || variacion.precio || 0);
+                                  return (
+                                    <span key={variacionIndex} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                                      {variacion.nombre} (+USD ${precioMostrar.toLocaleString()})
+                                    </span>
+                                  );
+                                })
                               )}
                               <button
                                 type="button"
@@ -2417,7 +2473,13 @@ export default function PanelDeControl() {
                               <input
                                 type="number"
                                 className="w-full pl-7 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium transition-all hover:border-primary-300"
-                                value={producto.precio || ''}
+                                value={
+                                  producto.precio !== undefined && 
+                                  producto.precio !== null && 
+                                  !isNaN(producto.precio) 
+                                    ? producto.precio 
+                                    : ''
+                                }
                                 onChange={(e) =>
                                   handleProductoChange(producto.id, 'precio', e.target.value)
                                 }
@@ -2466,47 +2528,71 @@ export default function PanelDeControl() {
                         {(producto.variaciones || []).length === 0 ? (
                           <p className="text-xs text-gray-500 italic">No hay variaciones. Agrega una para ofrecer diferentes opciones (ej: Tamaño, Color, etc.)</p>
                         ) : (
-                          <div className="space-y-4">
+                          <div className="space-y-2">
                             {(producto.variaciones || []).map((variacion, variacionIndex) => (
-                              <div key={variacionIndex} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                <div className="flex items-center justify-between mb-2">
+                              <div key={variacionIndex} className="bg-gray-50 rounded-md p-2 border border-gray-200">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <input
                                     type="text"
                                     value={variacion.nombre || ''}
                                     onChange={(e) => handleVariacionChange(producto.id, variacionIndex, 'nombre', e.target.value)}
-                                    placeholder="Nombre de la variación (ej: Tamaño de hoja)"
-                                    className="flex-1 px-2 py-1 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Nombre variación"
+                                    className="flex-1 min-w-[120px] px-2 py-1 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                                   />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteVariacion(producto.id, variacionIndex)}
-                                    className="ml-2 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors"
-                                    title="Eliminar variación"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                                
-                                {/* Sistema simplificado: precio directo en la variación */}
-                                <div className="flex items-center gap-2 mt-2">
-                                  <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">Precio:</label>
-                                  <div className="flex items-center gap-1 flex-1">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">May. (≥50):</span>
                                     <span className="text-xs text-gray-500">$</span>
                                     <input
                                       type="text"
                                       inputMode="decimal"
-                                      step="0.01"
-                                      value={variacion.precio !== undefined && variacion.precio !== null ? variacion.precio.toString().replace('.', ',') : ''}
+                                      value={
+                                        variacion.precioMayorista !== undefined && 
+                                        variacion.precioMayorista !== null && 
+                                        !isNaN(variacion.precioMayorista) && 
+                                        variacion.precioMayorista > 0
+                                          ? parseFloat(variacion.precioMayorista).toFixed(2).replace('.', ',')
+                                          : ''
+                                      }
                                       onChange={(e) => {
                                         const value = e.target.value.replace(/[^0-9,]/g, '').replace(',', '.');
-                                        handleUpdateVariacionPrecio(producto.id, variacionIndex, value);
+                                        handleUpdateVariacionPrecio(producto.id, variacionIndex, 'precioMayorista', value);
                                       }}
                                       placeholder="0,00"
-                                      className="flex-1 px-2 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                      className="w-16 px-1.5 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                                     />
                                   </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">Min. (10-50):</span>
+                                    <span className="text-xs text-gray-500">$</span>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={
+                                        variacion.precioMinorista !== undefined && 
+                                        variacion.precioMinorista !== null && 
+                                        !isNaN(variacion.precioMinorista) && 
+                                        variacion.precioMinorista > 0
+                                          ? parseFloat(variacion.precioMinorista).toFixed(2).replace('.', ',')
+                                          : ''
+                                      }
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9,]/g, '').replace(',', '.');
+                                        handleUpdateVariacionPrecio(producto.id, variacionIndex, 'precioMinorista', value);
+                                      }}
+                                      placeholder="0,00"
+                                      className="w-16 px-1.5 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteVariacion(producto.id, variacionIndex)}
+                                    className="px-1.5 py-1 text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                                    title="Eliminar variación"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -2541,6 +2627,31 @@ export default function PanelDeControl() {
                 </div>
               ))}
             </div>
+
+            {/* Paginación al final de la lista */}
+            {config.productos.length > itemsPerPage && (
+              <div className="flex items-center justify-center gap-2 py-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setProductosPage(p => Math.max(1, p - 1))}
+                  disabled={productosPage === 1}
+                  className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-sm text-gray-600">
+                  Página {productosPage} de {Math.ceil(config.productos.length / itemsPerPage)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setProductosPage(p => Math.min(Math.ceil(config.productos.length / itemsPerPage), p + 1))}
+                  disabled={productosPage >= Math.ceil(config.productos.length / itemsPerPage)}
+                  className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
 
             <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 pt-4 border-t border-gray-200">
               <button

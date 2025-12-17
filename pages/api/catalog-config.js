@@ -98,6 +98,8 @@ async function getFromMongoDB() {
       zipFilename: catalog.zipFilename || null,
       imagesUpdatedAt: catalog.imagesUpdatedAt || null,
       variacionesGlobales: catalog.variacionesGlobales || [], // Incluir variaciones globales
+      cotizacionDolar: catalog.cotizacionDolar || 1, // Cotización del dólar
+      tipoPrecioDefault: catalog.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
       productos: productos.map(p => ({
         id: p._id.toString(),
         nombre: p.nombre,
@@ -156,6 +158,8 @@ async function saveToMongoDB(data) {
         whatsappNumber: data.whatsappNumber || null,
         numPages: data.numPages || null,
         variacionesGlobales: data.variacionesGlobales || [], // Guardar variaciones globales
+        cotizacionDolar: data.cotizacionDolar || 1, // Cotización del dólar
+        tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
         createdAt: new Date(),
         updatedAt: new Date(),
       });

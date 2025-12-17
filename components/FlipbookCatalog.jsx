@@ -8,6 +8,8 @@ export default function FlipbookCatalog({
   hotspots = [],
   productos = [],
   whatsappNumber = null,
+  cotizacionDolar = 1,
+  tipoPrecioDefault = 'minorista',
 }) {
   const flipbookRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -971,6 +973,8 @@ export default function FlipbookCatalog({
           setSelectedProduct(null);
         }}
         whatsappNumber={whatsappNumber}
+        cotizacionDolar={cotizacionDolar}
+        tipoPrecioDefault={tipoPrecioDefault}
       />
     </div>
   );

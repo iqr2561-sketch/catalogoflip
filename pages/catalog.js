@@ -152,6 +152,8 @@ export default function CatalogPage() {
             hotspots={catalogConfig.hotspots || []}
             productos={catalogConfig.productos || []}
             whatsappNumber={catalogConfig.whatsappNumber || null}
+            cotizacionDolar={catalogConfig.cotizacionDolar || 1}
+            tipoPrecioDefault={catalogConfig.tipoPrecioDefault || 'minorista'}
           />
         )}
         <Cart whatsappNumber={catalogConfig?.whatsappNumber || null} />

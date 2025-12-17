@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useCartStore from '../store/cartStore';
 
-export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null }) {
+export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null, cotizacionDolar = 1, tipoPrecioDefault = 'minorista' }) {
   const agregarProducto = useCartStore((state) => state.agregarProducto);
   const [imageError, setImageError] = useState(false);
   const [cantidad, setCantidad] = useState(1);
@@ -21,7 +21,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     }
   }, [isOpen, producto]);
   
-  // Calcular precio basado en variaciones seleccionadas (sistema simplificado)
+  // Calcular precio basado en variaciones seleccionadas (sistema con mayorista/minorista)
   const calcularPrecio = () => {
     if (!producto) return 0;
     
@@ -30,10 +30,13 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     }
     
     let precioTotal = producto.precio || 0;
-    // Sistema simplificado: cada variación tiene un precio directo
+    // Sistema con precios mayorista/minorista
     (producto.variaciones || []).forEach((variacion) => {
       if (variacionesSeleccionadas[variacion.nombre]) {
-        precioTotal += variacion.precio || 0;
+        const precioVariacion = tipoPrecioDefault === 'mayorista' 
+          ? (variacion.precioMayorista || 0)
+          : (variacion.precioMinorista || 0);
+        precioTotal += precioVariacion;
       }
     });
     
@@ -131,7 +134,20 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                         {variacion.nombre}
                       </label>
                       <p className="text-sm text-gray-600">
-                        Precio adicional: <span className="font-semibold text-primary-600">+${(variacion.precio || 0).toLocaleString()}</span>
+                        Precio adicional: <span className="font-semibold text-primary-600">
+                          +USD ${(tipoPrecioDefault === 'mayorista' 
+                            ? (variacion.precioMayorista || 0)
+                            : (variacion.precioMinorista || 0)
+                          ).toLocaleString()}
+                        </span>
+                        {cotizacionDolar && cotizacionDolar !== 1 && (
+                          <span className="text-xs text-gray-500 ml-2">
+                            (≈ ${((tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || 0)
+                              : (variacion.precioMinorista || 0)
+                            ) * cotizacionDolar).toLocaleString()} COP)
+                          </span>
+                        )}
                       </p>
                     </div>
                     <button
@@ -182,16 +198,23 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
           {/* Precio + cantidad (agrupados para que se vean juntos en móvil) */}
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:gap-6">
             <div>
-              <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                ${precioFinal.toLocaleString()}
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="block text-4xl md:text-5xl font-bold text-primary-600">
+                  USD ${precioFinal.toLocaleString()}
+                </span>
+                {cotizacionDolar && cotizacionDolar !== 1 && (
+                  <span className="text-2xl md:text-3xl font-bold text-gray-500">
+                    ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} COP
+                  </span>
+                )}
+              </div>
               <span className="mt-1 inline-block text-sm font-semibold text-gray-600">
                 x {Math.max(1, cantidad || 1)} unidad
                 {Math.max(1, cantidad || 1) > 1 ? 'es' : ''}
               </span>
               {(producto.variaciones || []).length > 0 && producto.precio > 0 && (
                 <span className="mt-1 block text-xs text-gray-500">
-                  Precio base: ${producto.precio.toLocaleString()}
+                  Precio base: USD ${producto.precio.toLocaleString()}
                 </span>
               )}
             </div>
