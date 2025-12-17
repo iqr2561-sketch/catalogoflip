@@ -33,9 +33,8 @@ function getMongoClient() {
 
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
+    bodyParser: false,
+    responseLimit: '100mb',
   },
 };
 
@@ -50,6 +49,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('[upload-images-zip] Iniciando recepción de ZIP...');
+    
     // Leer el body completo
     const chunks = [];
     for await (const chunk of req) {
@@ -57,17 +58,25 @@ export default async function handler(req, res) {
     }
     
     if (chunks.length === 0) {
+      console.error('[upload-images-zip] No se recibieron datos');
       return sendJsonResponse(400, { error: 'No se recibió ningún dato.' });
     }
     
     const buffer = Buffer.concat(chunks);
+    console.log(`[upload-images-zip] Datos recibidos: ${buffer.length} bytes`);
     
     // Parsear JSON
     let data;
     try {
       const jsonString = buffer.toString('utf8');
       data = JSON.parse(jsonString);
+      console.log(`[upload-images-zip] JSON parseado correctamente, filename: ${data.filename || 'no especificado'}`);
     } catch (parseError) {
+      console.error('[upload-images-zip] Error al parsear JSON:', {
+        error: parseError.message,
+        bufferLength: buffer.length,
+        preview: buffer.toString('utf8').substring(0, 200),
+      });
       return sendJsonResponse(400, { 
         error: 'Error al parsear los datos JSON',
         details: parseError.message,
@@ -77,16 +86,27 @@ export default async function handler(req, res) {
     const { zipData, filename } = data;
     
     if (!zipData || !filename) {
+      console.error('[upload-images-zip] Datos incompletos:', { hasZipData: !!zipData, filename });
       return sendJsonResponse(400, {
         error: 'Datos incompletos',
         received: { hasZipData: !!zipData, filename },
       });
     }
 
-    console.log(`[upload-images-zip] Procesando ZIP: ${filename}`);
+    console.log(`[upload-images-zip] Procesando ZIP: ${filename}, tamaño base64: ${zipData.length} caracteres`);
 
     // Decodificar base64
-    const zipBuffer = Buffer.from(zipData, 'base64');
+    let zipBuffer;
+    try {
+      zipBuffer = Buffer.from(zipData, 'base64');
+      console.log(`[upload-images-zip] ZIP decodificado: ${zipBuffer.length} bytes`);
+    } catch (base64Error) {
+      console.error('[upload-images-zip] Error al decodificar base64:', base64Error);
+      return sendJsonResponse(400, {
+        error: 'Error al decodificar los datos base64',
+        details: base64Error.message,
+      });
+    }
     
     // Validar que sea un ZIP
     if (zipBuffer.length < 4 || zipBuffer.slice(0, 2).toString('hex') !== '504b') {
