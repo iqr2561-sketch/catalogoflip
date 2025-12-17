@@ -81,26 +81,35 @@ export default function FlipbookCatalog({
 
   const handlePrevPage = () => {
     setFlipDirection('prev');
-    setCurrentPage((prev) => {
+    const newPage = (() => {
       if (!isMobile && viewMode === 'double') {
-        const base = prev - (prev % 2); // index de la página izquierda actual
-        const target = Math.max(0, base - 2);
-        return target;
+        const base = currentPage - (currentPage % 2);
+        return Math.max(0, base - 2);
       }
-      return Math.max(0, prev - 1);
-    });
+      return Math.max(0, currentPage - 1);
+    })();
+    
+    setCurrentPage(newPage);
+    // Calcular offset para el slider
+    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
+    setSlideOffset(-newPage * 100 / pages);
   };
 
   const handleNextPage = () => {
     setFlipDirection('next');
-    setCurrentPage((prev) => {
+    const newPage = (() => {
       if (!isMobile && viewMode === 'double') {
-        const base = prev - (prev % 2);
+        const base = currentPage - (currentPage % 2);
         const target = base + 2;
-        return target >= images.length ? prev : target;
+        return target >= images.length ? currentPage : target;
       }
-      return Math.min(images.length - 1, prev + 1);
-    });
+      return Math.min(images.length - 1, currentPage + 1);
+    })();
+    
+    setCurrentPage(newPage);
+    // Calcular offset para el slider
+    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
+    setSlideOffset(-newPage * 100 / pages);
   };
 
   const toggleZoom = () => {
@@ -117,9 +126,20 @@ export default function FlipbookCatalog({
   // Limpiar estado de animación después de cada vuelta de página
   useEffect(() => {
     if (!flipDirection) return;
-    const timeoutId = setTimeout(() => setFlipDirection(null), 400);
+    const timeoutId = setTimeout(() => setFlipDirection(null), 500);
     return () => clearTimeout(timeoutId);
   }, [flipDirection]);
+
+  // Actualizar offset cuando cambia la página
+  useEffect(() => {
+    const pages = !isMobile && viewMode === 'double' ? 2 : 1;
+    if (viewMode === 'double') {
+      const base = currentPage - (currentPage % 2);
+      setSlideOffset(-base * 50); // En modo double, cada "slide" es 50% del ancho
+    } else {
+      setSlideOffset(-currentPage * 100); // En modo single, cada slide es 100% del ancho
+    }
+  }, [currentPage, isMobile, viewMode]);
 
   // Obtener hotspots de las páginas visibles (solo los habilitados)
   const isDouble = !isMobile && viewMode === 'double';
@@ -406,7 +426,7 @@ export default function FlipbookCatalog({
               return (
                 <div
                   ref={flipbookRef}
-                  className="flipbook-container flex bg-white shadow-2xl rounded-lg overflow-hidden"
+                  className="flipbook-container bg-white shadow-2xl rounded-lg overflow-hidden"
                   style={{
                     position: 'relative',
                     width: '100%',
@@ -416,52 +436,80 @@ export default function FlipbookCatalog({
                     transition: 'transform 0.3s ease',
                   }}
                 >
-            {isDouble ? (
-              <>
-                {images[leftIndex] && (
                   <div
-                    className={`w-1/2 h-full bg-white flex items-center justify-center ${leftPageClass} cursor-pointer`}
-                    onClick={handleClickLeftPage}
+                    className="page-slider-container"
+                    style={{
+                      width: isDouble ? `${Math.ceil(images.length / 2) * 100}%` : `${images.length * 100}%`,
+                      height: '100%',
+                      transform: `translateX(${slideOffset}%)`,
+                    }}
                   >
-                    <img
-                      src={images[leftIndex]}
-                      alt={`Página ${leftIndex + 1}`}
-                      className="w-full h-full object-contain shadow-xl rounded-sm"
-                      style={{ maxWidth: '100%', maxHeight: '100%' }}
-                    />
+                    {isDouble ? (
+                      // Modo double: mostrar pares de páginas
+                      Array.from({ length: Math.ceil(images.length / 2) }, (_, i) => {
+                        const leftIdx = i * 2;
+                        const rightIdx = i * 2 + 1;
+                        const isCurrent = leftIdx === baseIndex || rightIdx === baseIndex;
+                        
+                        return (
+                          <div key={i} className="page-slide-item flex" style={{ width: `${100 / Math.ceil(images.length / 2)}%` }}>
+                            {images[leftIdx] && (
+                              <div
+                                className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer border-r border-gray-200"
+                                onClick={handleClickLeftPage}
+                              >
+                                <img
+                                  src={images[leftIdx]}
+                                  alt={`Página ${leftIdx + 1}`}
+                                  className={`w-full h-full object-contain shadow-xl rounded-sm ${
+                                    isCurrent && flipDirection === 'prev' ? 'slide-in-left' : 
+                                    isCurrent && flipDirection === 'next' ? 'slide-in-right' : ''
+                                  }`}
+                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                                />
+                              </div>
+                            )}
+                            {rightIdx < images.length && images[rightIdx] && (
+                              <div
+                                className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer"
+                                onClick={handleClickRightPage}
+                              >
+                                <img
+                                  src={images[rightIdx]}
+                                  alt={`Página ${rightIdx + 1}`}
+                                  className={`w-full h-full object-contain shadow-xl rounded-sm ${
+                                    isCurrent && flipDirection === 'prev' ? 'slide-in-left' : 
+                                    isCurrent && flipDirection === 'next' ? 'slide-in-right' : ''
+                                  }`}
+                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Modo single: mostrar una página por vez
+                      images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="page-slide-item w-full h-full bg-white flex items-center justify-center cursor-pointer"
+                          style={{ width: `${100 / images.length}%` }}
+                          onClick={handleClickSinglePage}
+                        >
+                          <img
+                            src={img}
+                            alt={`Página ${idx + 1}`}
+                            className={`w-full h-full object-contain shadow-xl rounded-sm ${
+                              idx === currentPage && flipDirection === 'prev' ? 'slide-in-left' : 
+                              idx === currentPage && flipDirection === 'next' ? 'slide-in-right' : ''
+                            }`}
+                            style={{ maxWidth: '100%', maxHeight: '100%' }}
+                          />
+                        </div>
+                      ))
+                    )}
                   </div>
-                )}
-                {rightIndex !== null && rightIndex < images.length && images[rightIndex] && (
-                  <div
-                    className={`w-1/2 h-full bg-white flex items-center justify-center border-l border-gray-200 ${rightPageClass} cursor-pointer`}
-                    onClick={handleClickRightPage}
-                  >
-                    <img
-                      src={images[rightIndex]}
-                      alt={`Página ${rightIndex + 1}`}
-                      className="w-full h-full object-contain shadow-xl rounded-sm"
-                      style={{ maxWidth: '100%', maxHeight: '100%' }}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              images[currentPage] && (
-                <div
-                  className={`w-full h-full bg-white flex items-center justify-center ${
-                    flipDirection ? (flipDirection === 'next' ? 'page-flip-next' : 'page-flip-prev') : ''
-                  } cursor-pointer`}
-                  onClick={handleClickSinglePage}
-                >
-                  <img
-                    src={images[currentPage]}
-                    alt={`Página ${currentPage + 1}`}
-                    className="w-full h-full object-contain shadow-xl rounded-sm"
-                    style={{ maxWidth: '100%', maxHeight: '100%' }}
-                  />
-                </div>
-              )
-            )}
                 {/* Hotspots superpuestos - sobre el flipbook */}
                 {pageDimensions.width > 0 && (
                   <>
