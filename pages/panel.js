@@ -19,6 +19,8 @@ export default function PanelDeControl() {
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfPageCount, setPdfPageCount] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [zipUploading, setZipUploading] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState(null);
   const [bulkHotspotCount, setBulkHotspotCount] = useState(1);
@@ -1437,6 +1439,46 @@ export default function PanelDeControl() {
                   {pdfFile && !pdfUploading && (
                     <div className="mt-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
                       ✓ Archivo seleccionado: {pdfFile.name} ({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </div>
+                  )}
+                </div>
+
+                {/* Cargar ZIP con imágenes */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Cargar Catálogo desde ZIP (Imágenes JPG)
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors bg-white">
+                    <input
+                      type="file"
+                      accept=".zip,application/zip,application/x-zip-compressed"
+                      onChange={handleZipUpload}
+                      disabled={zipUploading}
+                      className="hidden"
+                      id="zip-upload"
+                    />
+                    <label
+                      htmlFor="zip-upload"
+                      className="cursor-pointer flex flex-col items-center gap-3"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-700 block">
+                          {zipFile ? zipFile.name : 'Haz clic para seleccionar ZIP'}
+                        </span>
+                        <span className="text-xs text-gray-500 block mt-1">
+                          {zipUploading ? 'Procesando...' : 'ZIP con imágenes JPG (jpg, jpeg). Las imágenes se ordenarán por nombre.'}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                  {zipFile && !zipUploading && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+                      ✓ Archivo seleccionado: {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
                     </div>
                   )}
                 </div>

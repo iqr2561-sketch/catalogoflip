@@ -4,6 +4,7 @@ import ProductModal from './ProductModal';
 
 export default function FlipbookCatalog({
   pdfUrl,
+  images = null, // Array de URLs de imágenes (alternativa al PDF)
   hotspots = [],
   productos = [],
   whatsappNumber = null,
@@ -30,59 +31,72 @@ export default function FlipbookCatalog({
   const canvasRefs = useRef({}); // Referencias a los canvas de cada página
   const renderQueue = useRef(new Set()); // Cola de páginas pendientes de renderizar
 
-  // Cargar PDF y configurar PDF.js
+  // Cargar imágenes o PDF
   useEffect(() => {
-    if (!pdfUrl || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
     let mounted = true;
 
-    const loadPDF = async () => {
+    const loadContent = async () => {
       try {
         setLoading(true);
-        console.log('[FlipbookCatalog] Cargando PDF desde:', pdfUrl);
 
-        // Importar PDF.js dinámicamente
-        const pdfjsLib = await import('pdfjs-dist');
-        
-        // Configurar worker de PDF.js
-        const pdfjsVersion = pdfjsLib.version || '4.10.38';
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 
-          `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
-
-        // Cargar el PDF
-        const response = await fetch(pdfUrl);
-        if (!response.ok) {
-          throw new Error(`Error al cargar PDF: ${response.status}`);
+        // Si hay imágenes, usarlas directamente
+        if (images && images.length > 0) {
+          console.log(`[FlipbookCatalog] Usando ${images.length} imágenes del catálogo`);
+          setNumPages(images.length);
+          setPdfDoc(null); // No hay PDF
+          setLoading(false);
+          return;
         }
-        const arrayBuffer = await response.arrayBuffer();
-        
-        const loadingTask = pdfjsLib.getDocument({ 
-          data: arrayBuffer,
-          verbosity: 0,
-        });
-        
-        const pdf = await loadingTask.promise;
-        
-        if (!mounted) return;
-        
-        console.log(`[FlipbookCatalog] PDF cargado: ${pdf.numPages} páginas`);
-        setPdfDoc(pdf);
-        setNumPages(pdf.numPages);
-        setLoading(false);
+
+        // Si hay PDF, cargarlo
+        if (pdfUrl) {
+          console.log('[FlipbookCatalog] Cargando PDF desde:', pdfUrl);
+
+          // Importar PDF.js dinámicamente
+          const pdfjsLib = await import('pdfjs-dist');
+          
+          // Configurar worker de PDF.js
+          const pdfjsVersion = pdfjsLib.version || '4.10.38';
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 
+            `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/legacy/build/pdf.worker.min.mjs`;
+
+          // Cargar el PDF
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error(`Error al cargar PDF: ${response.status}`);
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          
+          const loadingTask = pdfjsLib.getDocument({ 
+            data: arrayBuffer,
+            verbosity: 0,
+          });
+          
+          const pdf = await loadingTask.promise;
+          
+          if (!mounted) return;
+          
+          console.log(`[FlipbookCatalog] PDF cargado: ${pdf.numPages} páginas`);
+          setPdfDoc(pdf);
+          setNumPages(pdf.numPages);
+          setLoading(false);
+        }
       } catch (error) {
-        console.error('[FlipbookCatalog] Error al cargar PDF:', error);
+        console.error('[FlipbookCatalog] Error al cargar contenido:', error);
         if (mounted) {
           setLoading(false);
         }
       }
     };
 
-    loadPDF();
+    loadContent();
 
     return () => {
       mounted = false;
     };
-  }, [pdfUrl]);
+  }, [pdfUrl, images]);
 
   // Calcular tamaño del contenedor para que el catálogo quepa en pantalla
   useEffect(() => {
@@ -185,7 +199,7 @@ export default function FlipbookCatalog({
 
   // Renderizar páginas iniciales (lazy loading)
   useEffect(() => {
-    if (!pdfDoc || !containerSize.width || numPages === 0) return;
+    if ((!pdfDoc && !images) || !containerSize.width || numPages === 0) return;
 
     const initialPages = isMobile ? [0, 1] : [0, 1, 2]; // Mobile: 2 páginas, Desktop: 3 páginas
     
@@ -205,7 +219,7 @@ export default function FlipbookCatalog({
 
   // Renderizar páginas adyacentes cuando cambia la página actual
   useEffect(() => {
-    if (!pdfDoc || numPages === 0) return;
+    if ((!pdfDoc && !images) || numPages === 0) return;
 
     // Páginas a pre-renderizar alrededor de la actual
     const pagesToRender = [];
@@ -246,7 +260,7 @@ export default function FlipbookCatalog({
 
   // Limpiar canvas no visibles para evitar memory leaks
   useEffect(() => {
-    if (!pdfDoc) return;
+    if (!pdfDoc && !images) return;
 
     const cleanup = () => {
       // Mantener solo las páginas visibles y adyacentes

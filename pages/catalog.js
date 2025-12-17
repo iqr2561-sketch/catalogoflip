@@ -8,6 +8,7 @@ import catalogData from '../data/catalog.json'; // Fallback
 
 export default function CatalogPage() {
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [images, setImages] = useState(null); // Array de URLs de imágenes
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [catalogConfig, setCatalogConfig] = useState(null);
@@ -22,18 +23,29 @@ export default function CatalogPage() {
         if (response.ok) {
           const data = await response.json();
           setCatalogConfig(data);
-          // Obtener URL del PDF directamente
-          const pdfUrl = data.pdf || '/api/catalogo';
-          setPdfUrl(pdfUrl);
+          
+          // Verificar si hay imágenes disponibles
+          if (data.useImages && data.imageUrls && data.imageUrls.length > 0) {
+            setImages(data.imageUrls);
+            setPdfUrl(null);
+            console.log(`[catalog] Usando ${data.imageUrls.length} imágenes del catálogo`);
+          } else {
+            // Obtener URL del PDF directamente
+            const pdfUrl = data.pdf || '/api/catalogo';
+            setPdfUrl(pdfUrl);
+            setImages(null);
+          }
         } else {
           console.warn('[catalog] No se pudo cargar desde API, usando JSON estático');
           setCatalogConfig(catalogData);
           setPdfUrl('/api/catalogo');
+          setImages(null);
         }
       } catch (err) {
         console.error('[catalog] Error al cargar configuración:', err);
         setCatalogConfig(catalogData);
         setPdfUrl('/api/catalogo');
+        setImages(null);
       } finally {
         setLoading(false);
         setLoadingProgress('');
@@ -84,7 +96,7 @@ export default function CatalogPage() {
     );
   }
 
-  if (!loading && !pdfUrl) {
+  if (!loading && !pdfUrl && !images) {
     return (
       <>
         <Head>
@@ -96,7 +108,7 @@ export default function CatalogPage() {
             <div className="text-5xl mb-4">📄</div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">No se pudo cargar el catálogo</h1>
             <p className="text-gray-600 mb-4">
-              No se encontró el PDF del catálogo. Por favor, sube un PDF desde el panel de administración.
+              No se encontró el PDF o imágenes del catálogo. Por favor, sube un PDF o un ZIP con imágenes JPG desde el panel de administración.
             </p>
             <button
               onClick={() => window.location.reload()}
@@ -121,9 +133,10 @@ export default function CatalogPage() {
       <main className="relative">
         <ConfigButton />
 
-        {catalogConfig && pdfUrl && (
+        {catalogConfig && (pdfUrl || images) && (
           <FlipbookCatalog
             pdfUrl={pdfUrl}
+            images={images}
             hotspots={catalogConfig.hotspots || []}
             productos={catalogConfig.productos || []}
             whatsappNumber={catalogConfig.whatsappNumber || null}

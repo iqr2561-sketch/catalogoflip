@@ -11,6 +11,7 @@
     "prepare": "node scripts/check-setup.js"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "canvas": "^3.2.0",
     "formidable": "^3.5.4",
     "mongodb": "^7.0.0",
