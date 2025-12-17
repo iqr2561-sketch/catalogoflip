@@ -694,6 +694,96 @@ export default function PanelDeControl() {
     }
   };
 
+  const handleZipUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validaciones del archivo
+    if (file.type !== 'application/zip' && 
+        file.type !== 'application/x-zip-compressed' && 
+        !file.name.toLowerCase().endsWith('.zip')) {
+      setError('Por favor, selecciona un archivo ZIP válido.');
+      return;
+    }
+
+    // Validar tamaño máximo
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      setError(`El archivo es demasiado grande (${(file.size / 1024 / 1024).toFixed(2)}MB). El tamaño máximo es 50MB`);
+      return;
+    }
+
+    if (file.size === 0) {
+      setError('El archivo está vacío. Por favor, selecciona un ZIP válido.');
+      return;
+    }
+
+    setZipUploading(true);
+    setError(null);
+    setMessage(null);
+    setZipFile(file);
+
+    try {
+      console.log(`[panel] Iniciando subida de ZIP: ${file.name} (${file.size} bytes)`);
+      setMessage('Leyendo archivo ZIP...');
+
+      // Leer el archivo completo
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Convertir a base64
+      let binary = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const zipBase64 = btoa(binary);
+
+      setMessage('Subiendo imágenes...');
+
+      const res = await fetch('/api/upload-images-zip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          zipData: zipBase64,
+          filename: file.name,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(errorData.error || 'Error al subir el ZIP');
+      }
+
+      const data = await res.json();
+      console.log('[panel] ZIP subido exitosamente:', data);
+
+      setMessage(`✓ ${data.numPages || 0} imágenes cargadas exitosamente`);
+      setError(null);
+
+      // Recargar configuración
+      const configRes = await fetch('/api/catalog-config');
+      if (configRes.ok) {
+        const newConfig = await configRes.json();
+        setConfig(newConfig);
+      }
+
+      // Limpiar después de un delay
+      setTimeout(() => {
+        setMessage(null);
+        setZipFile(null);
+      }, 3000);
+
+    } catch (err) {
+      console.error('[panel] Error al subir ZIP:', err);
+      setError(`Error al subir el archivo ZIP: ${err.message || 'Error desconocido'}`);
+      setMessage(null);
+    } finally {
+      setZipUploading(false);
+    }
+  };
+
   const handleDeleteHotspot = async (index) => {
     setConfirmModal({
       isOpen: true,
