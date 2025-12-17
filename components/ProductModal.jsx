@@ -93,17 +93,17 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
             </svg>
           </button>
 
-          {/* Imagen del producto */}
-          <div className="w-full h-64 md:h-80 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden rounded-t-2xl">
+          {/* Imagen del producto - Más pequeña */}
+          <div className="w-full h-32 md:h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden rounded-t-2xl">
             {!imageError && producto.imagen ? (
               <img
                 src={producto.imagen}
                 alt={producto.nombre}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="text-gray-400 text-6xl">📦</div>
+              <div className="text-gray-400 text-4xl">📦</div>
             )}
           </div>
         </div>
