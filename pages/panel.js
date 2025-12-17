@@ -649,8 +649,6 @@ export default function PanelDeControl() {
               console.error('[panel] Error al generar imágenes:', genError);
               setMessage('PDF subido exitosamente. Las imágenes se generarán en la primera carga del catálogo.');
             }
-
-            await fetchPdfList();
           }
         } catch (chunkError) {
           // Intentar obtener más detalles del error
