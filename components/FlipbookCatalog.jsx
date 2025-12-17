@@ -678,14 +678,40 @@ export default function FlipbookCatalog({
         </div>
       </div>
 
+      {/* Indicadores de página (dots) - Móvil */}
+      {isMobile && images.length > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 flex-wrap px-4">
+          {images.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setCurrentPage(idx);
+              }}
+              className={`transition-all duration-300 rounded-full ${
+                idx === currentPage
+                  ? 'w-3 h-3 bg-primary-600 shadow-lg scale-110'
+                  : 'w-2 h-2 bg-gray-300 hover:bg-gray-400 active:bg-gray-500'
+              }`}
+              aria-label={`Ir a página ${idx + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Instrucciones */}
       <div className="mt-6 text-center text-gray-600">
         <p className="text-sm">
           Haz clic en los puntos destacados para ver más información del producto
         </p>
-        <p className="text-xs mt-2">
-          Arrastra las esquinas o usa las flechas para pasar las páginas
-        </p>
+        {isMobile ? (
+          <p className="text-xs mt-2">
+            Desliza hacia los lados para cambiar de página • Toca los puntos para saltar a una página
+          </p>
+        ) : (
+          <p className="text-xs mt-2">
+            Usa las flechas del teclado, el espacio, o haz clic en los lados de la página para navegar
+          </p>
+        )}
       </div>
 
       {/* Modal de producto */}
