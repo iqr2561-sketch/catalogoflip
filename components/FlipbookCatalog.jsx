@@ -425,7 +425,8 @@ export default function FlipbookCatalog({
                     <img
                       src={images[leftIndex]}
                       alt={`Página ${leftIndex + 1}`}
-                      className="object-contain w-[95%] h-[95%] shadow-xl rounded-sm"
+                      className="w-full h-full object-contain shadow-xl rounded-sm"
+                      style={{ maxWidth: '100%', maxHeight: '100%' }}
                     />
                   </div>
                 )}
