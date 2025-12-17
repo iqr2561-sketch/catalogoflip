@@ -721,33 +721,68 @@ export default function FlipbookCatalog({
                   onTouchCancel={onTouchCancel}
                 >
                   {isDouble ? (
-                    // Modo double: mostrar par de páginas actual con canvas
+                    // Modo double: usar imágenes JPG directamente (más rápido) o canvas para PDF
                     <div className="flex w-full h-full">
                       {baseIndex < numPages && (
                         <div
                           className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer border-r border-gray-200 relative"
                           onClick={handleClickLeftPage}
                         >
-                          <canvas
-                            ref={(el) => {
-                              if (el) canvasRefs.current[baseIndex] = el;
-                            }}
-                            className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
-                              flipDirection === 'prev' ? 'page-slide-in-left' : 
-                              flipDirection === 'next' ? 'page-slide-out-left' : ''
-                            }`}
-                            style={{ 
-                              maxWidth: '100%', 
-                              maxHeight: '100%',
-                              display: renderedPages.has(baseIndex) ? 'block' : 'none'
-                            }}
-                          />
-                          {!renderedPages.has(baseIndex) && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                              <div className="text-center">
-                                <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
-                              </div>
-                            </div>
+                          {images && images.length > 0 ? (
+                            <>
+                              <img
+                                ref={(el) => {
+                                  if (el) imageRefs.current[baseIndex] = el;
+                                }}
+                                src={images[baseIndex]}
+                                alt={`Página ${baseIndex + 1}`}
+                                className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                                  flipDirection === 'prev' ? 'page-slide-in-left' : 
+                                  flipDirection === 'next' ? 'page-slide-out-left' : ''
+                                }`}
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: '100%',
+                                  display: loadedImages.has(baseIndex) ? 'block' : 'none'
+                                }}
+                                loading="lazy"
+                                onLoad={() => {
+                                  setLoadedImages(prev => new Set([...prev, baseIndex]));
+                                  setRenderedPages(prev => new Set([...prev, baseIndex]));
+                                }}
+                              />
+                              {!loadedImages.has(baseIndex) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                  <div className="text-center">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <canvas
+                                ref={(el) => {
+                                  if (el) canvasRefs.current[baseIndex] = el;
+                                }}
+                                className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                                  flipDirection === 'prev' ? 'page-slide-in-left' : 
+                                  flipDirection === 'next' ? 'page-slide-out-left' : ''
+                                }`}
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: '100%',
+                                  display: renderedPages.has(baseIndex) ? 'block' : 'none'
+                                }}
+                              />
+                              {!renderedPages.has(baseIndex) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                  <div className="text-center">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
@@ -756,26 +791,61 @@ export default function FlipbookCatalog({
                           className="w-1/2 h-full bg-white flex items-center justify-center cursor-pointer relative"
                           onClick={handleClickRightPage}
                         >
-                          <canvas
-                            ref={(el) => {
-                              if (el) canvasRefs.current[baseIndex + 1] = el;
-                            }}
-                            className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
-                              flipDirection === 'prev' ? 'page-slide-in-right' : 
-                              flipDirection === 'next' ? 'page-slide-out-right' : ''
-                            }`}
-                            style={{ 
-                              maxWidth: '100%', 
-                              maxHeight: '100%',
-                              display: renderedPages.has(baseIndex + 1) ? 'block' : 'none'
-                            }}
-                          />
-                          {!renderedPages.has(baseIndex + 1) && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                              <div className="text-center">
-                                <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
-                              </div>
-                            </div>
+                          {images && images.length > 0 ? (
+                            <>
+                              <img
+                                ref={(el) => {
+                                  if (el) imageRefs.current[baseIndex + 1] = el;
+                                }}
+                                src={images[baseIndex + 1]}
+                                alt={`Página ${baseIndex + 2}`}
+                                className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                                  flipDirection === 'prev' ? 'page-slide-in-right' : 
+                                  flipDirection === 'next' ? 'page-slide-out-right' : ''
+                                }`}
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: '100%',
+                                  display: loadedImages.has(baseIndex + 1) ? 'block' : 'none'
+                                }}
+                                loading="lazy"
+                                onLoad={() => {
+                                  setLoadedImages(prev => new Set([...prev, baseIndex + 1]));
+                                  setRenderedPages(prev => new Set([...prev, baseIndex + 1]));
+                                }}
+                              />
+                              {!loadedImages.has(baseIndex + 1) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                  <div className="text-center">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <canvas
+                                ref={(el) => {
+                                  if (el) canvasRefs.current[baseIndex + 1] = el;
+                                }}
+                                className={`w-full h-full object-contain shadow-xl rounded-sm page-transition ${
+                                  flipDirection === 'prev' ? 'page-slide-in-right' : 
+                                  flipDirection === 'next' ? 'page-slide-out-right' : ''
+                                }`}
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: '100%',
+                                  display: renderedPages.has(baseIndex + 1) ? 'block' : 'none'
+                                }}
+                              />
+                              {!renderedPages.has(baseIndex + 1) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                  <div className="text-center">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
