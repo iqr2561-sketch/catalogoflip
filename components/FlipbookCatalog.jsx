@@ -168,55 +168,11 @@ export default function FlipbookCatalog({
     setIsModalOpen(true);
   };
 
-  // Función para renderizar una página a canvas (PDF o imagen)
+  // Función para renderizar una página a canvas (solo para PDF)
   const renderPageToCanvas = async (pageNum, canvas, mobile = isMobile) => {
     if (!canvas) return;
 
     try {
-      // Si hay imágenes, cargar directamente (optimizado para velocidad)
-      if (images && images.length > 0) {
-        const pageIndex = pageNum - 1;
-        if (pageIndex >= 0 && pageIndex < images.length) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          
-          await new Promise((resolve, reject) => {
-            img.onload = () => {
-              // Ajustar tamaño del canvas según la imagen
-              const maxWidth = mobile ? window.innerWidth * 0.9 : 1200;
-              const maxHeight = mobile ? window.innerHeight * 0.8 : 1600;
-              
-              let width = img.width;
-              let height = img.height;
-              
-              // Escalar si es necesario
-              if (width > maxWidth) {
-                height = (height * maxWidth) / width;
-                width = maxWidth;
-              }
-              if (height > maxHeight) {
-                width = (width * maxHeight) / height;
-                height = maxHeight;
-              }
-              
-              canvas.width = width;
-              canvas.height = height;
-              
-              const context = canvas.getContext('2d');
-              context.drawImage(img, 0, 0, width, height);
-              
-              setRenderedPages(prev => new Set([...prev, pageIndex]));
-              renderQueue.current.delete(pageIndex);
-              console.log(`[FlipbookCatalog] ✓ Imagen ${pageNum} cargada`);
-              resolve();
-            };
-            img.onerror = reject;
-            img.src = images[pageIndex];
-          });
-        }
-        return;
-      }
-
       // Si hay PDF, renderizar desde PDF
       if (pdfDoc) {
         const page = await pdfDoc.getPage(pageNum);
