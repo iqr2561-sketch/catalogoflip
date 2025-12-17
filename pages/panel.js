@@ -2242,9 +2242,26 @@ export default function PanelDeControl() {
                           </div>
                         </td>
                         <td className="py-2 pr-4 hidden md:table-cell">
-                          <div className="w-16 h-24 bg-gray-50 rounded-md border-2 border-gray-300 relative overflow-hidden">
+                          <div className="w-16 h-24 rounded-md border-2 border-gray-300 relative overflow-hidden bg-gray-100">
+                            <img
+                              src={`/api/catalog-thumbnail/${h.page}`}
+                              alt={`Página ${h.page}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // Fallback a placeholder si no hay miniatura
+                                e.target.style.display = 'none';
+                                const placeholder = e.target.nextElementSibling;
+                                if (placeholder) {
+                                  placeholder.style.display = 'block';
+                                }
+                              }}
+                            />
                             <div
-                              className="absolute rounded-sm border-2 border-primary-500/90 bg-primary-500/25"
+                              className="absolute inset-0 bg-gray-50"
+                              style={{ display: 'none' }}
+                            />
+                            <div
+                              className="absolute rounded-sm border-2 border-primary-500/90 bg-primary-500/25 z-10"
                               style={{
                                 left: `${h.x}%`,
                                 top: `${h.y}%`,
