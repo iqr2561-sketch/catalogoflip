@@ -799,7 +799,7 @@ export default function PanelDeControl() {
           .replace(/\s+/g, ' ');
       };
 
-      const getRowValue = (row, keys) => {
+      const getRowValue = (row, keys, containsTokens = []) => {
         if (!row) return undefined;
         const direct = new Map(Object.entries(row));
         // mapa normalizado para soportar encabezados con acentos/variantes
@@ -808,6 +808,14 @@ export default function PanelDeControl() {
         for (const key of keys) {
           const v = normalized.get(normalizeHeaderKey(key));
           if (v !== undefined) return v;
+        }
+        if (containsTokens && containsTokens.length > 0) {
+          const tokens = containsTokens.map((t) => normalizeHeaderKey(t));
+          for (const [k, v] of normalized.entries()) {
+            for (const t of tokens) {
+              if (k.includes(t)) return v;
+            }
+          }
         }
         return undefined;
       };
@@ -935,7 +943,7 @@ export default function PanelDeControl() {
           'Precio Mayorista',
           'PrecioMayorista',
           'precio mayorista',
-        ]);
+        ], ['precio mayorista']);
         const precioMayoristaProvided = hasValue(precioMayoristaRaw);
         const precioMayorista = precioMayoristaProvided ? parsePrice(precioMayoristaRaw) : 0;
         
@@ -945,7 +953,7 @@ export default function PanelDeControl() {
           'Precio Minorista',
           'PrecioMinorista',
           'precio minorista',
-        ]);
+        ], ['precio minorista']);
         const precioMinoristaProvided = hasValue(precioMinoristaRaw);
         const precioMinorista = precioMinoristaProvided ? parsePrice(precioMinoristaRaw) : 0;
 
