@@ -925,6 +925,9 @@ export default function LandingPage() {
           line-height: 1.7;
           color: rgba(35, 25, 72, 0.78);
           max-width: 62ch;
+          text-align: justify;
+          text-justify: inter-word;
+          hyphens: auto;
         }
         .lp-ctaRow {
           display: flex;
@@ -1051,7 +1054,7 @@ export default function LandingPage() {
           display: grid;
           grid-template-columns: 1fr;
           gap: 14px;
-          align-items: center;
+          align-items: start;
         }
         .lp-quienesImgWrap {
           width: 100%;
@@ -1080,7 +1083,12 @@ export default function LandingPage() {
           color: rgba(26, 22, 48, 0.92);
         }
         .lp-h2OnDark { color: #24114f; margin-top: 12px; font-size: clamp(22px, 3.2vw, 34px); }
-        .lp-pOnDark { color: rgba(35, 25, 72, 0.78); }
+        .lp-pOnDark {
+          color: rgba(35, 25, 72, 0.78);
+          text-align: justify;
+          text-justify: inter-word;
+          hyphens: auto;
+        }
         .lp-quienesWave {
           height: 96px;
           margin-top: 18px;
@@ -1207,6 +1215,9 @@ export default function LandingPage() {
           line-height: 1.65;
           font-size: 14px;
           max-width: 80ch;
+          text-align: justify;
+          text-justify: inter-word;
+          hyphens: auto;
         }
         .lp-contactGrid {
           display: grid;
@@ -1261,7 +1272,8 @@ export default function LandingPage() {
           .lp-introGrid { grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
           .lp-contactGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .lp-featureCard { padding: 20px; }
-          .lp-quienesGrid { grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
+          /* Quienes: texto + imagen al costado */
+          .lp-quienesGrid { grid-template-columns: 1.2fr 0.8fr; gap: 18px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
