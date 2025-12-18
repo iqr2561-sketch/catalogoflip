@@ -269,6 +269,27 @@ export default function LandingPage() {
             </div>
           </footer>
         </main>
+
+        {/* WhatsApp flotante (solo si hay número configurado) */}
+        {waHref && (
+          <a
+            className="lp-waFloat"
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Abrir WhatsApp"
+            title="WhatsApp"
+          >
+            <span className="lp-waGlow" aria-hidden="true" />
+            <span className="lp-waSpark" aria-hidden="true" />
+            <svg className="lp-waIcon" viewBox="0 0 32 32" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M19.11 17.53c-.27-.14-1.57-.77-1.81-.86-.24-.09-.42-.14-.6.14-.18.27-.69.86-.84 1.03-.15.18-.31.2-.58.07-.27-.14-1.13-.42-2.15-1.35-.79-.7-1.33-1.57-1.49-1.83-.16-.27-.02-.41.12-.55.12-.12.27-.31.41-.46.14-.15.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.6-1.45-.82-1.98-.22-.53-.45-.46-.6-.46h-.51c-.18 0-.46.07-.7.34-.24.27-.92.9-.92 2.2 0 1.3.94 2.56 1.07 2.74.13.18 1.85 2.82 4.49 3.95.63.27 1.12.43 1.51.55.63.2 1.21.17 1.66.1.51-.08 1.57-.64 1.79-1.26.22-.62.22-1.15.15-1.26-.06-.11-.24-.18-.51-.32zM16.01 5.33c-5.88 0-10.67 4.79-10.67 10.67 0 1.88.49 3.72 1.42 5.34L5.33 26.67l5.45-1.41c1.56.85 3.32 1.29 5.23 1.29 5.88 0 10.67-4.79 10.67-10.67S21.89 5.33 16.01 5.33zm0 19.43c-1.74 0-3.38-.47-4.82-1.36l-.34-.2-3.23.84.86-3.15-.22-.36a8.56 8.56 0 0 1-1.31-4.65c0-4.72 3.84-8.56 8.56-8.56 4.72 0 8.56 3.84 8.56 8.56 0 4.72-3.84 8.56-8.56 8.56z"
+              />
+            </svg>
+          </a>
+        )}
       </div>
 
       <style jsx global>{`
@@ -291,6 +312,7 @@ export default function LandingPage() {
                       radial-gradient(900px 520px at 85% 40%, rgba(0,0,0,0.18), transparent 60%),
                       linear-gradient(90deg, var(--lp-nav-from), var(--lp-nav-mid) 45%, var(--lp-nav-to));
           color: var(--lp-nav-text);
+          transition: transform 320ms ease, background-color 320ms ease, box-shadow 320ms ease, border-color 320ms ease, backdrop-filter 320ms ease;
         }
         .lp-topbarInner {
           max-width: 1120px;
@@ -303,23 +325,20 @@ export default function LandingPage() {
         }
         /* Al scrollear: baja un poco y se vuelve semitransparente (flotante) */
         .lp-topbarScrolled {
-          position: fixed;
-          left: 12px;
-          right: 12px;
-          top: 12px;
-          border-radius: 18px;
-          background: rgba(42, 23, 90, 0.72);
-          border: 1px solid rgba(255,255,255,0.14);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          box-shadow: 0 24px 60px rgba(18, 10, 48, 0.25);
+          /* Mantiene el mismo “modo” (sticky), solo se vuelve más flotante y delicado */
           transform: translateY(10px);
+          background: rgba(42, 23, 90, 0.42);
+          border-bottom: 1px solid rgba(255,255,255,0.10);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow: 0 18px 45px rgba(18, 10, 48, 0.14);
         }
         .lp-topbarScrolled .lp-topbarInner {
           padding: 12px 14px;
         }
         .lp-topbarScrolled .lp-topbarWave {
-          display: none;
+          /* no lo escondemos: que siga el estilo sin “cambio de modo” */
+          opacity: 0.35;
         }
         .lp-topbarWave {
           height: 46px;
@@ -543,24 +562,41 @@ export default function LandingPage() {
         /* QUIENES destacado (más importante) */
         .lp-quienes {
           position: relative;
-          margin-top: 10px;
+          margin-top: 14px;
           padding: 34px 0 0;
           background:
-            radial-gradient(1200px 560px at 15% 20%, rgba(255,255,255,0.10), transparent 60%),
-            radial-gradient(900px 520px at 85% 60%, rgba(0,0,0,0.20), transparent 60%),
-            linear-gradient(135deg, #2a175a, #4c1d95 50%, #2a175a);
+            radial-gradient(900px 520px at 18% 18%, rgba(139, 92, 246, 0.10), transparent 62%),
+            radial-gradient(800px 520px at 82% 50%, rgba(245, 158, 11, 0.08), transparent 62%),
+            linear-gradient(180deg, #fbfbff, #f6f6ff);
           border-radius: 28px;
           overflow: hidden;
+        }
+        /* patrón sutil tipo “hex” en la esquina, estilo template */
+        .lp-quienes::before {
+          content: "";
+          position: absolute;
+          top: -40px;
+          right: -40px;
+          width: 360px;
+          height: 260px;
+          background-image:
+            radial-gradient(circle at 4px 4px, rgba(0,0,0,0.10) 1.2px, transparent 1.3px),
+            linear-gradient(60deg, rgba(0,0,0,0.06) 1px, transparent 1px),
+            linear-gradient(-60deg, rgba(0,0,0,0.06) 1px, transparent 1px);
+          background-size: 28px 28px, 28px 28px, 28px 28px;
+          opacity: 0.10;
+          transform: rotate(8deg);
+          pointer-events: none;
         }
         .lp-quienesCard {
           border-radius: 26px;
           padding: 22px 18px;
-          color: #fff;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 24px 70px rgba(18, 10, 48, 0.24);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          color: #1a1630;
+          background: rgba(255,255,255,0.78);
+          border: 1px solid rgba(42, 23, 90, 0.10);
+          box-shadow: 0 22px 60px rgba(18, 10, 48, 0.10);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
         .lp-quienesEyebrow {
           display: inline-flex;
@@ -570,17 +606,66 @@ export default function LandingPage() {
           font-weight: 900;
           letter-spacing: 0.6px;
           text-transform: uppercase;
-          background: rgba(245,158,11,0.18);
-          border: 1px solid rgba(245,158,11,0.28);
-          color: rgba(255,255,255,0.92);
+          background: rgba(245,158,11,0.16);
+          border: 1px solid rgba(245,158,11,0.30);
+          color: rgba(26, 22, 48, 0.92);
         }
-        .lp-h2OnDark { color: #fff; margin-top: 12px; }
-        .lp-pOnDark { color: rgba(255,255,255,0.88); }
+        .lp-h2OnDark { color: #24114f; margin-top: 12px; }
+        .lp-pOnDark { color: rgba(35, 25, 72, 0.78); }
         .lp-quienesWave {
           height: 96px;
           margin-top: 18px;
         }
         .lp-quienesWave svg { width: 100%; height: 100%; display: block; }
+
+        /* WhatsApp flotante */
+        .lp-waFloat {
+          position: fixed;
+          right: 18px;
+          bottom: 18px;
+          width: 56px;
+          height: 56px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          color: #ffffff;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border: 1px solid rgba(255,255,255,0.18);
+          box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+          text-decoration: none;
+          z-index: 80;
+          overflow: hidden;
+          transition: transform 140ms ease, box-shadow 140ms ease;
+        }
+        .lp-waFloat:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 22px 60px rgba(0,0,0,0.32);
+        }
+        .lp-waIcon { width: 26px; height: 26px; }
+        .lp-waGlow {
+          position: absolute;
+          inset: -30%;
+          background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.40), transparent 55%);
+          opacity: 0.45;
+        }
+        .lp-waSpark {
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.22) 35%, transparent 70%);
+          transform: translateX(-120%);
+          animation: lpSpark 2.8s ease-in-out infinite;
+          opacity: 0.55;
+        }
+        @keyframes lpSpark {
+          0% { transform: translateX(-120%); }
+          55% { transform: translateX(120%); }
+          100% { transform: translateX(120%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lp-waSpark { animation: none; }
+        }
         .lp-sectionAlt {
           background: radial-gradient(1200px 520px at 15% 10%, rgba(58,31,115,0.10), transparent 60%),
                       radial-gradient(900px 520px at 85% 60%, rgba(139,92,246,0.10), transparent 60%),
