@@ -4715,12 +4715,19 @@ export default function PanelDeControl() {
               </div>
 
               {/* Video hero */}
-              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Video de portada</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Este video se reproduce automáticamente en la parte superior de la landing. También podés <strong>arrastrar y soltar</strong> el archivo aquí para subirlo.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <details className="group bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 shadow-sm mb-6" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Video de portada</div>
+                    <div className="text-sm text-gray-600">Subí o arrastrá un MP4 para el hero.</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Este video se reproduce automáticamente en la parte superior de la landing. También podés <strong>arrastrar y soltar</strong> el archivo aquí para subirlo.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                   <div
                     className="rounded-2xl overflow-hidden border border-gray-200 bg-black aspect-video relative"
                     onDragOver={(e) => {
@@ -4765,12 +4772,20 @@ export default function PanelDeControl() {
                     </p>
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Branding */}
-              <div className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-5 border border-indigo-200 shadow-sm mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Branding y Hero</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <details className="group bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-200 shadow-sm mb-6" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Branding y Hero</div>
+                    <div className="text-sm text-gray-600">Título, subtítulo y textos principales.</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Brand</label>
                     <input
@@ -4809,12 +4824,20 @@ export default function PanelDeControl() {
                     />
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Quienes somos */}
-              <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-5 border border-emerald-200 shadow-sm mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quienes Somos</h3>
-                <div className="grid grid-cols-1 gap-4">
+              <details className="group bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 shadow-sm mb-6" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Quienes Somos</div>
+                    <div className="text-sm text-gray-600">Texto e imagen de la sección destacada.</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Imagen (URL)</label>
                     <input
@@ -4845,11 +4868,20 @@ export default function PanelDeControl() {
                     />
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Galería */}
-              <div className="bg-gradient-to-br from-fuchsia-50 to-white rounded-xl p-5 border border-fuchsia-200 shadow-sm mb-6">
-                <div className="flex items-center justify-between mb-4">
+              <details className="group bg-gradient-to-br from-fuchsia-50 to-white rounded-xl border border-fuchsia-200 shadow-sm mb-6" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Galería</div>
+                    <div className="text-sm text-gray-600">Imágenes por URL.</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Galería</h3>
                     <p className="text-sm text-gray-600">Agrega imágenes por URL (por ahora).</p>
@@ -4909,11 +4941,20 @@ export default function PanelDeControl() {
                     <p className="text-sm text-gray-500 italic">No hay imágenes aún.</p>
                   )}
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Noticias */}
-              <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-5 border border-amber-200 shadow-sm mb-6">
-                <div className="flex items-center justify-between mb-4">
+              <details className="group bg-gradient-to-br from-amber-50 to-white rounded-xl border border-amber-200 shadow-sm mb-6" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Noticias</div>
+                    <div className="text-sm text-gray-600">Entradas (texto + imagen opcional).</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Noticias</h3>
                     <p className="text-sm text-gray-600">Crea noticias (texto + imagen opcional por URL).</p>
@@ -4997,12 +5038,20 @@ export default function PanelDeControl() {
                     <p className="text-sm text-gray-500 italic">No hay noticias aún.</p>
                   )}
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Contacto */}
-              <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contacto</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <details className="group bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 shadow-sm" open>
+                <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Contacto</div>
+                    <div className="text-sm text-gray-600">Datos de contacto (incluye WhatsApp).</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 group-open:rotate-180 transition-transform">▾</div>
+                </summary>
+                <div className="px-5 pb-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Nombre</label>
                     <input
@@ -5043,7 +5092,8 @@ export default function PanelDeControl() {
                     </p>
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               <div className="mt-6">
                 <button
