@@ -61,6 +61,15 @@ export default function PanelDeControl() {
           galeria: [],
           noticias: [],
           contacto: { nombre: '', ciudad: '', telefono: '', whatsapp: '' },
+          ui: {
+            // Logo (URL) y colores del menú (configurables)
+            logoUrl: '',
+            navBgFrom: '#2a175a',
+            navBgMid: '#3a1f73',
+            navBgTo: '#2a175a',
+            navTextColor: '#ffffff',
+            navAccentColor: '#f59e0b',
+          },
           video: data?.landingPage?.video || null,
         },
       };
@@ -726,6 +735,19 @@ export default function PanelDeControl() {
       landingPage: {
         ...(prev?.landingPage || {}),
         ...patch,
+      },
+    }));
+  };
+
+  const updateLandingUi = (patch) => {
+    setConfig((prev) => ({
+      ...prev,
+      landingPage: {
+        ...(prev?.landingPage || {}),
+        ui: {
+          ...((prev?.landingPage || {}).ui || {}),
+          ...patch,
+        },
       },
     }));
   };
@@ -4328,6 +4350,123 @@ export default function PanelDeControl() {
                   >
                     Ver Landing
                   </button>
+                </div>
+              </div>
+
+              {/* Configuración (Logo + Colores menú) */}
+              <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl p-5 border border-violet-200 shadow-sm mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Configuración</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Ajusta el logo y los colores del menú superior de la landing.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Logo (URL)</label>
+                    <input
+                      value={config.landingPage?.ui?.logoUrl || ''}
+                      onChange={(e) => updateLandingUi({ logoUrl: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      placeholder="https://.../logo.png (recomendado PNG/SVG)"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Si está vacío, se usa el ícono circular por defecto.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Menú: Fondo (Inicio)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.landingPage?.ui?.navBgFrom || '#2a175a'}
+                        onChange={(e) => updateLandingUi({ navBgFrom: e.target.value })}
+                        className="h-10 w-12 p-1 rounded border border-gray-200 bg-white"
+                        aria-label="Color menú fondo inicio"
+                      />
+                      <input
+                        value={config.landingPage?.ui?.navBgFrom || '#2a175a'}
+                        onChange={(e) => updateLandingUi({ navBgFrom: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                        placeholder="#2a175a"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Menú: Fondo (Medio)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.landingPage?.ui?.navBgMid || '#3a1f73'}
+                        onChange={(e) => updateLandingUi({ navBgMid: e.target.value })}
+                        className="h-10 w-12 p-1 rounded border border-gray-200 bg-white"
+                        aria-label="Color menú fondo medio"
+                      />
+                      <input
+                        value={config.landingPage?.ui?.navBgMid || '#3a1f73'}
+                        onChange={(e) => updateLandingUi({ navBgMid: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                        placeholder="#3a1f73"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Menú: Fondo (Fin)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.landingPage?.ui?.navBgTo || '#2a175a'}
+                        onChange={(e) => updateLandingUi({ navBgTo: e.target.value })}
+                        className="h-10 w-12 p-1 rounded border border-gray-200 bg-white"
+                        aria-label="Color menú fondo fin"
+                      />
+                      <input
+                        value={config.landingPage?.ui?.navBgTo || '#2a175a'}
+                        onChange={(e) => updateLandingUi({ navBgTo: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                        placeholder="#2a175a"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Menú: Texto</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.landingPage?.ui?.navTextColor || '#ffffff'}
+                        onChange={(e) => updateLandingUi({ navTextColor: e.target.value })}
+                        className="h-10 w-12 p-1 rounded border border-gray-200 bg-white"
+                        aria-label="Color texto menú"
+                      />
+                      <input
+                        value={config.landingPage?.ui?.navTextColor || '#ffffff'}
+                        onChange={(e) => updateLandingUi({ navTextColor: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                        placeholder="#ffffff"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Acento</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.landingPage?.ui?.navAccentColor || '#f59e0b'}
+                        onChange={(e) => updateLandingUi({ navAccentColor: e.target.value })}
+                        className="h-10 w-12 p-1 rounded border border-gray-200 bg-white"
+                        aria-label="Color acento"
+                      />
+                      <input
+                        value={config.landingPage?.ui?.navAccentColor || '#f59e0b'}
+                        onChange={(e) => updateLandingUi({ navAccentColor: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                        placeholder="#f59e0b"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

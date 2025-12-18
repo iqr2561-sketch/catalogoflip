@@ -6,6 +6,14 @@ const DEFAULT_LP = {
   tagline: 'Argentina',
   heroTitle: 'Cuchillos Galucho',
   heroSubtitle: 'Calidad, precisión y artesanía. Hecho para durar.',
+  ui: {
+    logoUrl: '',
+    navBgFrom: '#2a175a',
+    navBgMid: '#3a1f73',
+    navBgTo: '#2a175a',
+    navTextColor: '#ffffff',
+    navAccentColor: '#f59e0b',
+  },
   heroCtas: [
     { label: 'Ver Catálogo 2025', href: '/catalog', primary: true },
     { label: 'Contacto Directo Whatsapp', href: '#contacto', primary: false },
@@ -65,6 +73,7 @@ export default function LandingPage() {
     return {
       ...DEFAULT_LP,
       ...lp,
+      ui: { ...DEFAULT_LP.ui, ...(lp.ui || {}) },
       quienesSomos: { ...DEFAULT_LP.quienesSomos, ...(lp.quienesSomos || {}) },
       contacto: { ...DEFAULT_LP.contacto, ...(lp.contacto || {}) },
       noticias: Array.isArray(lp.noticias) ? lp.noticias : DEFAULT_LP.noticias,
@@ -90,12 +99,25 @@ export default function LandingPage() {
         />
       </Head>
 
-      <div className="lp-root">
+      <div
+        className="lp-root"
+        style={{
+          '--lp-nav-from': landing.ui.navBgFrom,
+          '--lp-nav-mid': landing.ui.navBgMid,
+          '--lp-nav-to': landing.ui.navBgTo,
+          '--lp-nav-text': landing.ui.navTextColor,
+          '--lp-accent': landing.ui.navAccentColor,
+        }}
+      >
         {/* Navbar estilo template (violeta + ondas) */}
         <header className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
           <div className="lp-topbarInner">
             <div className="lp-logo" aria-label={landing.brandName}>
-              <span className="lp-logoMark" aria-hidden="true" />
+              {landing.ui.logoUrl ? (
+                <img className="lp-logoImg" src={landing.ui.logoUrl} alt={`${landing.brandName} logo`} />
+              ) : (
+                <span className="lp-logoMark" aria-hidden="true" />
+              )}
               <span className="lp-logoText">{landing.brandName}</span>
             </div>
             <nav className="lp-menu" aria-label="Navegación">
@@ -267,8 +289,8 @@ export default function LandingPage() {
           z-index: 50;
           background: radial-gradient(1200px 520px at 15% 10%, rgba(255,255,255,0.10), transparent 60%),
                       radial-gradient(900px 520px at 85% 40%, rgba(0,0,0,0.18), transparent 60%),
-                      linear-gradient(90deg, #2a175a, #3a1f73 45%, #2a175a);
-          color: #fff;
+                      linear-gradient(90deg, var(--lp-nav-from), var(--lp-nav-mid) 45%, var(--lp-nav-to));
+          color: var(--lp-nav-text);
         }
         .lp-topbarInner {
           max-width: 1120px;
@@ -311,6 +333,15 @@ export default function LandingPage() {
           gap: 10px;
           user-select: none;
         }
+        .lp-logoImg {
+          width: 34px;
+          height: 34px;
+          object-fit: contain;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.18);
+          padding: 3px;
+        }
         .lp-logoMark {
           width: 34px;
           height: 34px;
@@ -331,7 +362,7 @@ export default function LandingPage() {
           align-items: center;
         }
         .lp-menuLink {
-          color: rgba(255,255,255,0.92);
+          color: var(--lp-nav-text);
           text-decoration: none;
           font-size: 13px;
           font-weight: 700;
@@ -463,7 +494,7 @@ export default function LandingPage() {
         }
         .lp-btn:hover { transform: translateY(-1px); }
         .lp-btnPrimary {
-          background: linear-gradient(135deg, #8b5cf6, #f59e0b);
+          background: linear-gradient(135deg, var(--lp-nav-mid), var(--lp-accent));
           box-shadow: 0 16px 44px rgba(58, 31, 115, 0.25);
           color: #fff;
         }
