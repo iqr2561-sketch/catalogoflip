@@ -32,6 +32,7 @@ function cx(...xs) {
 export default function LandingPage() {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -46,6 +47,17 @@ export default function LandingPage() {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      // Activa el modo “menu flotante” apenas el usuario empieza a scrollear
+      const y = typeof window !== 'undefined' ? window.scrollY : 0;
+      setScrolled(y > 12);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const landing = useMemo(() => {
@@ -80,7 +92,7 @@ export default function LandingPage() {
 
       <div className="lp-root">
         {/* Navbar estilo template (violeta + ondas) */}
-        <header className="lp-topbar" role="banner">
+        <header className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
           <div className="lp-topbarInner">
             <div className="lp-logo" aria-label={landing.brandName}>
               <span className="lp-logoMark" aria-hidden="true" />
@@ -177,10 +189,21 @@ export default function LandingPage() {
           </section>
 
           {/* Quienes */}
-          <section id="quienes" className="lp-section" aria-label="Quienes somos">
+          <section id="quienes" className="lp-section lp-quienes" aria-label="Quienes somos">
             <div className="lp-sectionInner">
-              <h2 className="lp-h2">{landing?.quienesSomos?.title || 'Quienes Somos'}</h2>
-              <p className="lp-p">{landing?.quienesSomos?.body || ''}</p>
+              <div className="lp-quienesCard">
+                <div className="lp-quienesEyebrow">Nuestra historia</div>
+                <h2 className="lp-h2 lp-h2OnDark">{landing?.quienesSomos?.title || 'Quienes Somos'}</h2>
+                <p className="lp-p lp-pOnDark">{landing?.quienesSomos?.body || ''}</p>
+              </div>
+            </div>
+            <div className="lp-quienesWave" aria-hidden="true">
+              <svg viewBox="0 0 1440 140" preserveAspectRatio="none">
+                <path
+                  d="M0,74 C180,124 320,140 520,128 C760,114 860,60 1040,60 C1220,60 1340,98 1440,120 L1440,140 L0,140 Z"
+                  fill="#ffffff"
+                />
+              </svg>
             </div>
           </section>
 
@@ -255,6 +278,26 @@ export default function LandingPage() {
           align-items: center;
           justify-content: space-between;
           gap: 12px;
+        }
+        /* Al scrollear: baja un poco y se vuelve semitransparente (flotante) */
+        .lp-topbarScrolled {
+          position: fixed;
+          left: 12px;
+          right: 12px;
+          top: 12px;
+          border-radius: 18px;
+          background: rgba(42, 23, 90, 0.72);
+          border: 1px solid rgba(255,255,255,0.14);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          box-shadow: 0 24px 60px rgba(18, 10, 48, 0.25);
+          transform: translateY(10px);
+        }
+        .lp-topbarScrolled .lp-topbarInner {
+          padding: 12px 14px;
+        }
+        .lp-topbarScrolled .lp-topbarWave {
+          display: none;
         }
         .lp-topbarWave {
           height: 46px;
@@ -360,6 +403,8 @@ export default function LandingPage() {
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
         .lp-main { max-width: 1120px; margin: 0 auto; padding: 0 16px 56px; }
+        /* Para que el contenido no “salte” cuando el header pasa a fixed */
+        .lp-topbar + .lp-heroVideo { scroll-margin-top: 86px; }
 
         /* INTRO estilo template */
         .lp-intro { padding: 26px 0 10px; }
@@ -464,6 +509,47 @@ export default function LandingPage() {
         }
 
         .lp-section { padding: 26px 0; }
+        /* QUIENES destacado (más importante) */
+        .lp-quienes {
+          position: relative;
+          margin-top: 10px;
+          padding: 34px 0 0;
+          background:
+            radial-gradient(1200px 560px at 15% 20%, rgba(255,255,255,0.10), transparent 60%),
+            radial-gradient(900px 520px at 85% 60%, rgba(0,0,0,0.20), transparent 60%),
+            linear-gradient(135deg, #2a175a, #4c1d95 50%, #2a175a);
+          border-radius: 28px;
+          overflow: hidden;
+        }
+        .lp-quienesCard {
+          border-radius: 26px;
+          padding: 22px 18px;
+          color: #fff;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 24px 70px rgba(18, 10, 48, 0.24);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+        .lp-quienesEyebrow {
+          display: inline-flex;
+          padding: 8px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.6px;
+          text-transform: uppercase;
+          background: rgba(245,158,11,0.18);
+          border: 1px solid rgba(245,158,11,0.28);
+          color: rgba(255,255,255,0.92);
+        }
+        .lp-h2OnDark { color: #fff; margin-top: 12px; }
+        .lp-pOnDark { color: rgba(255,255,255,0.88); }
+        .lp-quienesWave {
+          height: 96px;
+          margin-top: 18px;
+        }
+        .lp-quienesWave svg { width: 100%; height: 100%; display: block; }
         .lp-sectionAlt {
           background: radial-gradient(1200px 520px at 15% 10%, rgba(58,31,115,0.10), transparent 60%),
                       radial-gradient(900px 520px at 85% 60%, rgba(139,92,246,0.10), transparent 60%),
