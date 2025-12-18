@@ -1242,6 +1242,13 @@ export default function LandingPage() {
         }
 
         /* Responsive */
+        /* En mobile, priorizamos ver el video completo (sin recorte). */
+        @media (max-width: 520px) {
+          .lp-heroVideoEl {
+            object-fit: contain;
+            transform: none;
+          }
+        }
         @media (min-width: 860px) {
           .lp-menu { display: flex; }
           .lp-menuBtn, .lp-drawerRoot { display: none; }
