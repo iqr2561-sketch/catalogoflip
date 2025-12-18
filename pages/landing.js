@@ -489,7 +489,7 @@ export default function LandingPage() {
         /* Al scrollear: baja un poco y se vuelve semitransparente (flotante) */
         .lp-topbarScrolled {
           /* Mantiene el mismo “modo” (sticky), solo se vuelve más flotante y delicado */
-          transform: translateY(10px);
+          transform: none;
           background: rgba(42, 23, 90, 0.42);
           border-bottom: 1px solid rgba(255,255,255,0.10);
           backdrop-filter: blur(12px);
@@ -497,7 +497,7 @@ export default function LandingPage() {
           box-shadow: 0 18px 45px rgba(18, 10, 48, 0.14);
         }
         .lp-topbarScrolled .lp-topbarInner {
-          padding: 12px 14px;
+          padding: 10px 16px;
         }
         .lp-topbarScrolled .lp-topbarWave {
           /* no lo escondemos: que siga el estilo sin “cambio de modo” */
