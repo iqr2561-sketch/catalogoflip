@@ -4575,10 +4575,23 @@ export default function PanelDeControl() {
               <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Video de portada</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Este video se reproduce automáticamente en la parte superior de la landing.
+                  Este video se reproduce automáticamente en la parte superior de la landing. También podés <strong>arrastrar y soltar</strong> el archivo aquí para subirlo.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  <div className="rounded-2xl overflow-hidden border border-gray-200 bg-black aspect-video">
+                  <div
+                    className="rounded-2xl overflow-hidden border border-gray-200 bg-black aspect-video relative"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const f = e.dataTransfer?.files?.[0];
+                      if (f) handleUploadLandingVideo(f);
+                    }}
+                    title="Arrastrá y soltá un video para subirlo"
+                  >
                     {config?.landingPage?.video?.source ? (
                       <video
                         src="/api/landing-video"
@@ -4587,8 +4600,9 @@ export default function PanelDeControl() {
                         playsInline
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-200 text-sm">
-                        No hay video cargado
+                      <div className="w-full h-full flex flex-col gap-1 items-center justify-center text-gray-200 text-sm">
+                        <div className="font-semibold">No hay video cargado</div>
+                        <div className="opacity-80 text-xs">Arrastrá y soltá aquí para subir</div>
                       </div>
                     )}
                   </div>
