@@ -57,7 +57,7 @@ export default function PanelDeControl() {
           tagline: 'Argentina',
           heroTitle: 'Cuchillos Galucho',
           heroSubtitle: 'Calidad, precisión y artesanía. Hecho para durar.',
-          quienesSomos: { title: 'Quienes Somos', body: '' },
+          quienesSomos: { title: 'Quienes Somos', body: '', imageUrl: '' },
           galeria: [],
           noticias: [],
           contacto: { nombre: '', ciudad: '', telefono: '', whatsapp: '' },
@@ -4557,6 +4557,18 @@ export default function PanelDeControl() {
               <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-5 border border-emerald-200 shadow-sm mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quienes Somos</h3>
                 <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Imagen (URL)</label>
+                    <input
+                      value={config.landingPage?.quienesSomos?.imageUrl || ''}
+                      onChange={(e) => updateLandingNested('quienesSomos', { imageUrl: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      placeholder="https://.../foto.jpg (opcional)"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Sugerido: imagen horizontal o cuadrada, optimizada para web.
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Título</label>
                     <input

@@ -22,6 +22,7 @@ const DEFAULT_LP = {
     title: 'Quienes Somos',
     body:
       'Somos Cuchillos Galucho: diseño, calidad y un estándar profesional en cada pieza. Nuestra prioridad es que cada producto sea confiable y elegante.',
+    imageUrl: '',
   },
   noticias: [],
   galeria: [],
@@ -41,6 +42,7 @@ export default function LandingPage() {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -67,6 +69,11 @@ export default function LandingPage() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    // Si el usuario scrollea, cerramos el menú móvil para evitar superposiciones
+    if (scrolled) setMenuOpen(false);
+  }, [scrolled]);
 
   const landing = useMemo(() => {
     const lp = config?.landingPage || {};
@@ -126,7 +133,29 @@ export default function LandingPage() {
               <a className="lp-menuLink" href="#contacto">Contacto</a>
               <a className="lp-menuLink" href="/catalog">Catálogo</a>
             </nav>
+
+            <button
+              type="button"
+              className="lp-menuBtn"
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuOpen ? 'true' : 'false'}
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <span className="lp-menuBtnBar" />
+              <span className="lp-menuBtnBar" />
+              <span className="lp-menuBtnBar" />
+            </button>
           </div>
+
+          {menuOpen && (
+            <div className="lp-mobileMenu" role="dialog" aria-label="Menú">
+              <a className="lp-mobileLink" href="#home" onClick={() => setMenuOpen(false)}>Home</a>
+              <a className="lp-mobileLink" href="#quienes" onClick={() => setMenuOpen(false)}>Quienes</a>
+              <a className="lp-mobileLink" href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
+              <a className="lp-mobileLink" href="/catalog" onClick={() => setMenuOpen(false)}>Catálogo</a>
+            </div>
+          )}
+
           <div className="lp-topbarWave" aria-hidden="true">
             <svg viewBox="0 0 1440 130" preserveAspectRatio="none">
               <path
@@ -214,9 +243,18 @@ export default function LandingPage() {
           <section id="quienes" className="lp-section lp-quienes" aria-label="Quienes somos">
             <div className="lp-sectionInner">
               <div className="lp-quienesCard">
-                <div className="lp-quienesEyebrow">Nuestra historia</div>
-                <h2 className="lp-h2 lp-h2OnDark">{landing?.quienesSomos?.title || 'Quienes Somos'}</h2>
-                <p className="lp-p lp-pOnDark">{landing?.quienesSomos?.body || ''}</p>
+                <div className="lp-quienesGrid">
+                  <div>
+                    <div className="lp-quienesEyebrow">Nuestra historia</div>
+                    <h2 className="lp-h2 lp-h2OnDark">{landing?.quienesSomos?.title || 'Quienes Somos'}</h2>
+                    <p className="lp-p lp-pOnDark">{landing?.quienesSomos?.body || ''}</p>
+                  </div>
+                  {landing?.quienesSomos?.imageUrl ? (
+                    <div className="lp-quienesImgWrap" aria-label="Imagen quienes somos">
+                      <img className="lp-quienesImg" src={landing.quienesSomos.imageUrl} alt="" />
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="lp-quienesWave" aria-hidden="true">
@@ -380,6 +418,43 @@ export default function LandingPage() {
           gap: 18px;
           align-items: center;
         }
+        .lp-menuBtn {
+          display: inline-flex;
+          flex-direction: column;
+          gap: 5px;
+          padding: 10px;
+          border-radius: 12px;
+          background: rgba(0,0,0,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          color: var(--lp-nav-text);
+        }
+        .lp-menuBtnBar {
+          width: 18px;
+          height: 2px;
+          background: currentColor;
+          opacity: 0.9;
+          border-radius: 999px;
+        }
+        .lp-mobileMenu {
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: 10px 16px 16px;
+          display: grid;
+          gap: 8px;
+          background: rgba(42, 23, 90, 0.26);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border-top: 1px solid rgba(255,255,255,0.12);
+        }
+        .lp-mobileLink {
+          color: var(--lp-nav-text);
+          text-decoration: none;
+          font-weight: 800;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(0,0,0,0.10);
+        }
         .lp-menuLink {
           color: var(--lp-nav-text);
           text-decoration: none;
@@ -395,7 +470,7 @@ export default function LandingPage() {
         /* HERO VIDEO (sin texto) */
         .lp-heroVideo {
           position: relative;
-          height: clamp(260px, 52vh, 520px);
+          height: clamp(320px, 62vh, 620px);
           overflow: hidden;
           background: #0b0a1a;
         }
@@ -568,8 +643,22 @@ export default function LandingPage() {
             radial-gradient(900px 520px at 18% 18%, rgba(139, 92, 246, 0.10), transparent 62%),
             radial-gradient(800px 520px at 82% 50%, rgba(245, 158, 11, 0.08), transparent 62%),
             linear-gradient(180deg, #fbfbff, #f6f6ff);
-          border-radius: 28px;
+          border-radius: 0;
           overflow: hidden;
+        }
+        /* Entramado sutil full-width */
+        .lp-quienes::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px),
+            radial-gradient(circle at 20% 30%, rgba(139,92,246,0.10), transparent 55%),
+            radial-gradient(circle at 80% 55%, rgba(245,158,11,0.07), transparent 58%);
+          background-size: 80px 80px, 80px 80px, auto, auto;
+          opacity: 0.18;
+          pointer-events: none;
         }
         /* patrón sutil tipo “hex” en la esquina, estilo template */
         .lp-quienes::before {
@@ -597,6 +686,28 @@ export default function LandingPage() {
           box-shadow: 0 22px 60px rgba(18, 10, 48, 0.10);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
+          position: relative;
+          z-index: 1;
+        }
+        .lp-quienesGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          align-items: center;
+        }
+        .lp-quienesImgWrap {
+          width: 100%;
+          aspect-ratio: 16 / 10;
+          border-radius: 18px;
+          overflow: hidden;
+          border: 1px solid rgba(42, 23, 90, 0.10);
+          background: rgba(255,255,255,0.65);
+        }
+        .lp-quienesImg {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         .lp-quienesEyebrow {
           display: inline-flex;
@@ -610,7 +721,7 @@ export default function LandingPage() {
           border: 1px solid rgba(245,158,11,0.30);
           color: rgba(26, 22, 48, 0.92);
         }
-        .lp-h2OnDark { color: #24114f; margin-top: 12px; }
+        .lp-h2OnDark { color: #24114f; margin-top: 12px; font-size: clamp(22px, 3.2vw, 34px); }
         .lp-pOnDark { color: rgba(35, 25, 72, 0.78); }
         .lp-quienesWave {
           height: 96px;
@@ -727,10 +838,12 @@ export default function LandingPage() {
         /* Responsive */
         @media (min-width: 860px) {
           .lp-menu { display: flex; }
+          .lp-menuBtn, .lp-mobileMenu { display: none; }
           .lp-intro { padding: 44px 0 16px; }
           .lp-introGrid { grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
           .lp-contactGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .lp-featureCard { padding: 20px; }
+          .lp-quienesGrid { grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
