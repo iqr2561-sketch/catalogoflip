@@ -4373,8 +4373,35 @@ export default function PanelDeControl() {
                 </div>
               </div>
 
+              {/* Submenú horizontal tipo fichas para navegar módulos */}
+              <div className="sticky top-4 z-10 mb-6">
+                <div className="flex gap-2 overflow-auto rounded-2xl border border-gray-200 bg-white/80 backdrop-blur px-3 py-2">
+                  {[
+                    { id: 'lp-config', label: 'Configuración' },
+                    { id: 'lp-video', label: 'Video' },
+                    { id: 'lp-branding', label: 'Branding' },
+                    { id: 'lp-quienes', label: 'Quienes' },
+                    { id: 'lp-galeria', label: 'Galería' },
+                    { id: 'lp-noticias', label: 'Noticias' },
+                    { id: 'lp-contacto', label: 'Contacto' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(t.id);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-sm font-semibold whitespace-nowrap"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Configuración (Logo + Colores menú) */}
-              <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl p-5 border border-violet-200 shadow-sm mb-6">
+              <div id="lp-config" className="bg-gradient-to-br from-violet-50 to-white rounded-xl p-5 border border-violet-200 shadow-sm mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Configuración</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Ajusta el logo y los colores del menú superior de la landing.
@@ -4715,6 +4742,7 @@ export default function PanelDeControl() {
               </div>
 
               {/* Video hero */}
+              <div id="lp-video" />
               <details className="group bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 shadow-sm mb-6" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>
@@ -4776,6 +4804,7 @@ export default function PanelDeControl() {
               </details>
 
               {/* Branding */}
+              <div id="lp-branding" />
               <details className="group bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-200 shadow-sm mb-6" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>
@@ -4828,6 +4857,7 @@ export default function PanelDeControl() {
               </details>
 
               {/* Quienes somos */}
+              <div id="lp-quienes" />
               <details className="group bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 shadow-sm mb-6" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>
@@ -4872,6 +4902,7 @@ export default function PanelDeControl() {
               </details>
 
               {/* Galería */}
+              <div id="lp-galeria" />
               <details className="group bg-gradient-to-br from-fuchsia-50 to-white rounded-xl border border-fuchsia-200 shadow-sm mb-6" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>
@@ -4945,6 +4976,7 @@ export default function PanelDeControl() {
               </details>
 
               {/* Noticias */}
+              <div id="lp-noticias" />
               <details className="group bg-gradient-to-br from-amber-50 to-white rounded-xl border border-amber-200 shadow-sm mb-6" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>
@@ -5042,6 +5074,7 @@ export default function PanelDeControl() {
               </details>
 
               {/* Contacto */}
+              <div id="lp-contacto" />
               <details className="group bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 shadow-sm" open>
                 <summary className="cursor-pointer list-none select-none px-5 py-4 flex items-center justify-between gap-3">
                   <div>

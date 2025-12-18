@@ -142,10 +142,11 @@ export default function LandingPage() {
 
   const videoUrl = config?.landingPage?.video?.source ? '/api/landing-video' : null;
   const waHref = useMemo(() => {
-    const raw = landing?.contacto?.whatsapp || '';
+    // Si no se configuró WhatsApp en LandingPage, usamos el WhatsApp general del catálogo
+    const raw = landing?.contacto?.whatsapp || config?.whatsappNumber || '';
     const digits = String(raw).replace(/[^\d]/g, '');
     return digits ? `https://wa.me/${digits}` : null;
-  }, [landing?.contacto?.whatsapp]);
+  }, [landing?.contacto?.whatsapp, config?.whatsappNumber]);
 
   return (
     <>
@@ -413,8 +414,10 @@ export default function LandingPage() {
             aria-label="Abrir WhatsApp"
             title="WhatsApp"
           >
+            <span className="lp-waLabel">WhatsApp</span>
             <span className="lp-waGlow" aria-hidden="true" />
             <span className="lp-waSpark" aria-hidden="true" />
+            <span className="lp-waPulse" aria-hidden="true" />
             <svg className="lp-waIcon" viewBox="0 0 32 32" aria-hidden="true">
               <path
                 fill="currentColor"
@@ -1043,11 +1046,46 @@ export default function LandingPage() {
           overflow: hidden;
           transition: transform 140ms ease, box-shadow 140ms ease;
         }
+        .lp-waLabel {
+          position: absolute;
+          left: 18px;
+          font-weight: 950;
+          letter-spacing: 0.3px;
+          font-size: 12px;
+          opacity: 0;
+          transform: translateX(-4px);
+          transition: opacity 160ms ease, transform 160ms ease;
+          pointer-events: none;
+          white-space: nowrap;
+        }
+        .lp-waFloat:hover {
+          width: 140px;
+          justify-content: end;
+          padding-right: 16px;
+        }
+        .lp-waFloat:hover .lp-waLabel {
+          opacity: 1;
+          transform: translateX(0);
+        }
         .lp-waFloat:hover {
           transform: translateY(-2px);
           box-shadow: 0 22px 60px rgba(0,0,0,0.32);
         }
         .lp-waIcon { width: 26px; height: 26px; }
+        .lp-waPulse {
+          position: absolute;
+          inset: -6px;
+          border-radius: 999px;
+          border: 2px solid rgba(255,255,255,0.22);
+          opacity: 0;
+          animation: lpPulse 2.8s ease-in-out infinite;
+        }
+        @keyframes lpPulse {
+          0% { transform: scale(0.92); opacity: 0; }
+          25% { opacity: 0.35; }
+          60% { transform: scale(1.08); opacity: 0; }
+          100% { transform: scale(1.08); opacity: 0; }
+        }
         .lp-waGlow {
           position: absolute;
           inset: -30%;
@@ -1071,6 +1109,7 @@ export default function LandingPage() {
 
         @media (prefers-reduced-motion: reduce) {
           .lp-waSpark { animation: none; }
+          .lp-waPulse { animation: none; }
         }
         .lp-sectionAlt {
           background: radial-gradient(1200px 520px at 15% 10%, rgba(58,31,115,0.10), transparent 60%),
