@@ -287,7 +287,7 @@ export default function LandingPage() {
           <div className="lp-heroWave" aria-hidden="true">
             <svg viewBox="0 0 1440 180" preserveAspectRatio="none">
               <path
-                d="M0,120 C180,170 360,190 540,170 C720,150 840,100 1020,100 C1200,100 1320,140 1440,168 L1440,180 L0,180 Z"
+                d="M0,152 C220,174 380,182 560,176 C760,170 880,148 1040,148 C1220,148 1340,164 1440,174 L1440,180 L0,180 Z"
                 fill="#ffffff"
               />
             </svg>
@@ -537,6 +537,12 @@ export default function LandingPage() {
           display: none;
           gap: 18px;
           align-items: center;
+          padding: 6px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(0,0,0,0.10);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
         .lp-menuBtn {
           display: inline-flex;
@@ -738,9 +744,15 @@ export default function LandingPage() {
           letter-spacing: 0.4px;
           text-transform: uppercase;
           opacity: 0.9;
-          transition: opacity 120ms ease;
+          padding: 8px 10px;
+          border-radius: 999px;
+          transition: opacity 140ms ease, background 140ms ease, transform 140ms ease;
         }
-        .lp-menuLink:hover { opacity: 1; }
+        .lp-menuLink:hover {
+          opacity: 1;
+          background: rgba(255,255,255,0.10);
+          transform: translateY(-1px);
+        }
 
         /* HERO VIDEO (sin texto) */
         .lp-heroVideo {
@@ -803,8 +815,8 @@ export default function LandingPage() {
           position: absolute;
           left: 0;
           right: 0;
-          bottom: -1px;
-          height: 120px;
+          bottom: -26px;
+          height: 84px;
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
