@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 
 const DEFAULT_LP = {
@@ -56,6 +56,7 @@ export default function LandingPage() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const topbarRef = useRef(null);
 
   useEffect(() => {
     const load = async () => {
@@ -70,6 +71,26 @@ export default function LandingPage() {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    // Medimos el alto real del navbar para compensar correctamente (scroll/anchors) sin meter márgenes/paddings “mágicos”.
+    const el = topbarRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height || 0);
+      document.documentElement.style.setProperty('--lp-topbar-h', `${h}px`);
+    };
+
+    update();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', update, { passive: true });
+    return () => {
+      window.removeEventListener('resize', update);
+      ro?.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -179,7 +200,7 @@ export default function LandingPage() {
         }}
       >
         {/* Navbar estilo template (violeta + ondas) */}
-        <header className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
+        <header ref={topbarRef} className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
           <div className="lp-topbarInner">
             <div className="lp-logo" aria-label={landing.brandName}>
               {landing.ui.logoUrl ? (
@@ -190,8 +211,8 @@ export default function LandingPage() {
               <span className="lp-logoText">{landing.brandName}</span>
             </div>
             <nav className="lp-menu" aria-label="Navegación">
-              <a className="lp-menuLink" href="#home">Home</a>
-              <a className="lp-menuLink" href="#quienes">Quienes</a>
+              <a className="lp-menuLink" href="#home">Inicio</a>
+              <a className="lp-menuLink" href="#quienes">Quienes somos</a>
               <a className="lp-menuLink" href="#contacto">Contacto</a>
               <a className="lp-menuLink" href="/catalog">Catálogo</a>
               {canInstall ? (
@@ -230,8 +251,8 @@ export default function LandingPage() {
                 </button>
               </div>
               <div className="lp-drawerBody">
-                <a className="lp-mobileLink" href="#home" onClick={() => setMenuOpen(false)}>Home</a>
-                <a className="lp-mobileLink" href="#quienes" onClick={() => setMenuOpen(false)}>Quienes</a>
+                <a className="lp-mobileLink" href="#home" onClick={() => setMenuOpen(false)}>Inicio</a>
+                <a className="lp-mobileLink" href="#quienes" onClick={() => setMenuOpen(false)}>Quienes somos</a>
                 <a className="lp-mobileLink" href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
                 <a className="lp-mobileLink" href="/catalog" onClick={() => setMenuOpen(false)}>Catálogo</a>
 
@@ -464,11 +485,17 @@ export default function LandingPage() {
           min-height: 100vh;
           color: #1a1630;
         }
+        :root {
+          /* fallback por si falla la medición */
+          --lp-topbar-h: 64px;
+        }
 
         /* TOP BAR (template violeta) */
         .lp-topbar {
-          position: sticky;
+          position: fixed;
           top: 0;
+          left: 0;
+          right: 0;
           z-index: 50;
           overflow: hidden;
           background: radial-gradient(1200px 520px at 15% 10%, rgba(255,255,255,0.10), transparent 60%),
@@ -486,6 +513,8 @@ export default function LandingPage() {
           justify-content: space-between;
           gap: 12px;
         }
+        /* Evita “saltos” por altura del navbar en diferentes fuentes/escala */
+        .lp-topbarInner { min-height: var(--lp-topbar-h); }
         /* Al scrollear: baja un poco y se vuelve semitransparente (flotante) */
         .lp-topbarScrolled {
           /* Mantiene el mismo “modo” (sticky), solo se vuelve más flotante y delicado */
@@ -554,6 +583,8 @@ export default function LandingPage() {
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
+        /* Ajuste fino: evitar “aire” extra arriba del menú y alinear visualmente con el logo */
+        .lp-menu { padding-top: 4px; padding-bottom: 4px; }
         .lp-menuBtn {
           display: inline-flex;
           flex-direction: column;
@@ -767,24 +798,39 @@ export default function LandingPage() {
         /* HERO VIDEO (sin texto) */
         .lp-heroVideo {
           position: relative;
-          height: clamp(var(--lp-hero-h-min), var(--lp-hero-h-vh), var(--lp-hero-h-max));
+          /* 100vh real (mobile-friendly) */
+          height: 100dvh;
+          min-height: 100svh;
+          /* Compensar navbar fixed sin meter "espacio vacío": el hero sigue midiendo 100vh,
+             pero el contenido/video se centra en el área visible (vh - topbar). */
+          padding-top: var(--lp-topbar-h);
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
           background: #0b0a1a;
         }
         .lp-heroVideoEl {
           position: absolute;
-          inset: 0;
+          left: 0;
+          right: 0;
+          top: var(--lp-topbar-h);
+          bottom: 0;
           width: 100%;
-          height: 100%;
+          height: calc(100% - var(--lp-topbar-h));
           object-fit: cover;
-          /* Subimos levemente el encuadre para que el texto del video se vea mejor */
-          object-position: center 12%;
+          /* Centrado real del encuadre */
+          object-position: center center;
           filter: saturate(1.1) contrast(1.05);
           transform: scale(1.02);
         }
         .lp-heroFallback {
           position: absolute;
-          inset: 0;
+          left: 0;
+          right: 0;
+          top: var(--lp-topbar-h);
+          bottom: 0;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -835,9 +881,9 @@ export default function LandingPage() {
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
         .lp-main { max-width: 1120px; margin: 0 auto; padding: 0 16px 56px; }
-        /* Para que el contenido no “salte” cuando el header pasa a fixed */
-        .lp-topbar + .lp-heroVideo { scroll-margin-top: 86px; }
-        #home, #quienes, #contacto { scroll-margin-top: 96px; }
+        /* Compensación correcta para anchors con navbar fixed */
+        .lp-topbar + .lp-heroVideo { scroll-margin-top: var(--lp-topbar-h); }
+        #home, #quienes, #contacto { scroll-margin-top: calc(var(--lp-topbar-h) + 12px); }
 
         /* INTRO estilo template */
         .lp-intro { padding: 26px 0 10px; }
