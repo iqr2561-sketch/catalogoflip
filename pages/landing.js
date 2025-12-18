@@ -470,6 +470,7 @@ export default function LandingPage() {
           position: sticky;
           top: 0;
           z-index: 50;
+          overflow: hidden;
           background: radial-gradient(1200px 520px at 15% 10%, rgba(255,255,255,0.10), transparent 60%),
                       radial-gradient(900px 520px at 85% 40%, rgba(0,0,0,0.18), transparent 60%),
                       linear-gradient(90deg, var(--lp-nav-from), var(--lp-nav-mid) 45%, var(--lp-nav-to));
@@ -479,7 +480,7 @@ export default function LandingPage() {
         .lp-topbarInner {
           max-width: 1120px;
           margin: 0 auto;
-          padding: 16px 16px;
+          padding: 10px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -503,8 +504,13 @@ export default function LandingPage() {
           opacity: 0.35;
         }
         .lp-topbarWave {
-          height: 18px;
-          overflow: hidden;
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: -1px;
+          height: 12px;
+          opacity: 0.65;
+          pointer-events: none;
         }
         .lp-topbarWave svg { width: 100%; height: 100%; display: block; }
 
