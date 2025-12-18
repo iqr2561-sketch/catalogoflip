@@ -505,8 +505,9 @@ export default function LandingPage() {
           transition: transform 320ms ease, background-color 320ms ease, box-shadow 320ms ease, border-color 320ms ease, backdrop-filter 320ms ease;
         }
         .lp-topbarInner {
-          max-width: 1120px;
-          margin: 0 auto;
+          width: 100%;
+          max-width: none;
+          margin: 0;
           padding: 10px 16px;
           display: flex;
           align-items: center;
@@ -801,7 +802,6 @@ export default function LandingPage() {
           /* 100vh real (mobile-friendly) */
           height: 100dvh;
           min-height: 100svh;
-          width: 100vw;
           /* Compensar navbar fixed sin meter "espacio vacío": el hero sigue midiendo 100vh,
              pero el contenido/video se centra en el área visible (vh - topbar). */
           padding-top: var(--lp-topbar-h);
@@ -881,8 +881,8 @@ export default function LandingPage() {
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
-        /* Contenido a ancho completo (sin encajonar) */
-        .lp-main { width: 100%; max-width: 100%; margin: 0; padding: 0 16px 56px; }
+        /* Layout full-width: el contenido ocupa todo el ancho, con padding lateral consistente */
+        .lp-main { width: 100%; max-width: none; margin: 0; padding: 0 16px 56px; }
         /* Compensación correcta para anchors con navbar fixed */
         .lp-topbar + .lp-heroVideo { scroll-margin-top: var(--lp-topbar-h); }
         #home, #quienes, #contacto { scroll-margin-top: calc(var(--lp-topbar-h) + 12px); }
@@ -893,7 +893,8 @@ export default function LandingPage() {
           display: grid;
           grid-template-columns: 1fr;
           gap: 18px;
-          align-items: stretch;
+          align-items: start;
+          width: 100%;
         }
         .lp-pill {
           display: inline-flex;
@@ -1192,7 +1193,7 @@ export default function LandingPage() {
           border-radius: 28px;
           padding: 26px 16px;
         }
-        .lp-sectionInner { max-width: 1120px; margin: 0 auto; }
+        .lp-sectionInner { width: 100%; max-width: none; margin: 0; padding: 0 16px; }
         .lp-h2 {
           font-size: 18px;
           font-weight: 950;
@@ -1244,12 +1245,11 @@ export default function LandingPage() {
         }
 
         /* Responsive */
-        /* En mobile, priorizamos ocupar ancho completo (sin barras laterales). */
+        /* En mobile, priorizamos ver el video completo (sin recorte). */
         @media (max-width: 520px) {
           .lp-heroVideoEl {
-            object-fit: cover;
-            object-position: center center;
-            transform: scale(1.02);
+            object-fit: contain;
+            transform: none;
           }
         }
         @media (min-width: 860px) {
