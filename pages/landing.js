@@ -488,6 +488,7 @@ export default function LandingPage() {
         :root {
           /* fallback por si falla la medición */
           --lp-topbar-h: 64px;
+          --lp-logo-size: 44px;
         }
 
         /* TOP BAR (template violeta) */
@@ -551,8 +552,8 @@ export default function LandingPage() {
           user-select: none;
         }
         .lp-logoImg {
-          width: 34px;
-          height: 34px;
+          width: var(--lp-logo-size);
+          height: var(--lp-logo-size);
           object-fit: contain;
           border-radius: 10px;
           background: rgba(255,255,255,0.08);
@@ -560,8 +561,8 @@ export default function LandingPage() {
           padding: 3px;
         }
         .lp-logoMark {
-          width: 34px;
-          height: 34px;
+          width: var(--lp-logo-size);
+          height: var(--lp-logo-size);
           border-radius: 999px;
           background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0.10) 42%, rgba(0,0,0,0.10) 100%);
           border: 1px solid rgba(255,255,255,0.22);
@@ -1253,6 +1254,7 @@ export default function LandingPage() {
           }
         }
         @media (min-width: 860px) {
+          :root { --lp-logo-size: 48px; }
           .lp-menu { display: flex; }
           .lp-menuBtn, .lp-drawerRoot { display: none; }
           .lp-intro { padding: 44px 0 16px; }
