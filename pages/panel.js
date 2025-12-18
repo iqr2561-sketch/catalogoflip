@@ -76,6 +76,10 @@ export default function PanelDeControl() {
             heroGridOpacity: 0.18,
             heroGridSize: 56,
             heroGridSpeedSec: 28,
+            // Alto del hero (clamp)
+            heroHeightMinPx: 320,
+            heroHeightVh: 62,
+            heroHeightMaxPx: 620,
           },
           video: data?.landingPage?.video || null,
         },
@@ -4566,6 +4570,58 @@ export default function PanelDeControl() {
                 <div className="mt-6 pt-5 border-t border-violet-200">
                   <h4 className="text-sm font-bold text-gray-900 mb-3">Overlay del Hero (Video)</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <h5 className="text-xs font-bold text-gray-700 uppercase mb-2">Alto de la cabecera</h5>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Mínimo (px): {Number(config.landingPage?.ui?.heroHeightMinPx ?? 320)}
+                      </label>
+                      <input
+                        type="range"
+                        min="220"
+                        max="520"
+                        step="10"
+                        value={Number(config.landingPage?.ui?.heroHeightMinPx ?? 320)}
+                        onChange={(e) => updateLandingUi({ heroHeightMinPx: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Relativo (vh): {Number(config.landingPage?.ui?.heroHeightVh ?? 62)}
+                      </label>
+                      <input
+                        type="range"
+                        min="35"
+                        max="90"
+                        step="1"
+                        value={Number(config.landingPage?.ui?.heroHeightVh ?? 62)}
+                        onChange={(e) => updateLandingUi({ heroHeightVh: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Máximo (px): {Number(config.landingPage?.ui?.heroHeightMaxPx ?? 620)}
+                      </label>
+                      <input
+                        type="range"
+                        min="360"
+                        max="920"
+                        step="20"
+                        value={Number(config.landingPage?.ui?.heroHeightMaxPx ?? 620)}
+                        onChange={(e) => updateLandingUi({ heroHeightMaxPx: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Se calcula como <code>clamp(min, vh, max)</code> para que sea responsive.
+                      </p>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                         Blur (px): {Number(config.landingPage?.ui?.heroBlurPx ?? 10)}

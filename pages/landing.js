@@ -19,6 +19,9 @@ const DEFAULT_LP = {
     heroGridOpacity: 0.18,
     heroGridSize: 56,
     heroGridSpeedSec: 28,
+    heroHeightMinPx: 320,
+    heroHeightVh: 62,
+    heroHeightMaxPx: 620,
   },
   heroCtas: [
     { label: 'Ver Catálogo 2025', href: '/catalog', primary: true },
@@ -125,6 +128,9 @@ export default function LandingPage() {
           '--lp-hero-grid-opacity': String(landing.ui.heroGridOpacity ?? 0.18),
           '--lp-hero-grid-size': `${Number(landing.ui.heroGridSize || 56)}px`,
           '--lp-hero-grid-speed': `${Number(landing.ui.heroGridSpeedSec || 28)}s`,
+          '--lp-hero-h-min': `${Number(landing.ui.heroHeightMinPx || 320)}px`,
+          '--lp-hero-h-vh': `${Number(landing.ui.heroHeightVh || 62)}vh`,
+          '--lp-hero-h-max': `${Number(landing.ui.heroHeightMaxPx || 620)}px`,
         }}
       >
         {/* Navbar estilo template (violeta + ondas) */}
@@ -483,7 +489,7 @@ export default function LandingPage() {
         /* HERO VIDEO (sin texto) */
         .lp-heroVideo {
           position: relative;
-          height: clamp(320px, 62vh, 620px);
+          height: clamp(var(--lp-hero-h-min), var(--lp-hero-h-vh), var(--lp-hero-h-max));
           overflow: hidden;
           background: #0b0a1a;
         }
