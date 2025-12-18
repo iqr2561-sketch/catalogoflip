@@ -69,6 +69,13 @@ export default function PanelDeControl() {
             navBgTo: '#2a175a',
             navTextColor: '#ffffff',
             navAccentColor: '#f59e0b',
+            // Overlay del hero (blur + grid animado)
+            heroBlurPx: 10,
+            heroOverlayOpacity: 0.28,
+            heroGridEnabled: true,
+            heroGridOpacity: 0.18,
+            heroGridSize: 56,
+            heroGridSpeedSec: 28,
           },
           video: data?.landingPage?.video || null,
         },
@@ -4464,6 +4471,100 @@ export default function PanelDeControl() {
                         onChange={(e) => updateLandingUi({ navAccentColor: e.target.value })}
                         className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
                         placeholder="#f59e0b"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-violet-200">
+                  <h4 className="text-sm font-bold text-gray-900 mb-3">Overlay del Hero (Video)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Blur (px): {Number(config.landingPage?.ui?.heroBlurPx ?? 10)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        step="1"
+                        value={Number(config.landingPage?.ui?.heroBlurPx ?? 10)}
+                        onChange={(e) => updateLandingUi({ heroBlurPx: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Opacidad del overlay: {Number(config.landingPage?.ui?.heroOverlayOpacity ?? 0.28).toFixed(2)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="0.6"
+                        step="0.01"
+                        value={Number(config.landingPage?.ui?.heroOverlayOpacity ?? 0.28)}
+                        onChange={(e) => updateLandingUi({ heroOverlayOpacity: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                        <input
+                          type="checkbox"
+                          checked={config.landingPage?.ui?.heroGridEnabled !== false}
+                          onChange={(e) => updateLandingUi({ heroGridEnabled: e.target.checked })}
+                        />
+                        Grid overlay animado
+                      </label>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Agrega una cuadrícula sutil con movimiento lento encima del video.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Opacidad grid: {Number(config.landingPage?.ui?.heroGridOpacity ?? 0.18).toFixed(2)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="0.5"
+                        step="0.01"
+                        value={Number(config.landingPage?.ui?.heroGridOpacity ?? 0.18)}
+                        onChange={(e) => updateLandingUi({ heroGridOpacity: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Tamaño grid (px): {Number(config.landingPage?.ui?.heroGridSize ?? 56)}
+                      </label>
+                      <input
+                        type="range"
+                        min="24"
+                        max="96"
+                        step="1"
+                        value={Number(config.landingPage?.ui?.heroGridSize ?? 56)}
+                        onChange={(e) => updateLandingUi({ heroGridSize: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                        Velocidad animación (seg): {Number(config.landingPage?.ui?.heroGridSpeedSec ?? 28)}
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="80"
+                        step="1"
+                        value={Number(config.landingPage?.ui?.heroGridSpeedSec ?? 28)}
+                        onChange={(e) => updateLandingUi({ heroGridSpeedSec: Number(e.target.value) })}
+                        className="w-full"
                       />
                     </div>
                   </div>

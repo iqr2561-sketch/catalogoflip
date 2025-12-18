@@ -13,6 +13,12 @@ const DEFAULT_LP = {
     navBgTo: '#2a175a',
     navTextColor: '#ffffff',
     navAccentColor: '#f59e0b',
+    heroBlurPx: 10,
+    heroOverlayOpacity: 0.28,
+    heroGridEnabled: true,
+    heroGridOpacity: 0.18,
+    heroGridSize: 56,
+    heroGridSpeedSec: 28,
   },
   heroCtas: [
     { label: 'Ver Catálogo 2025', href: '/catalog', primary: true },
@@ -114,6 +120,11 @@ export default function LandingPage() {
           '--lp-nav-to': landing.ui.navBgTo,
           '--lp-nav-text': landing.ui.navTextColor,
           '--lp-accent': landing.ui.navAccentColor,
+          '--lp-hero-blur': `${Number(landing.ui.heroBlurPx || 0)}px`,
+          '--lp-hero-overlay-opacity': String(landing.ui.heroOverlayOpacity ?? 0.28),
+          '--lp-hero-grid-opacity': String(landing.ui.heroGridOpacity ?? 0.18),
+          '--lp-hero-grid-size': `${Number(landing.ui.heroGridSize || 56)}px`,
+          '--lp-hero-grid-speed': `${Number(landing.ui.heroGridSpeedSec || 28)}s`,
         }}
       >
         {/* Navbar estilo template (violeta + ondas) */}
@@ -188,7 +199,9 @@ export default function LandingPage() {
             </div>
           )}
           <div className="lp-heroOverlay" aria-hidden="true" />
-          <div className="lp-heroGrid" aria-hidden="true" />
+          {landing.ui.heroGridEnabled !== false ? (
+            <div className="lp-heroGrid" aria-hidden="true" />
+          ) : null}
           <div className="lp-heroWave" aria-hidden="true">
             <svg viewBox="0 0 1440 180" preserveAspectRatio="none">
               <path
@@ -503,8 +516,9 @@ export default function LandingPage() {
             radial-gradient(1000px 500px at 18% 22%, rgba(255,255,255,0.06), transparent 64%),
             radial-gradient(900px 520px at 80% 55%, rgba(255,255,255,0.04), transparent 66%),
             linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.28));
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(var(--lp-hero-blur));
+          -webkit-backdrop-filter: blur(var(--lp-hero-blur));
+          opacity: var(--lp-hero-overlay-opacity);
         }
         /* Cuadrícula sutil sobre el hero (sin tapar demasiado) */
         .lp-heroGrid {
@@ -513,10 +527,15 @@ export default function LandingPage() {
           background:
             linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-          background-size: 56px 56px, 56px 56px;
-          opacity: 0.18;
+          background-size: var(--lp-hero-grid-size) var(--lp-hero-grid-size), var(--lp-hero-grid-size) var(--lp-hero-grid-size);
+          opacity: var(--lp-hero-grid-opacity);
           mix-blend-mode: overlay;
           pointer-events: none;
+          animation: lpHeroGridMove var(--lp-hero-grid-speed) linear infinite;
+        }
+        @keyframes lpHeroGridMove {
+          0% { background-position: 0 0, 0 0; }
+          100% { background-position: 200px 140px, 200px 140px; }
         }
         .lp-heroWave {
           position: absolute;
