@@ -4,54 +4,50 @@ import useCartStore from '../store/cartStore';
 export default function ProductModal({ producto, isOpen, onClose, whatsappNumber = null, cotizacionDolar = 1, tipoPrecioDefault = 'minorista', mostrarPreciosEnPesos = false, imagenGeneralProductos = '' }) {
   const agregarProducto = useCartStore((state) => state.agregarProducto);
   const [imageError, setImageError] = useState(false);
-  const [variacionesSeleccionadas, setVariacionesSeleccionadas] = useState({});
+  const [variacionesCantidades, setVariacionesCantidades] = useState({});
   
   // Resetear selecciones cuando cambia el producto o se abre el modal
   useEffect(() => {
     if (isOpen && producto) {
-      const inicial = {};
-      (producto.variaciones || []).forEach((variacion) => {
-        // Sistema simplificado: no hay valores, solo nombre y precio
-        if (variacion.nombre) {
-          inicial[variacion.nombre] = variacion.nombre;
-        }
-      });
-      setVariacionesSeleccionadas(inicial);
+      setVariacionesCantidades({});
     }
   }, [isOpen, producto]);
   
-  // Calcular precio basado en variaciones seleccionadas (sistema con mayorista/minorista)
-  const calcularPrecio = () => {
+  const getPrecioVariacion = (variacion) => {
+    return tipoPrecioDefault === 'mayorista'
+      ? (variacion.precioMayorista || 0)
+      : (variacion.precioMinorista || 0);
+  };
+
+  // Total del detalle (sumatoria de ítems seleccionados con cantidades)
+  const calcularTotalDetalle = () => {
     if (!producto) return 0;
     
     if (!producto.variaciones || producto.variaciones.length === 0) {
       return producto.precio || 0;
     }
     
-    let precioTotal = producto.precio || 0;
-    // Sistema con precios mayorista/minorista
+    let total = 0;
     (producto.variaciones || []).forEach((variacion) => {
-      if (variacionesSeleccionadas[variacion.nombre]) {
-        const precioVariacion = tipoPrecioDefault === 'mayorista' 
-          ? (variacion.precioMayorista || 0)
-          : (variacion.precioMinorista || 0);
-        precioTotal += precioVariacion;
+      const qty = variacionesCantidades[variacion.nombre] || 0;
+      if (qty > 0) {
+        const precioUnitario = (producto.precio || 0) + getPrecioVariacion(variacion);
+        total += precioUnitario * qty;
       }
     });
-    
-    return precioTotal;
+    return total;
   };
 
   if (!isOpen || !producto) return null;
   
-  const precioFinal = calcularPrecio();
+  const totalDetalle = calcularTotalDetalle();
 
   const handleAgregar = () => {
     // Si no hay variaciones, agregar el producto base
     if (!producto.variaciones || producto.variaciones.length === 0) {
       const productoBase = {
         ...producto,
-        precio: precioFinal,
+        precio: producto.precio || 0,
         variacionesSeleccionadas: {},
       };
       agregarProducto(productoBase, 1);
@@ -59,10 +55,9 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
       return;
     }
 
-    // Si hay variaciones seleccionadas, agregar cada una como item separado
-    const variacionesActivas = Object.keys(variacionesSeleccionadas).filter(
-      key => variacionesSeleccionadas[key] === key
-    );
+    const variacionesActivas = Object.entries(variacionesCantidades)
+      .filter(([, qty]) => (qty || 0) > 0)
+      .map(([nombre]) => nombre);
 
     if (variacionesActivas.length === 0) {
       // Si no hay variaciones seleccionadas, agregar solo el producto base
@@ -73,23 +68,23 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
       };
       agregarProducto(productoBase, 1);
     } else {
-      // Agregar cada variación como un item separado
+      // Agregar cada variación como un item separado con su cantidad
       variacionesActivas.forEach((nombreVariacion) => {
         const variacion = producto.variaciones.find(v => v.nombre === nombreVariacion);
         if (variacion) {
-          const precioVariacion = tipoPrecioDefault === 'mayorista' 
-            ? (variacion.precioMayorista || 0)
-            : (variacion.precioMinorista || 0);
+          const qty = Math.max(1, variacionesCantidades[nombreVariacion] || 1);
+          const precioVariacion = getPrecioVariacion(variacion);
           
           const precioTotal = (producto.precio || 0) + precioVariacion;
           
           const productoConVariacion = {
             ...producto,
+            nombre: `${producto.nombre} – ${nombreVariacion}`,
             precio: precioTotal,
             variacionesSeleccionadas: { [nombreVariacion]: nombreVariacion },
           };
           
-          agregarProducto(productoConVariacion, 1);
+          agregarProducto(productoConVariacion, qty);
         }
       });
     }
@@ -199,48 +194,113 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                         )}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const isSelected = variacionesSeleccionadas[variacion.nombre] === variacion.nombre;
-                        setVariacionesSeleccionadas((prev) => {
-                          if (isSelected) {
-                            const newState = { ...prev };
-                            delete newState[variacion.nombre];
-                            return newState;
-                          } else {
-                            return {
+                    {((variacionesCantidades[variacion.nombre] || 0) > 0) ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVariacionesCantidades((prev) => {
+                              const curr = prev[variacion.nombre] || 0;
+                              const next = Math.max(0, curr - 1);
+                              const out = { ...prev };
+                              if (next === 0) delete out[variacion.nombre];
+                              else out[variacion.nombre] = next;
+                              return out;
+                            });
+                          }}
+                          className="w-10 h-10 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center"
+                          aria-label="Disminuir cantidad"
+                        >
+                          <span className="text-xl leading-none">−</span>
+                        </button>
+                        <div className="min-w-[44px] text-center font-bold text-gray-900">
+                          {variacionesCantidades[variacion.nombre] || 0}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVariacionesCantidades((prev) => ({
                               ...prev,
-                              [variacion.nombre]: variacion.nombre,
-                            };
-                          }
-                        });
-                      }}
-                      className={`px-5 py-3 rounded-lg border-2 transition-all flex items-center gap-2 min-w-[140px] justify-center font-semibold shadow-sm ${
-                        variacionesSeleccionadas[variacion.nombre] === variacion.nombre
-                          ? 'border-primary-600 bg-primary-600 text-white shadow-md hover:bg-primary-700'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-primary-400 hover:bg-primary-50'
-                      }`}
-                    >
-                      <svg
-                        className={`w-5 h-5 ${variacionesSeleccionadas[variacion.nombre] === variacion.nombre ? 'text-white' : 'text-gray-400'}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                              [variacion.nombre]: (prev[variacion.nombre] || 0) + 1,
+                            }));
+                          }}
+                          className="w-10 h-10 rounded-lg border-2 border-primary-300 bg-primary-50 hover:bg-primary-100 flex items-center justify-center"
+                          aria-label="Aumentar cantidad"
+                        >
+                          <span className="text-xl leading-none">+</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVariacionesCantidades((prev) => {
+                              const out = { ...prev };
+                              delete out[variacion.nombre];
+                              return out;
+                            });
+                          }}
+                          className="w-10 h-10 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-600"
+                          aria-label="Eliminar variación"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVariacionesCantidades((prev) => ({
+                            ...prev,
+                            [variacion.nombre]: 1,
+                          }));
+                        }}
+                        className="px-5 py-3 rounded-lg border-2 transition-all flex items-center gap-2 min-w-[140px] justify-center font-semibold shadow-sm border-gray-300 bg-white text-gray-700 hover:border-primary-400 hover:bg-primary-50"
                       >
-                        {variacionesSeleccionadas[variacion.nombre] === variacion.nombre ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        ) : (
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        )}
-                      </svg>
-                      <span className="text-sm">
-                        {variacionesSeleccionadas[variacion.nombre] === variacion.nombre ? 'Incluido' : 'Incluir'}
-                      </span>
-                    </button>
+                        </svg>
+                        <span className="text-sm">Incluir</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Resumen / Subtotal */}
+          {(producto.variaciones || []).length > 0 && (
+            <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-gray-900">Detalle</h4>
+                <span className="text-sm font-bold text-primary-700">
+                  {mostrarPreciosEnPesos
+                    ? `$${(totalDetalle * cotizacionDolar).toLocaleString()} Pesos`
+                    : `USD ${totalDetalle.toLocaleString()}`}
+                </span>
+              </div>
+              {Object.keys(variacionesCantidades).length === 0 ? (
+                <p className="text-xs text-gray-500">Selecciona una o más variaciones para ver el detalle.</p>
+              ) : (
+                <div className="space-y-1">
+                  {Object.entries(variacionesCantidades)
+                    .filter(([, qty]) => (qty || 0) > 0)
+                    .map(([nombre, qty]) => {
+                      const variacion = (producto.variaciones || []).find((v) => v.nombre === nombre);
+                      const unit = (producto.precio || 0) + (variacion ? getPrecioVariacion(variacion) : 0);
+                      const sub = unit * qty;
+                      return (
+                        <div key={nombre} className="flex items-center justify-between text-xs text-gray-700">
+                          <span className="truncate pr-2">{qty} × {producto.nombre} – {nombre}</span>
+                          <span className="font-semibold">
+                            {mostrarPreciosEnPesos
+                              ? `$${(sub * cotizacionDolar).toLocaleString()} Pesos`
+                              : `USD ${sub.toLocaleString()}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 
@@ -250,22 +310,24 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
               {mostrarPreciosEnPesos ? (
                 <>
                   <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                    ${(precioFinal * cotizacionDolar).toLocaleString()} Pesos
+                    {(producto.variaciones || []).length > 0
+                      ? `$${(totalDetalle * cotizacionDolar).toLocaleString()} Pesos`
+                      : `$${((producto.precio || 0) * cotizacionDolar).toLocaleString()} Pesos`}
                   </span>
                   {cotizacionDolar && cotizacionDolar !== 1 && (
                     <span className="text-2xl md:text-3xl font-bold text-gray-500">
-                      ≈ USD ${precioFinal.toLocaleString()}
+                      ≈ USD {(producto.variaciones || []).length > 0 ? totalDetalle.toLocaleString() : (producto.precio || 0).toLocaleString()}
                     </span>
                   )}
                 </>
               ) : (
                 <>
                   <span className="block text-4xl md:text-5xl font-bold text-primary-600">
-                    USD ${precioFinal.toLocaleString()}
+                    USD {(producto.variaciones || []).length > 0 ? totalDetalle.toLocaleString() : (producto.precio || 0).toLocaleString()}
                   </span>
                   {cotizacionDolar && cotizacionDolar !== 1 && (
                     <span className="text-2xl md:text-3xl font-bold text-gray-500">
-                      ≈ ${(precioFinal * cotizacionDolar).toLocaleString()} Pesos
+                      ≈ {(((producto.variaciones || []).length > 0 ? totalDetalle : (producto.precio || 0)) * cotizacionDolar).toLocaleString()} Pesos
                     </span>
                   )}
                 </>

@@ -10,6 +10,8 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
   const [isOpen, setIsOpen] = useState(false);
   const [whatsappNum, setWhatsappNum] = useState(whatsappNumber);
   const [config, setConfig] = useState({ cotizacionDolar: 1, mostrarPreciosEnPesos: false, imagenGeneralProductos: '' });
+  const [swipedKey, setSwipedKey] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(null);
 
   // Cargar configuración desde la API
   useEffect(() => {
@@ -198,10 +200,40 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
               ) : (
                 <div className="space-y-3">
                   {productos.map((producto) => (
-                    <div
-                      key={producto.id}
-                      className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
+                    <div key={producto.cartKey || producto.id} className="relative overflow-hidden rounded-xl">
+                      {/* Acción de borrar (visible al hacer swipe) */}
+                      <div className="absolute inset-y-0 right-0 w-20 bg-red-600 flex items-center justify-center">
+                        <button
+                          onClick={() => eliminarProducto(producto.cartKey || producto.id)}
+                          className="text-white font-bold"
+                          aria-label="Eliminar"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+
+                      <div
+                        className="flex items-start gap-3 p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        style={{
+                          transform: swipedKey === (producto.cartKey || producto.id) ? 'translateX(-80px)' : 'translateX(0px)',
+                          transition: touchStartX === null ? 'transform 180ms ease' : 'none',
+                        }}
+                        onTouchStart={(e) => {
+                          const x = e.touches?.[0]?.clientX;
+                          setTouchStartX(typeof x === 'number' ? x : null);
+                        }}
+                        onTouchMove={(e) => {
+                          if (touchStartX === null) return;
+                          const x = e.touches?.[0]?.clientX;
+                          if (typeof x !== 'number') return;
+                          const delta = x - touchStartX; // negativo -> izquierda
+                          if (delta < -40) setSwipedKey(producto.cartKey || producto.id);
+                          if (delta > 30) setSwipedKey(null);
+                        }}
+                        onTouchEnd={() => {
+                          setTouchStartX(null);
+                        }}
+                      >
                       {/* Imagen más pequeña en móvil */}
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                         {(producto.imagen || config.imagenGeneralProductos) ? (
@@ -220,6 +252,12 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                         <h3 className="font-semibold text-gray-900 text-sm md:text-base line-clamp-2">
                           {producto.nombre}
                         </h3>
+                        {/* Detalle de variación si existe */}
+                        {producto.variacionesSeleccionadas && Object.keys(producto.variacionesSeleccionadas).length > 0 && (
+                          <p className="text-xs text-gray-500">
+                            {Object.values(producto.variacionesSeleccionadas).join(', ')}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <p className="text-primary-600 font-bold text-sm md:text-base">
                             {formatearPrecio(producto.precio || 0)}
@@ -229,7 +267,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                             <button
                               onClick={() =>
                                 actualizarCantidad(
-                                  producto.id,
+                                  producto.cartKey || producto.id,
                                   Math.max(1, (producto.cantidad || 1) - 1)
                                 )
                               }
@@ -255,7 +293,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                             <button
                               onClick={() =>
                                 actualizarCantidad(
-                                  producto.id,
+                                  producto.cartKey || producto.id,
                                   (producto.cantidad || 1) + 1
                                 )
                               }
@@ -285,7 +323,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
 
                       {/* Botón eliminar */}
                       <button
-                        onClick={() => eliminarProducto(producto.id)}
+                        onClick={() => eliminarProducto(producto.cartKey || producto.id)}
                         className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
                         aria-label="Eliminar producto"
                       >
@@ -303,6 +341,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                           />
                         </svg>
                       </button>
+                      </div>
                     </div>
                   ))}
                 </div>

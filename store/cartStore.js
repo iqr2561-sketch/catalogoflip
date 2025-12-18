@@ -9,14 +9,14 @@ const useCartStore = create((set) => ({
       const variacionesKey = producto.variacionesSeleccionadas 
         ? JSON.stringify(producto.variacionesSeleccionadas)
         : '';
-      const claveUnica = `${producto.id}_${variacionesKey}`;
+      const cartKey = `${producto.id}_${variacionesKey}`;
       
       // Verificar si el producto con las mismas variaciones ya existe en el carrito
       const existe = state.productos.find((p) => {
         const pVariacionesKey = p.variacionesSeleccionadas 
           ? JSON.stringify(p.variacionesSeleccionadas)
           : '';
-        return `${p.id}_${pVariacionesKey}` === claveUnica;
+        return (p.cartKey || `${p.id}_${pVariacionesKey}`) === cartKey;
       });
       
       if (existe) {
@@ -26,7 +26,8 @@ const useCartStore = create((set) => ({
             const pVariacionesKey = p.variacionesSeleccionadas 
               ? JSON.stringify(p.variacionesSeleccionadas)
               : '';
-            return `${p.id}_${pVariacionesKey}` === claveUnica
+            const pKey = p.cartKey || `${p.id}_${pVariacionesKey}`;
+            return pKey === cartKey
               ? { ...p, cantidad: (p.cantidad || 1) + (cantidad || 1) }
               : p;
           }),
@@ -34,22 +35,25 @@ const useCartStore = create((set) => ({
       } else {
         // Si no existe, agregarlo con cantidad 1
         return {
-          productos: [...state.productos, { ...producto, cantidad: Math.max(1, cantidad || 1) }],
+          productos: [
+            ...state.productos,
+            { ...producto, cartKey, cantidad: Math.max(1, cantidad || 1) },
+          ],
         };
       }
     });
   },
   
-  eliminarProducto: (productoId) => {
+  eliminarProducto: (cartKey) => {
     set((state) => ({
-      productos: state.productos.filter((p) => p.id !== productoId),
+      productos: state.productos.filter((p) => (p.cartKey || p.id) !== cartKey),
     }));
   },
   
-  actualizarCantidad: (productoId, cantidad) => {
+  actualizarCantidad: (cartKey, cantidad) => {
     set((state) => ({
       productos: state.productos.map((p) =>
-        p.id === productoId ? { ...p, cantidad: Math.max(1, cantidad) } : p
+        (p.cartKey || p.id) === cartKey ? { ...p, cantidad: Math.max(1, cantidad) } : p
       ),
     }));
   },
