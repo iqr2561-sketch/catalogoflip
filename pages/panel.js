@@ -833,6 +833,15 @@ export default function PanelDeControl() {
     }
   };
 
+  // Helpers: convertir archivo a Data URL (para logo por drag&drop sin backend)
+  const readAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsDataURL(file);
+    });
+
   // Exportar a Excel
   const handleExportToExcel = () => {
     if (!config || !config.productos || config.productos.length === 0) {
@@ -4369,14 +4378,92 @@ export default function PanelDeControl() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Logo (URL)</label>
-                    <input
-                      value={config.landingPage?.ui?.logoUrl || ''}
-                      onChange={(e) => updateLandingUi({ logoUrl: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                      placeholder="https://.../logo.png (recomendado PNG/SVG)"
-                    />
+                    <div
+                      className="rounded-xl border-2 border-dashed border-violet-200 bg-white/70 p-3"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const f = e.dataTransfer?.files?.[0];
+                        if (!f) return;
+                        if (!f.type.startsWith('image/')) {
+                          setError('El logo debe ser una imagen (PNG/JPG/SVG/WEBP).');
+                          setTimeout(() => setError(null), 5000);
+                          return;
+                        }
+                        try {
+                          const dataUrl = await readAsDataUrl(f);
+                          updateLandingUi({ logoUrl: dataUrl });
+                          setMessage('Logo cargado (arrastrar y soltar)');
+                          setTimeout(() => setMessage(null), 2500);
+                        } catch (err) {
+                          setError(err?.message || 'No se pudo cargar el logo');
+                          setTimeout(() => setError(null), 5000);
+                        }
+                      }}
+                      title="Arrastrá y soltá una imagen para cargar el logo"
+                    >
+                      <input
+                        value={config.landingPage?.ui?.logoUrl || ''}
+                        onChange={(e) => updateLandingUi({ logoUrl: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        placeholder="Pegá una URL o arrastrá una imagen aquí"
+                      />
+
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              if (!f.type.startsWith('image/')) {
+                                setError('El logo debe ser una imagen (PNG/JPG/SVG/WEBP).');
+                                setTimeout(() => setError(null), 5000);
+                                return;
+                              }
+                              try {
+                                const dataUrl = await readAsDataUrl(f);
+                                updateLandingUi({ logoUrl: dataUrl });
+                                e.target.value = '';
+                                setMessage('Logo cargado');
+                                setTimeout(() => setMessage(null), 2500);
+                              } catch (err) {
+                                setError(err?.message || 'No se pudo cargar el logo');
+                                setTimeout(() => setError(null), 5000);
+                              }
+                            }}
+                            className="block w-full text-sm"
+                          />
+                          <p className="mt-2 text-xs text-gray-500">
+                            Podés <strong>arrastrar y soltar</strong> o seleccionar un archivo. Recomendado: SVG/PNG liviano.
+                          </p>
+                        </div>
+
+                        {config.landingPage?.ui?.logoUrl ? (
+                          <div className="rounded-lg border border-gray-200 bg-white p-3 flex items-center gap-3">
+                            <img
+                              src={config.landingPage.ui.logoUrl}
+                              alt="Preview logo"
+                              className="w-10 h-10 object-contain rounded"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateLandingUi({ logoUrl: '' })}
+                              className="ml-auto px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                     <p className="mt-2 text-xs text-gray-500">
-                      Si está vacío, se usa el ícono circular por defecto.
+                      Si está vacío, se usa el ícono circular por defecto. Si pegás una URL, se usa esa URL. Si subís un archivo, se guarda como Data URL.
                     </p>
                   </div>
 
