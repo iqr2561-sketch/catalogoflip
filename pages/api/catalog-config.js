@@ -102,6 +102,7 @@ async function getFromMongoDB() {
       tipoPrecioDefault: catalog.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
       mostrarPreciosEnPesos: catalog.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
       imagenGeneralProductos: catalog.imagenGeneralProductos || '', // Imagen general para productos sin imagen
+      landingPage: catalog.landingPage || null,
       productos: productos.map(p => ({
         id: p._id.toString(),
         nombre: p.nombre,
@@ -164,6 +165,7 @@ async function saveToMongoDB(data) {
         tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
         mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
         imagenGeneralProductos: data.imagenGeneralProductos || '', // Imagen general para productos sin imagen
+        landingPage: data.landingPage || null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -180,6 +182,7 @@ async function saveToMongoDB(data) {
             tipoPrecioDefault: data.tipoPrecioDefault || catalog.tipoPrecioDefault,
             mostrarPreciosEnPesos: data.mostrarPreciosEnPesos !== undefined ? data.mostrarPreciosEnPesos : catalog.mostrarPreciosEnPesos,
             imagenGeneralProductos: data.imagenGeneralProductos !== undefined ? data.imagenGeneralProductos : catalog.imagenGeneralProductos,
+            landingPage: data.landingPage !== undefined ? data.landingPage : catalog.landingPage,
             updatedAt: new Date(),
           },
         }

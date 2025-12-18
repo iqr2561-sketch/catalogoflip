@@ -12,7 +12,7 @@ export default function PanelDeControl() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'lista-precios'
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'lista-precios' | 'landingpage'
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
@@ -52,6 +52,17 @@ export default function PanelDeControl() {
         tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
         mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
         imagenGeneralProductos: data.imagenGeneralProductos || '', // Imagen general para productos sin imagen
+        landingPage: data.landingPage || {
+          brandName: 'CUCHILLOS GALUCHO',
+          tagline: 'Argentina',
+          heroTitle: 'Cuchillos Galucho',
+          heroSubtitle: 'Calidad, precisión y artesanía. Hecho para durar.',
+          quienesSomos: { title: 'Quienes Somos', body: '' },
+          galeria: [],
+          noticias: [],
+          contacto: { nombre: '', ciudad: '', telefono: '', whatsapp: '' },
+          video: data?.landingPage?.video || null,
+        },
       };
       setConfig(normalized);
       
@@ -703,6 +714,91 @@ export default function PanelDeControl() {
       console.error('Error al guardar configuración:', err);
       setError('No se pudieron guardar los cambios. Revisa la consola para más detalles.');
       setTimeout(() => setError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Helpers LandingPage
+  const updateLanding = (patch) => {
+    setConfig((prev) => ({
+      ...prev,
+      landingPage: {
+        ...(prev?.landingPage || {}),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateLandingNested = (key, patch) => {
+    setConfig((prev) => ({
+      ...prev,
+      landingPage: {
+        ...(prev?.landingPage || {}),
+        [key]: {
+          ...((prev?.landingPage || {})[key] || {}),
+          ...patch,
+        },
+      },
+    }));
+  };
+
+  const handleUploadLandingVideo = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setError('Por favor, selecciona un archivo de video válido.');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage('Subiendo video de portada...');
+
+      const chunkSize = 2 * 1024 * 1024; // 2MB
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      const sessionId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunkArray = uint8.slice(start, end);
+
+        let binary = '';
+        for (let j = 0; j < chunkArray.length; j++) binary += String.fromCharCode(chunkArray[j]);
+        const chunkBase64 = btoa(binary);
+
+        setMessage(`Subiendo video: ${i + 1}/${totalChunks}...`);
+
+        const res = await fetch('/api/upload-landing-video-chunk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chunkIndex: i,
+            totalChunks,
+            chunkData: chunkBase64,
+            filename: file.name,
+            sessionId,
+            contentType: file.type || 'video/mp4',
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || `Error al subir el chunk ${i + 1}/${totalChunks}`);
+        }
+      }
+
+      await loadConfig();
+      setMessage('✓ Video de portada cargado correctamente');
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      console.error('[panel] Error al subir video:', err);
+      setError(`Error al subir video: ${err.message || 'Error desconocido'}`);
+      setTimeout(() => setError(null), 6000);
     } finally {
       setSaving(false);
     }
@@ -2379,6 +2475,17 @@ export default function PanelDeControl() {
               }`}
             >
               Lista de Precios
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('landingpage')}
+              className={`px-4 py-2 rounded-xl transition-colors ${
+                activeTab === 'landingpage'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              LandingPage
             </button>
           </div>
 
@@ -4201,6 +4308,345 @@ export default function PanelDeControl() {
               </div>
             </div>
           </section>
+          )}
+
+          {/* Sección LandingPage */}
+          {activeTab === 'landingpage' && config && (
+            <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+              <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">LandingPage</h2>
+                  <p className="text-gray-600 text-sm">
+                    Administra el contenido de la landing moderna (video, secciones, noticias e imágenes).
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/landing')}
+                    className="px-4 py-2 rounded-lg border border-primary-300 text-primary-700 text-sm font-semibold bg-primary-50 hover:bg-primary-100 transition-colors"
+                  >
+                    Ver Landing
+                  </button>
+                </div>
+              </div>
+
+              {/* Video hero */}
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-200 shadow-sm mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Video de portada</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Este video se reproduce automáticamente en la parte superior de la landing.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  <div className="rounded-2xl overflow-hidden border border-gray-200 bg-black aspect-video">
+                    {config?.landingPage?.video?.source ? (
+                      <video
+                        src="/api/landing-video"
+                        className="w-full h-full object-cover"
+                        controls
+                        playsInline
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-200 text-sm">
+                        No hay video cargado
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadLandingVideo(f);
+                        e.target.value = '';
+                      }}
+                      className="block w-full text-sm"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Recomendado: MP4, horizontal 16:9, compresión web (máx. recomendado 30–60MB).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branding */}
+              <div className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-5 border border-indigo-200 shadow-sm mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Branding y Hero</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Brand</label>
+                    <input
+                      value={config.landingPage?.brandName || ''}
+                      onChange={(e) => updateLanding({ brandName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      placeholder="CUCHILLOS GALUCHO"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tagline</label>
+                    <input
+                      value={config.landingPage?.tagline || ''}
+                      onChange={(e) => updateLanding({ tagline: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      placeholder="Argentina"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Título</label>
+                    <input
+                      value={config.landingPage?.heroTitle || ''}
+                      onChange={(e) => updateLanding({ heroTitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      placeholder="Cuchillos Galucho"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Subtítulo</label>
+                    <textarea
+                      value={config.landingPage?.heroSubtitle || ''}
+                      onChange={(e) => updateLanding({ heroSubtitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      rows={3}
+                      placeholder="Calidad, precisión y artesanía…"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quienes somos */}
+              <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl p-5 border border-emerald-200 shadow-sm mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quienes Somos</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Título</label>
+                    <input
+                      value={config.landingPage?.quienesSomos?.title || ''}
+                      onChange={(e) => updateLandingNested('quienesSomos', { title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Texto</label>
+                    <textarea
+                      value={config.landingPage?.quienesSomos?.body || ''}
+                      onChange={(e) => updateLandingNested('quienesSomos', { body: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      rows={5}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Galería */}
+              <div className="bg-gradient-to-br from-fuchsia-50 to-white rounded-xl p-5 border border-fuchsia-200 shadow-sm mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Galería</h3>
+                    <p className="text-sm text-gray-600">Agrega imágenes por URL (por ahora).</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [...(config.landingPage?.galeria || []), { url: '', alt: '' }];
+                      updateLanding({ galeria: next });
+                    }}
+                    className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    + Agregar Imagen
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {(config.landingPage?.galeria || []).map((img, idx) => (
+                    <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                        <input
+                          value={img.url || ''}
+                          onChange={(e) => {
+                            const next = [...(config.landingPage?.galeria || [])];
+                            next[idx] = { ...next[idx], url: e.target.value };
+                            updateLanding({ galeria: next });
+                          }}
+                          className="md:col-span-2 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                          placeholder="https://... o /imagenes/..."
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            value={img.alt || ''}
+                            onChange={(e) => {
+                              const next = [...(config.landingPage?.galeria || [])];
+                              next[idx] = { ...next[idx], alt: e.target.value };
+                              updateLanding({ galeria: next });
+                            }}
+                            className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                            placeholder="Alt"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = (config.landingPage?.galeria || []).filter((_, i) => i !== idx);
+                              updateLanding({ galeria: next });
+                            }}
+                            className="px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                            title="Eliminar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(config.landingPage?.galeria || []).length === 0 && (
+                    <p className="text-sm text-gray-500 italic">No hay imágenes aún.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Noticias */}
+              <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-5 border border-amber-200 shadow-sm mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Noticias</h3>
+                    <p className="text-sm text-gray-600">Crea noticias (texto + imagen opcional por URL).</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [
+                        ...(config.landingPage?.noticias || []),
+                        { title: '', body: '', date: '', imageUrl: '' },
+                      ];
+                      updateLanding({ noticias: next });
+                    }}
+                    className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    + Agregar Noticia
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {(config.landingPage?.noticias || []).map((n, idx) => (
+                    <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 space-y-2">
+                          <input
+                            value={n.title || ''}
+                            onChange={(e) => {
+                              const next = [...(config.landingPage?.noticias || [])];
+                              next[idx] = { ...next[idx], title: e.target.value };
+                              updateLanding({ noticias: next });
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                            placeholder="Título"
+                          />
+                          <input
+                            value={n.date || ''}
+                            onChange={(e) => {
+                              const next = [...(config.landingPage?.noticias || [])];
+                              next[idx] = { ...next[idx], date: e.target.value };
+                              updateLanding({ noticias: next });
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                            placeholder="Fecha (opcional)"
+                          />
+                          <textarea
+                            value={n.body || ''}
+                            onChange={(e) => {
+                              const next = [...(config.landingPage?.noticias || [])];
+                              next[idx] = { ...next[idx], body: e.target.value };
+                              updateLanding({ noticias: next });
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                            rows={3}
+                            placeholder="Texto"
+                          />
+                          <input
+                            value={n.imageUrl || ''}
+                            onChange={(e) => {
+                              const next = [...(config.landingPage?.noticias || [])];
+                              next[idx] = { ...next[idx], imageUrl: e.target.value };
+                              updateLanding({ noticias: next });
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                            placeholder="URL de imagen (opcional)"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = (config.landingPage?.noticias || []).filter((_, i) => i !== idx);
+                            updateLanding({ noticias: next });
+                          }}
+                          className="px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                          title="Eliminar"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {(config.landingPage?.noticias || []).length === 0 && (
+                    <p className="text-sm text-gray-500 italic">No hay noticias aún.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contacto */}
+              <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contacto</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Nombre</label>
+                    <input
+                      value={config.landingPage?.contacto?.nombre || ''}
+                      onChange={(e) => updateLandingNested('contacto', { nombre: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                      placeholder="Dolores"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Ciudad</label>
+                    <input
+                      value={config.landingPage?.contacto?.ciudad || ''}
+                      onChange={(e) => updateLandingNested('contacto', { ciudad: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                      placeholder="BsAs, Argentina"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Teléfono</label>
+                    <input
+                      value={config.landingPage?.contacto?.telefono || ''}
+                      onChange={(e) => updateLandingNested('contacto', { telefono: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                      placeholder="+54 ..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">WhatsApp</label>
+                    <input
+                      value={config.landingPage?.contacto?.whatsapp || ''}
+                      onChange={(e) => updateLandingNested('contacto', { whatsapp: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 text-sm"
+                      placeholder="+54 ..."
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Si lo dejas vacío, la landing usará el WhatsApp general del catálogo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white text-sm font-semibold"
+                >
+                  {saving ? 'Guardando...' : 'Guardar Landing'}
+                </button>
+              </div>
+            </section>
           )}
         </div>
       </main>
