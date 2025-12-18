@@ -502,7 +502,7 @@ export default function LandingPage() {
           opacity: 0.35;
         }
         .lp-topbarWave {
-          height: 28px;
+          height: 18px;
           overflow: hidden;
         }
         .lp-topbarWave svg { width: 100%; height: 100%; display: block; }
@@ -820,8 +820,10 @@ export default function LandingPage() {
           position: absolute;
           left: 0;
           right: 0;
-          bottom: -14px;
-          height: 110px;
+          bottom: -1px;
+          height: 120px;
+          z-index: 3;
+          pointer-events: none;
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
