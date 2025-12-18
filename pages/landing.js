@@ -801,6 +801,7 @@ export default function LandingPage() {
           /* 100vh real (mobile-friendly) */
           height: 100dvh;
           min-height: 100svh;
+          width: 100vw;
           /* Compensar navbar fixed sin meter "espacio vacío": el hero sigue midiendo 100vh,
              pero el contenido/video se centra en el área visible (vh - topbar). */
           padding-top: var(--lp-topbar-h);
@@ -880,7 +881,8 @@ export default function LandingPage() {
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
-        .lp-main { max-width: 1120px; margin: 0 auto; padding: 0 16px 56px; }
+        /* Contenido a ancho completo (sin encajonar) */
+        .lp-main { width: 100%; max-width: 100%; margin: 0; padding: 0 16px 56px; }
         /* Compensación correcta para anchors con navbar fixed */
         .lp-topbar + .lp-heroVideo { scroll-margin-top: var(--lp-topbar-h); }
         #home, #quienes, #contacto { scroll-margin-top: calc(var(--lp-topbar-h) + 12px); }
@@ -1242,11 +1244,12 @@ export default function LandingPage() {
         }
 
         /* Responsive */
-        /* En mobile, priorizamos ver el video completo (sin recorte). */
+        /* En mobile, priorizamos ocupar ancho completo (sin barras laterales). */
         @media (max-width: 520px) {
           .lp-heroVideoEl {
-            object-fit: contain;
-            transform: none;
+            object-fit: cover;
+            object-position: center center;
+            transform: scale(1.02);
           }
         }
         @media (min-width: 860px) {
