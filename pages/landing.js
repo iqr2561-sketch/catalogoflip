@@ -125,6 +125,7 @@ export default function LandingPage() {
             </div>
           )}
           <div className="lp-heroOverlay" aria-hidden="true" />
+          <div className="lp-heroGrid" aria-hidden="true" />
           <div className="lp-heroWave" aria-hidden="true">
             <svg viewBox="0 0 1440 180" preserveAspectRatio="none">
               <path
@@ -331,11 +332,23 @@ export default function LandingPage() {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(1000px 500px at 18% 22%, rgba(255,255,255,0.10), transparent 62%),
-            radial-gradient(900px 520px at 80% 55%, rgba(255,255,255,0.06), transparent 64%),
-            linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.42));
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
+            radial-gradient(1000px 500px at 18% 22%, rgba(255,255,255,0.06), transparent 64%),
+            radial-gradient(900px 520px at 80% 55%, rgba(255,255,255,0.04), transparent 66%),
+            linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.28));
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+        /* Cuadrícula sutil sobre el hero (sin tapar demasiado) */
+        .lp-heroGrid {
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+          background-size: 56px 56px, 56px 56px;
+          opacity: 0.18;
+          mix-blend-mode: overlay;
+          pointer-events: none;
         }
         .lp-heroWave {
           position: absolute;
