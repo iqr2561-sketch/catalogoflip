@@ -1,0 +1,19 @@
+{
+  "name": "Catálogo Flipbook",
+  "short_name": "Catálogo",
+  "description": "Catálogo interactivo tipo flipbook con landing.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0a1a",
+  "theme_color": "#2a175a",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
+

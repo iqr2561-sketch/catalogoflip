@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Catálogo">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a175a"/>
+      <stop offset="0.55" stop-color="#3a1f73"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <radialGradient id="h" cx="30%" cy="25%" r="70%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="120" fill="url(#g)"/>
+  <rect x="32" y="32" width="448" height="448" rx="120" fill="url(#h)"/>
+  <path d="M164 168c0-16 13-28 28-28h156c16 0 28 12 28 28v176c0 16-12 28-28 28H192c-15 0-28-12-28-28V168z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.26)" stroke-width="10"/>
+  <path d="M214 200h124M214 252h124M214 304h92" stroke="rgba(255,255,255,0.78)" stroke-width="16" stroke-linecap="round"/>
+</svg>
+
+

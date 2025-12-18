@@ -52,6 +52,9 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -83,6 +86,46 @@ export default function LandingPage() {
     // Si el usuario scrollea, cerramos el menú móvil para evitar superposiciones
     if (scrolled) setMenuOpen(false);
   }, [scrolled]);
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const standalone =
+        window.matchMedia?.('(display-mode: standalone)')?.matches ||
+        window.navigator?.standalone === true;
+      setIsStandalone(!!standalone);
+    };
+    checkStandalone();
+
+    const onBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+
+    const onAppInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setShowInstallModal(false);
+      setIsStandalone(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  const canInstall = !!deferredInstallPrompt && !isStandalone;
+  const triggerInstall = async () => {
+    if (!deferredInstallPrompt) return;
+    try {
+      await deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+    } finally {
+      setDeferredInstallPrompt(null);
+      setShowInstallModal(false);
+    }
+  };
 
   const landing = useMemo(() => {
     const lp = config?.landingPage || {};
@@ -149,6 +192,11 @@ export default function LandingPage() {
               <a className="lp-menuLink" href="#quienes">Quienes</a>
               <a className="lp-menuLink" href="#contacto">Contacto</a>
               <a className="lp-menuLink" href="/catalog">Catálogo</a>
+              {canInstall ? (
+                <button type="button" className="lp-installBtn" onClick={() => setShowInstallModal(true)}>
+                  Instalar
+                </button>
+              ) : null}
             </nav>
 
             <button
@@ -164,14 +212,42 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {menuOpen && (
-            <div className="lp-mobileMenu" role="dialog" aria-label="Menú">
-              <a className="lp-mobileLink" href="#home" onClick={() => setMenuOpen(false)}>Home</a>
-              <a className="lp-mobileLink" href="#quienes" onClick={() => setMenuOpen(false)}>Quienes</a>
-              <a className="lp-mobileLink" href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
-              <a className="lp-mobileLink" href="/catalog" onClick={() => setMenuOpen(false)}>Catálogo</a>
-            </div>
-          )}
+          {/* Drawer móvil (aparece desde un costado con animación suave) */}
+          <div className={cx('lp-drawerRoot', menuOpen && 'is-open')} aria-hidden={menuOpen ? 'false' : 'true'}>
+            <button
+              type="button"
+              className="lp-drawerOverlay"
+              aria-label="Cerrar menú"
+              onClick={() => setMenuOpen(false)}
+            />
+            <aside className="lp-drawer" aria-label="Menú" role="dialog">
+              <div className="lp-drawerHead">
+                <div className="lp-drawerTitle">Menú</div>
+                <button type="button" className="lp-drawerClose" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+                  ✕
+                </button>
+              </div>
+              <div className="lp-drawerBody">
+                <a className="lp-mobileLink" href="#home" onClick={() => setMenuOpen(false)}>Home</a>
+                <a className="lp-mobileLink" href="#quienes" onClick={() => setMenuOpen(false)}>Quienes</a>
+                <a className="lp-mobileLink" href="#contacto" onClick={() => setMenuOpen(false)}>Contacto</a>
+                <a className="lp-mobileLink" href="/catalog" onClick={() => setMenuOpen(false)}>Catálogo</a>
+
+                {canInstall ? (
+                  <button
+                    type="button"
+                    className="lp-mobileInstall"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setShowInstallModal(true);
+                    }}
+                  >
+                    Instalar app
+                  </button>
+                ) : null}
+              </div>
+            </aside>
+          </div>
 
           <div className="lp-topbarWave" aria-hidden="true">
             <svg viewBox="0 0 1440 130" preserveAspectRatio="none">
@@ -347,6 +423,31 @@ export default function LandingPage() {
             </svg>
           </a>
         )}
+
+        {/* Modal instalación PWA */}
+        {showInstallModal && (
+          <div className="lp-modalRoot" role="dialog" aria-modal="true" aria-label="Instalar app">
+            <button className="lp-modalOverlay" onClick={() => setShowInstallModal(false)} aria-label="Cerrar" />
+            <div className="lp-modal">
+              <div className="lp-modalGlow" aria-hidden="true" />
+              <div className="lp-modalHead">
+                <div className="lp-modalIcon" aria-hidden="true">
+                  <span />
+                </div>
+                <div className="lp-modalTitle">Instalar como app</div>
+                <div className="lp-modalSub">Acceso rápido, pantalla completa y mejor experiencia.</div>
+              </div>
+              <div className="lp-modalActions">
+                <button type="button" className="lp-modalBtnGhost" onClick={() => setShowInstallModal(false)}>
+                  Ahora no
+                </button>
+                <button type="button" className="lp-modalBtn" onClick={triggerInstall}>
+                  Instalar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx global>{`
@@ -454,17 +555,6 @@ export default function LandingPage() {
           opacity: 0.9;
           border-radius: 999px;
         }
-        .lp-mobileMenu {
-          max-width: 1120px;
-          margin: 0 auto;
-          padding: 10px 16px 16px;
-          display: grid;
-          gap: 8px;
-          background: rgba(42, 23, 90, 0.26);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          border-top: 1px solid rgba(255,255,255,0.12);
-        }
         .lp-mobileLink {
           color: var(--lp-nav-text);
           text-decoration: none;
@@ -473,6 +563,172 @@ export default function LandingPage() {
           border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.12);
           background: rgba(0,0,0,0.10);
+        }
+        .lp-installBtn {
+          margin-left: 8px;
+          padding: 8px 12px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(0,0,0,0.12);
+          color: var(--lp-nav-text);
+          font-weight: 900;
+          font-size: 12px;
+          letter-spacing: 0.4px;
+          text-transform: uppercase;
+        }
+
+        /* Drawer (menú móvil) */
+        .lp-drawerRoot {
+          position: fixed;
+          inset: 0;
+          z-index: 90;
+          pointer-events: none;
+        }
+        .lp-drawerOverlay {
+          position: absolute;
+          inset: 0;
+          border: 0;
+          background: rgba(0,0,0,0.18);
+          opacity: 0;
+          transition: opacity 220ms ease;
+          pointer-events: none;
+        }
+        .lp-drawer {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          bottom: 12px;
+          width: min(360px, calc(100vw - 24px));
+          border-radius: 22px;
+          background: rgba(42, 23, 90, 0.58);
+          border: 1px solid rgba(255,255,255,0.14);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+          transform: translateX(16px);
+          opacity: 0;
+          transition: transform 240ms ease, opacity 240ms ease;
+          pointer-events: none;
+          overflow: hidden;
+        }
+        .lp-drawerHead {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 14px 10px;
+          border-bottom: 1px solid rgba(255,255,255,0.10);
+          color: var(--lp-nav-text);
+        }
+        .lp-drawerTitle { font-weight: 950; letter-spacing: 0.2px; }
+        .lp-drawerClose {
+          width: 36px;
+          height: 36px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(0,0,0,0.12);
+          color: var(--lp-nav-text);
+          font-weight: 900;
+        }
+        .lp-drawerBody {
+          padding: 12px;
+          display: grid;
+          gap: 10px;
+        }
+        .lp-mobileInstall {
+          margin-top: 6px;
+          padding: 12px 12px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.12));
+          color: var(--lp-nav-text);
+          font-weight: 950;
+        }
+        .lp-drawerRoot.is-open { pointer-events: auto; }
+        .lp-drawerRoot.is-open .lp-drawerOverlay { opacity: 1; pointer-events: auto; }
+        .lp-drawerRoot.is-open .lp-drawer { transform: translateX(0); opacity: 1; pointer-events: auto; }
+
+        /* Modal instalación PWA */
+        .lp-modalRoot {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: grid;
+          place-items: center;
+          padding: 18px;
+        }
+        .lp-modalOverlay {
+          position: absolute;
+          inset: 0;
+          border: 0;
+          background: rgba(0,0,0,0.32);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+        }
+        .lp-modal {
+          position: relative;
+          width: min(520px, 100%);
+          border-radius: 26px;
+          padding: 18px 18px 16px;
+          background:
+            radial-gradient(900px 420px at 15% 15%, rgba(255,255,255,0.14), transparent 60%),
+            radial-gradient(700px 420px at 85% 85%, rgba(0,0,0,0.18), transparent 60%),
+            linear-gradient(135deg, rgba(42, 23, 90, 0.92), rgba(76, 29, 149, 0.92));
+          border: 1px solid rgba(255,255,255,0.14);
+          color: #fff;
+          box-shadow: 0 40px 120px rgba(0,0,0,0.45);
+          overflow: hidden;
+        }
+        .lp-modalGlow {
+          position: absolute;
+          inset: -20%;
+          background:
+            radial-gradient(circle at 25% 20%, rgba(245,158,11,0.22), transparent 60%),
+            radial-gradient(circle at 70% 55%, rgba(139,92,246,0.22), transparent 60%);
+          opacity: 0.9;
+          pointer-events: none;
+        }
+        .lp-modalHead { position: relative; z-index: 1; }
+        .lp-modalIcon {
+          width: 48px;
+          height: 48px;
+          border-radius: 18px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.16);
+          display: grid;
+          place-items: center;
+          margin-bottom: 10px;
+        }
+        .lp-modalIcon span {
+          width: 22px;
+          height: 22px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(255,255,255,0.20));
+          box-shadow: 0 14px 40px rgba(245,158,11,0.20);
+        }
+        .lp-modalTitle { font-size: 18px; font-weight: 950; letter-spacing: -0.2px; }
+        .lp-modalSub { margin-top: 6px; color: rgba(255,255,255,0.86); line-height: 1.55; font-size: 13px; }
+        .lp-modalActions {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
+          margin-top: 16px;
+        }
+        .lp-modalBtn, .lp-modalBtnGhost {
+          padding: 10px 14px;
+          border-radius: 14px;
+          font-weight: 900;
+          border: 1px solid rgba(255,255,255,0.18);
+        }
+        .lp-modalBtnGhost {
+          background: rgba(0,0,0,0.14);
+          color: rgba(255,255,255,0.92);
+        }
+        .lp-modalBtn {
+          background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(139,92,246,0.92));
+          color: #fff;
+          box-shadow: 0 18px 50px rgba(245,158,11,0.18);
         }
         .lp-menuLink {
           color: var(--lp-nav-text);
@@ -863,7 +1119,7 @@ export default function LandingPage() {
         /* Responsive */
         @media (min-width: 860px) {
           .lp-menu { display: flex; }
-          .lp-menuBtn, .lp-mobileMenu { display: none; }
+          .lp-menuBtn, .lp-drawerRoot { display: none; }
           .lp-intro { padding: 44px 0 16px; }
           .lp-introGrid { grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
           .lp-contactGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
