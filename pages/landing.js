@@ -20,9 +20,9 @@ const DEFAULT_LP = {
     heroGridSize: 56,
     heroGridSpeedSec: 28,
     // Más espacio por defecto en la cabecera (se puede ajustar desde el Panel)
-    heroHeightMinPx: 360,
-    heroHeightVh: 70,
-    heroHeightMaxPx: 720,
+    heroHeightMinPx: 340,
+    heroHeightVh: 66,
+    heroHeightMaxPx: 700,
   },
   heroCtas: [
     { label: 'Ver Catálogo 2025', href: '/catalog', primary: true },
@@ -772,7 +772,7 @@ export default function LandingPage() {
           height: 100%;
           object-fit: cover;
           /* Subimos levemente el encuadre para que el texto del video se vea mejor */
-          object-position: center 25%;
+          object-position: center 12%;
           filter: saturate(1.1) contrast(1.05);
           transform: scale(1.02);
         }
