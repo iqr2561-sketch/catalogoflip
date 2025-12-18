@@ -19,9 +19,10 @@ const DEFAULT_LP = {
     heroGridOpacity: 0.18,
     heroGridSize: 56,
     heroGridSpeedSec: 28,
-    heroHeightMinPx: 320,
-    heroHeightVh: 62,
-    heroHeightMaxPx: 620,
+    // Más espacio por defecto en la cabecera (se puede ajustar desde el Panel)
+    heroHeightMinPx: 360,
+    heroHeightVh: 70,
+    heroHeightMaxPx: 720,
   },
   heroCtas: [
     { label: 'Ver Catálogo 2025', href: '/catalog', primary: true },
@@ -294,16 +295,6 @@ export default function LandingPage() {
             </svg>
           </div>
         </section>
-
-        {/* Submenú tipo fichas (navegación rápida entre secciones) */}
-        <nav className="lp-tabs" aria-label="Secciones">
-          <div className="lp-tabsInner">
-            <a className="lp-tab" href="#home">Home</a>
-            <a className="lp-tab" href="#quienes">Quienes</a>
-            <a className="lp-tab" href="#contacto">Contacto</a>
-            <a className="lp-tab lp-tabAccent" href="/catalog">Catálogo</a>
-          </div>
-        </nav>
 
         <main className="lp-main">
           {/* Bloque principal estilo template (texto grande + CTA) */}
@@ -781,7 +772,7 @@ export default function LandingPage() {
           height: 100%;
           object-fit: cover;
           /* Subimos levemente el encuadre para que el texto del video se vea mejor */
-          object-position: center 35%;
+          object-position: center 25%;
           filter: saturate(1.1) contrast(1.05);
           transform: scale(1.02);
         }
@@ -837,54 +828,10 @@ export default function LandingPage() {
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
-        /* Tabs (fichas) */
-        .lp-tabs {
-          position: sticky;
-          top: 0;
-          z-index: 40;
-          background: rgba(255,255,255,0.68);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(42, 23, 90, 0.08);
-        }
-        .lp-tabsInner {
-          max-width: 1120px;
-          margin: 0 auto;
-          padding: 10px 16px;
-          display: flex;
-          gap: 10px;
-          overflow: auto;
-          scrollbar-width: none;
-        }
-        .lp-tabsInner::-webkit-scrollbar { display: none; }
-        .lp-tab {
-          flex: 0 0 auto;
-          padding: 10px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(42, 23, 90, 0.14);
-          background: rgba(255,255,255,0.78);
-          color: #2a175a;
-          text-decoration: none;
-          font-weight: 900;
-          font-size: 12px;
-          letter-spacing: 0.4px;
-          text-transform: uppercase;
-          transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
-        }
-        .lp-tab:hover {
-          transform: translateY(-1px);
-          background: rgba(255,255,255,0.92);
-          border-color: rgba(42, 23, 90, 0.22);
-        }
-        .lp-tabAccent {
-          border-color: rgba(245, 158, 11, 0.40);
-          background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(139,92,246,0.10));
-        }
-
         .lp-main { max-width: 1120px; margin: 0 auto; padding: 0 16px 56px; }
         /* Para que el contenido no “salte” cuando el header pasa a fixed */
         .lp-topbar + .lp-heroVideo { scroll-margin-top: 86px; }
-        #home, #quienes, #contacto { scroll-margin-top: 120px; }
+        #home, #quienes, #contacto { scroll-margin-top: 96px; }
 
         /* INTRO estilo template */
         .lp-intro { padding: 26px 0 10px; }
@@ -1103,6 +1050,21 @@ export default function LandingPage() {
           overflow: hidden;
           transition: transform 140ms ease, box-shadow 140ms ease;
         }
+        /* halo moderno (conic-gradient) */
+        .lp-waFloat::before {
+          content: "";
+          position: absolute;
+          inset: -22px;
+          border-radius: 999px;
+          background: conic-gradient(from 0deg, rgba(255,255,255,0.0), rgba(255,255,255,0.22), rgba(255,255,255,0.0));
+          opacity: 0.22;
+          animation: lpHalo 6s linear infinite;
+          pointer-events: none;
+        }
+        @keyframes lpHalo {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
         .lp-waLabel {
           position: absolute;
           left: 18px;
@@ -1167,6 +1129,7 @@ export default function LandingPage() {
         @media (prefers-reduced-motion: reduce) {
           .lp-waSpark { animation: none; }
           .lp-waPulse { animation: none; }
+          .lp-waFloat::before { animation: none; }
         }
         .lp-sectionAlt {
           background: radial-gradient(1200px 520px at 15% 10%, rgba(58,31,115,0.10), transparent 60%),
