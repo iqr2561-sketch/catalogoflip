@@ -287,7 +287,7 @@ export default function LandingPage() {
           <div className="lp-heroWave" aria-hidden="true">
             <svg viewBox="0 0 1440 180" preserveAspectRatio="none">
               <path
-                d="M0,152 C220,174 380,182 560,176 C760,170 880,148 1040,148 C1220,148 1340,164 1440,174 L1440,180 L0,180 Z"
+                d="M0,124 C180,170 360,190 540,170 C720,150 840,106 1020,106 C1200,106 1320,140 1440,166 L1440,180 L0,180 Z"
                 fill="#ffffff"
               />
             </svg>
@@ -499,7 +499,7 @@ export default function LandingPage() {
           opacity: 0.35;
         }
         .lp-topbarWave {
-          height: 46px;
+          height: 28px;
           overflow: hidden;
         }
         .lp-topbarWave svg { width: 100%; height: 100%; display: block; }
@@ -767,6 +767,8 @@ export default function LandingPage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          /* Subimos levemente el encuadre para que el texto del video se vea mejor */
+          object-position: center 35%;
           filter: saturate(1.1) contrast(1.05);
           transform: scale(1.02);
         }
@@ -815,8 +817,8 @@ export default function LandingPage() {
           position: absolute;
           left: 0;
           right: 0;
-          bottom: -26px;
-          height: 84px;
+          bottom: -14px;
+          height: 110px;
         }
         .lp-heroWave svg { width: 100%; height: 100%; display: block; }
 
