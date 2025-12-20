@@ -930,8 +930,8 @@ export default function FlipbookCatalog({
         </div>
       </div>
 
-      {/* Indicadores de página (dots) - Móvil */}
-      {isMobile && numPages > 1 && (
+      {/* Indicadores de página (dots) - Oculto en móvil */}
+      {!isMobile && numPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-2 flex-wrap px-4">
           {Array.from({ length: numPages }, (_, idx) => (
             <button
