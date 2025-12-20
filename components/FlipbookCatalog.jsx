@@ -541,8 +541,8 @@ export default function FlipbookCatalog({
           </button>
         </div>
 
-        {/* Controles de zoom y pantalla completa - Solo desktop */}
-        <div className="hidden md:flex items-center gap-2">
+        {/* Controles de zoom y pantalla completa - Centrados en desktop */}
+        <div className="hidden md:flex items-center justify-center gap-2 mt-4">
           {/* Botón zoom out */}
           <button
             onClick={() => handleZoomChange('out')}
@@ -586,6 +586,31 @@ export default function FlipbookCatalog({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
               </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Botón pantalla completa - Solo mobile */}
+        <div className="md:hidden flex justify-center mt-4">
+          <button
+            onClick={toggleFullscreen}
+            className="px-4 py-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            {isFullscreen ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span className="text-sm">Salir</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+                <span className="text-sm">Pantalla completa</span>
+              </>
             )}
           </button>
         </div>
@@ -1004,6 +1029,19 @@ export default function FlipbookCatalog({
             Usa las flechas del teclado, el espacio, o haz clic en los lados de la página para navegar
           </p>
         )}
+      </div>
+
+      {/* Footer - Desarrollado por Surconexion */}
+      <div className="mt-8 mb-4 text-center">
+        <a
+          href="https://wa.me/5492245506078"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-xs transition-colors duration-200"
+        >
+          <span>Desarrollado por</span>
+          <span className="font-semibold">Surconexion</span>
+        </a>
       </div>
 
       {/* Modal de producto */}
