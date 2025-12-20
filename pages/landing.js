@@ -56,6 +56,7 @@ export default function LandingPage() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [logoSize, setLogoSize] = useState(44); // Tamaño base del logo
   const topbarRef = useRef(null);
 
   useEffect(() => {
@@ -202,13 +203,40 @@ export default function LandingPage() {
         {/* Navbar estilo template (violeta + ondas) */}
         <header ref={topbarRef} className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
           <div className="lp-topbarInner">
-            <div className="lp-logo" aria-label={landing.brandName}>
+            <div className="lp-logo" aria-label={landing.brandName} style={{ '--lp-logo-size': `${logoSize}px` }}>
               {landing.ui.logoUrl ? (
                 <img className="lp-logoImg" src={landing.ui.logoUrl} alt={`${landing.brandName} logo`} />
               ) : (
                 <span className="lp-logoMark" aria-hidden="true" />
               )}
               <span className="lp-logoText">{landing.brandName}</span>
+            </div>
+            
+            {/* Control sutil de tamaño del logo - Solo desktop */}
+            <div className="lp-logoSizeControl">
+              <button
+                type="button"
+                onClick={() => setLogoSize(Math.max(32, logoSize - 4))}
+                className="lp-logoSizeBtn"
+                aria-label="Reducir logo"
+                title="Reducir logo"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span className="lp-logoSizeValue">{logoSize}px</span>
+              <button
+                type="button"
+                onClick={() => setLogoSize(Math.min(64, logoSize + 4))}
+                className="lp-logoSizeBtn"
+                aria-label="Aumentar logo"
+                title="Aumentar logo"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
             </div>
             <nav className="lp-menu" aria-label="Navegación">
               <a className="lp-menuLink" href="#home">Inicio</a>
@@ -573,6 +601,51 @@ export default function LandingPage() {
           letter-spacing: 0.2px;
           line-height: 1.05;
           font-size: 18px;
+        }
+        /* Control sutil de tamaño del logo - Solo desktop */
+        .lp-logoSizeControl {
+          display: none;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 6px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          opacity: 0.6;
+          transition: opacity 200ms ease;
+        }
+        .lp-logoSizeControl:hover {
+          opacity: 1;
+        }
+        .lp-logoSizeBtn {
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.16);
+          color: var(--lp-nav-text);
+          cursor: pointer;
+          transition: background 140ms ease, transform 140ms ease;
+        }
+        .lp-logoSizeBtn:hover {
+          background: rgba(255,255,255,0.18);
+          transform: scale(1.1);
+        }
+        .lp-logoSizeBtn:active {
+          transform: scale(0.95);
+        }
+        .lp-logoSizeValue {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--lp-nav-text);
+          min-width: 32px;
+          text-align: center;
+          opacity: 0.85;
         }
         .lp-menu {
           display: none;
@@ -1268,6 +1341,7 @@ export default function LandingPage() {
           :root { --lp-logo-size: 48px; }
           .lp-menu { display: flex; }
           .lp-menuBtn, .lp-drawerRoot { display: none; }
+          .lp-logoSizeControl { display: flex; }
           .lp-intro { padding: 44px 0 16px; }
           .lp-introGrid { grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
           .lp-contactGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

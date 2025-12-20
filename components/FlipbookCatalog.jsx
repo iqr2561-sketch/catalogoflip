@@ -17,7 +17,8 @@ export default function FlipbookCatalog({
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1); // 0.75, 1, 1.25, 1.5, 2
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState('single'); // 'single' | 'double'
   const [containerSize, setContainerSize] = useState({ width: 600, height: 800 });
@@ -26,6 +27,7 @@ export default function FlipbookCatalog({
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const flipbookContainerRef = useRef(null);
   
   // Estados para PDF y renderizado
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -271,9 +273,42 @@ export default function FlipbookCatalog({
     }, 50);
   };
 
-  const toggleZoom = () => {
-    setIsZoomed(!isZoomed);
+  const zoomLevels = [0.75, 1, 1.25, 1.5, 2];
+  
+  const handleZoomChange = (direction) => {
+    const currentIndex = zoomLevels.indexOf(zoomLevel);
+    if (direction === 'in' && currentIndex < zoomLevels.length - 1) {
+      setZoomLevel(zoomLevels[currentIndex + 1]);
+    } else if (direction === 'out' && currentIndex > 0) {
+      setZoomLevel(zoomLevels[currentIndex - 1]);
+    }
   };
+
+  const toggleFullscreen = async () => {
+    if (!flipbookContainerRef.current) return;
+    
+    try {
+      if (!document.fullscreenElement) {
+        await flipbookContainerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error('Error al cambiar pantalla completa:', err);
+    }
+  };
+
+  // Escuchar cambios de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Asegurar que la página actual sea válida cuando cambia el número de páginas
   useEffect(() => {
@@ -506,60 +541,65 @@ export default function FlipbookCatalog({
           </button>
         </div>
 
-        {/* Botón de zoom - Solo desktop */}
-        <div className="hidden md:block">
+        {/* Controles de zoom y pantalla completa - Solo desktop */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Botón zoom out */}
           <button
-            onClick={toggleZoom}
-            className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+            onClick={() => handleZoomChange('out')}
+            disabled={zoomLevel === zoomLevels[0]}
+            className="px-3 py-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Alejar"
           >
-            {isZoomed ? (
-              <>
-                <svg
-                  className="w-5 h-5 inline-block mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
-                  />
-                </svg>
-                Alejar
-              </>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+            </svg>
+          </button>
+          
+          {/* Indicador de zoom */}
+          <span className="px-3 py-2 bg-white/90 text-gray-700 rounded-lg font-medium shadow-md text-sm min-w-[60px] text-center">
+            {Math.round(zoomLevel * 100)}%
+          </span>
+          
+          {/* Botón zoom in */}
+          <button
+            onClick={() => handleZoomChange('in')}
+            disabled={zoomLevel === zoomLevels[zoomLevels.length - 1]}
+            className="px-3 py-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Acercar"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+            </svg>
+          </button>
+          
+          {/* Botón pantalla completa */}
+          <button
+            onClick={toggleFullscreen}
+            className="px-3 py-2 bg-white/90 hover:bg-white text-gray-700 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
+            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            {isFullscreen ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             ) : (
-              <>
-                <svg
-                  className="w-5 h-5 inline-block mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
-                  />
-                </svg>
-                Acercar
-              </>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
             )}
           </button>
         </div>
       </div>
 
       {/* Contenedor del flipbook con zoom controlado */}
-      <div className="relative flex justify-center" style={{ perspective: '1200px' }}>
+      <div ref={flipbookContainerRef} className="relative flex justify-center" style={{ perspective: '1200px' }}>
         <div 
           className="relative bg-gray-300/60 rounded-2xl p-4 shadow-inner overflow-hidden"
           style={{
-            width: isZoomed ? `${containerSize.width * 1.5}px` : `${containerSize.width}px`,
-            height: isZoomed ? `${containerSize.height * 1.5}px` : `${containerSize.height}px`,
-            maxWidth: '90vw',
-            maxHeight: '80vh',
+            width: `${containerSize.width * zoomLevel}px`,
+            height: `${containerSize.height * zoomLevel}px`,
+            maxWidth: isFullscreen ? '100vw' : '90vw',
+            maxHeight: isFullscreen ? '100vh' : '80vh',
             transition: 'width 0.3s ease, height 0.3s ease',
             display: 'flex',
             alignItems: 'center',
@@ -614,7 +654,7 @@ export default function FlipbookCatalog({
                     position: 'relative',
                     width: '100%',
                     height: '100%',
-                    transform: isZoomed ? 'scale(1.5)' : 'scale(1)',
+                    transform: `scale(${zoomLevel})`,
                     transformOrigin: 'center center',
                     transition: 'transform 0.3s ease',
                     touchAction: 'pan-y pinch-zoom',
