@@ -121,6 +121,40 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
     // Formatear número de WhatsApp (eliminar caracteres no numéricos excepto +)
     const numeroLimpio = whatsappNum.replace(/[^\d+]/g, '');
     
+    // Guardar la orden en el sistema antes de enviar
+    const orderData = {
+      productos: productos.map(p => ({
+        id: p.id,
+        nombre: construirTituloProductoParaWhatsapp(p),
+        precio: p.precio || 0,
+        cantidad: p.cantidad || 1,
+        variaciones: p.variacionesSeleccionadas || {},
+      })),
+      total: total,
+      cotizacionDolar: config.cotizacionDolar || cotizacionDolar || 1,
+      mostrarPreciosEnPesos: config.mostrarPreciosEnPesos || mostrarPreciosEnPesos || false,
+      whatsappNumber: whatsappNum,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Guardar orden en el backend (no bloquea el flujo si falla)
+    fetch('/api/save-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok) {
+          console.log('[Cart] Orden guardada correctamente:', data);
+        } else {
+          console.warn('[Cart] No se pudo guardar la orden:', data);
+        }
+      })
+      .catch(err => {
+        console.error('[Cart] Error al guardar orden:', err);
+      });
+
     // Abrir WhatsApp Web/App
     const whatsappUrl = `https://wa.me/${numeroLimpio}?text=${mensajeEncoded}`;
     window.open(whatsappUrl, '_blank');

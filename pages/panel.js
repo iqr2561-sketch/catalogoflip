@@ -12,7 +12,10 @@ export default function PanelDeControl() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'lista-precios' | 'landingpage'
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'marcadores' | 'configuracion' | 'lista-precios' | 'landingpage' | 'ventas'
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersStats, setOrdersStats] = useState(null);
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
@@ -99,9 +102,30 @@ export default function PanelDeControl() {
   };
 
   useEffect(() => {
-
     loadConfig();
   }, []);
+
+  // Cargar órdenes cuando se activa el tab de ventas
+  const loadOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      setOrders(data.orders || []);
+      setOrdersStats(data.stats || null);
+    } catch (err) {
+      console.error('Error al cargar órdenes:', err);
+      setMessage({ type: 'error', text: 'No se pudieron cargar las ventas' });
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'ventas') {
+      loadOrders();
+    }
+  }, [activeTab]);
 
   const loadThumbnails = async (numPages) => {
     if (!numPages || numPages === 0) {
@@ -2528,6 +2552,17 @@ export default function PanelDeControl() {
               }`}
             >
               LandingPage
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ventas')}
+              className={`px-4 py-2 rounded-xl transition-colors ${
+                activeTab === 'ventas'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Ventas
             </button>
           </div>
 
@@ -5136,6 +5171,137 @@ export default function PanelDeControl() {
                   className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white text-sm font-semibold"
                 >
                   {saving ? 'Guardando...' : 'Guardar Landing'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Sección Ventas */}
+          {activeTab === 'ventas' && (
+            <section className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Seguimiento de Ventas</h2>
+                <p className="text-gray-600 text-sm">Registro completo de todas las compras realizadas</p>
+              </div>
+
+              {/* Estadísticas */}
+              {ordersStats && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                    <div className="text-sm text-blue-700 font-medium mb-1">Total Ventas</div>
+                    <div className="text-2xl font-bold text-blue-900">{ordersStats.total || 0}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="text-sm text-green-700 font-medium mb-1">Total Recaudado</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      ${(ordersStats.totalAmount || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                    <div className="text-sm text-purple-700 font-medium mb-1">Hoy</div>
+                    <div className="text-2xl font-bold text-purple-900">{ordersStats.today || 0}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                    <div className="text-sm text-orange-700 font-medium mb-1">Este Mes</div>
+                    <div className="text-2xl font-bold text-orange-900">{ordersStats.thisMonth || 0}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de órdenes */}
+              {ordersLoading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mb-4"></div>
+                  <p className="text-gray-600">Cargando ventas...</p>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-5xl mb-4">📦</div>
+                  <p className="text-gray-600 text-lg">No hay ventas registradas aún</p>
+                  <p className="text-gray-500 text-sm mt-2">Las compras aparecerán aquí cuando los clientes realicen pedidos</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Productos</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Total</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">WhatsApp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order, idx) => {
+                        const fecha = new Date(order.createdAt || order.updatedAt || order.timestamp);
+                        const fechaFormateada = fecha.toLocaleDateString('es-AR', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+                        const productosCount = (order.productos || []).length;
+                        const total = order.total || 0;
+                        const whatsappNum = order.whatsappNumber || '';
+
+                        return (
+                          <tr key={order.id || order._id || idx} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 text-gray-600">{fechaFormateada}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900">{productosCount} producto{productosCount !== 1 ? 's' : ''}</span>
+                                <details className="mt-1">
+                                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                    Ver detalles
+                                  </summary>
+                                  <div className="mt-2 pl-4 space-y-1">
+                                    {(order.productos || []).map((p, pIdx) => (
+                                      <div key={pIdx} className="text-xs text-gray-600">
+                                        • {p.nombre} (x{p.cantidad || 1}) - ${(p.precio || 0) * (p.cantidad || 1)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right font-semibold text-gray-900">
+                              ${total.toLocaleString()}
+                            </td>
+                            <td className="py-3 px-4">
+                              {whatsappNum ? (
+                                <a
+                                  href={`https://wa.me/${whatsappNum.replace(/[^\d+]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-green-600 hover:text-green-700 font-medium"
+                                >
+                                  {whatsappNum}
+                                </a>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Botón refrescar */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={loadOrders}
+                  disabled={ordersLoading}
+                  className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white text-sm font-semibold flex items-center gap-2"
+                >
+                  <svg className={`w-4 h-4 ${ordersLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {ordersLoading ? 'Actualizando...' : 'Actualizar'}
                 </button>
               </div>
             </section>
