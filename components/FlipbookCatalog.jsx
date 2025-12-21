@@ -558,6 +558,77 @@ export default function FlipbookCatalog({
           </button>
         </div>
 
+        {/* Selector de tipo de precio (Minorista/Mayorista) */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <span className={`text-sm font-semibold transition-colors ${tipoPrecio === 'minorista' ? 'text-primary-600' : 'text-gray-500'}`}>
+            Minorista
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (tipoPrecio === 'minorista') {
+                setShowMayoristaModal(true);
+              } else {
+                setTipoPrecio('minorista');
+              }
+            }}
+            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+              tipoPrecio === 'mayorista' ? 'bg-primary-600' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={tipoPrecio === 'mayorista'}
+            aria-label="Alternar entre lista minorista y mayorista"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                tipoPrecio === 'mayorista' ? 'translate-x-8' : 'translate-x-1'
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-semibold transition-colors ${tipoPrecio === 'mayorista' ? 'text-primary-600' : 'text-gray-500'}`}>
+            Mayorista
+          </span>
+        </div>
+
+        {/* Modal informativo para mayorista */}
+        {showMayoristaModal && (
+          <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-slideUp">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Lista Mayorista</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    La venta mayorista aplica a partir de <strong className="text-primary-600">50 productos variados</strong>. 
+                    Los precios mostrados corresponden a esta modalidad de compra.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setTipoPrecio('mayorista');
+                        setShowMayoristaModal(false);
+                      }}
+                      className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Continuar
+                    </button>
+                    <button
+                      onClick={() => setShowMayoristaModal(false)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Controles de zoom y pantalla completa - Centrados en desktop */}
         <div className="hidden md:flex items-center justify-center gap-2 mt-4">
           {/* Botón zoom out */}
