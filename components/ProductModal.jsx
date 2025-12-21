@@ -6,6 +6,18 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
   const [imageError, setImageError] = useState(false);
   const [variacionesCantidades, setVariacionesCantidades] = useState({});
   
+  // Debug: verificar que los props se reciban correctamente
+  useEffect(() => {
+    if (isOpen && producto) {
+      console.log('[ProductModal] Props recibidos:', {
+        mostrarPreciosEnPesos,
+        cotizacionDolar,
+        precioBase: producto.precio,
+        precioEnPesos: mostrarPreciosEnPesos ? (producto.precio || 0) * cotizacionDolar : producto.precio
+      });
+    }
+  }, [isOpen, producto, mostrarPreciosEnPesos, cotizacionDolar]);
+  
   // Resetear selecciones cuando cambia el producto o se abre el modal
   useEffect(() => {
     if (isOpen && producto) {
