@@ -362,12 +362,22 @@ export default function LandingPage() {
                     return (
                       <a
                         key={`${cta?.label || 'cta'}-${idx}`}
-                        className={cx('lp-btn', isPrimary ? 'lp-btnPrimary' : 'lp-btnGhost')}
+                        className={cx('lp-btn', isPrimary ? 'lp-btnPrimary lp-btnPrimaryMobile' : 'lp-btnGhost')}
                         href={href}
                         target={external ? '_blank' : undefined}
                         rel={external ? 'noreferrer' : undefined}
                       >
-                        {cta?.label || (isPrimary ? 'Ver catálogo' : 'Contactar')}
+                        {isPrimary && <span className="lp-btnShimmer" aria-hidden="true" />}
+                        <span className="lp-btnContent">
+                          {cta?.label || (isPrimary ? 'Ver catálogo' : 'Contactar')}
+                        </span>
+                        {isPrimary && (
+                          <svg className="lp-btnSparkle" aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="currentColor" opacity="0.6"/>
+                            <path d="M19 3L19.5 5.5L22 6L19.5 6.5L19 9L18.5 6.5L16 6L18.5 5.5L19 3Z" fill="currentColor" opacity="0.4"/>
+                            <path d="M5 15L5.3 16.3L6.6 16.6L5.3 16.9L5 18.2L4.7 16.9L3.4 16.6L4.7 16.3L5 15Z" fill="currentColor" opacity="0.5"/>
+                          </svg>
+                        )}
                       </a>
                     );
                   })}
@@ -1039,6 +1049,148 @@ export default function LandingPage() {
           background: linear-gradient(135deg, var(--lp-nav-mid), var(--lp-accent));
           box-shadow: 0 16px 44px rgba(58, 31, 115, 0.25);
           color: #fff;
+          position: relative;
+          overflow: hidden;
+        }
+        .lp-btnContent {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .lp-btnShimmer {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent
+          );
+          animation: lpShimmer 3s infinite;
+          z-index: 1;
+        }
+        @keyframes lpShimmer {
+          0% { left: -100%; }
+          50% { left: 100%; }
+          100% { left: 100%; }
+        }
+        .lp-btnSparkle {
+          width: 20px;
+          height: 20px;
+          position: relative;
+          z-index: 2;
+          animation: lpSparkle 2s ease-in-out infinite;
+          opacity: 0.8;
+        }
+        @keyframes lpSparkle {
+          0%, 100% { 
+            transform: scale(1) rotate(0deg);
+            opacity: 0.8;
+          }
+          50% { 
+            transform: scale(1.15) rotate(180deg);
+            opacity: 1;
+          }
+        }
+        /* Versión móvil mejorada del botón primario */
+        @media (max-width: 860px) {
+          .lp-btnPrimaryMobile {
+            width: 100%;
+            padding: 18px 24px !important;
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            border-radius: 20px !important;
+            background: linear-gradient(135deg, #4c1d95, #6d28d9, #7c3aed) !important;
+            box-shadow: 
+              0 8px 32px rgba(76, 29, 149, 0.35),
+              0 0 0 2px rgba(255, 255, 255, 0.1) inset,
+              0 4px 16px rgba(124, 58, 237, 0.4) !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            position: relative;
+            overflow: visible;
+          }
+          .lp-btnPrimaryMobile::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: lpBorderGlow 2.5s ease-in-out infinite;
+            z-index: 0;
+          }
+          .lp-btnPrimaryMobile::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            animation: lpPulse 3s ease-in-out infinite;
+            z-index: 0;
+          }
+          .lp-btnPrimaryMobile:hover,
+          .lp-btnPrimaryMobile:active {
+            transform: translateY(-2px) scale(1.02) !important;
+            box-shadow: 
+              0 12px 40px rgba(76, 29, 149, 0.45),
+              0 0 0 2px rgba(255, 255, 255, 0.15) inset,
+              0 6px 20px rgba(124, 58, 237, 0.5) !important;
+          }
+          .lp-btnPrimaryMobile .lp-btnShimmer {
+            animation: lpShimmerMobile 2.5s ease-in-out infinite;
+          }
+          .lp-btnPrimaryMobile .lp-btnSparkle {
+            width: 24px;
+            height: 24px;
+            animation: lpSparkleMobile 1.8s ease-in-out infinite;
+          }
+        }
+        @keyframes lpBorderGlow {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+        @keyframes lpPulse {
+          0%, 100% { 
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          50% { 
+            transform: scale(1.2);
+            opacity: 0.3;
+          }
+        }
+        @keyframes lpShimmerMobile {
+          0% { left: -100%; }
+          40% { left: 100%; }
+          100% { left: 100%; }
+        }
+        @keyframes lpSparkleMobile {
+          0%, 100% { 
+            transform: scale(1) rotate(0deg);
+            opacity: 0.9;
+          }
+          25% { 
+            transform: scale(1.2) rotate(90deg);
+            opacity: 1;
+          }
+          50% { 
+            transform: scale(1.1) rotate(180deg);
+            opacity: 0.95;
+          }
+          75% { 
+            transform: scale(1.2) rotate(270deg);
+            opacity: 1;
+          }
         }
         .lp-btnGhost {
           background: rgba(42, 23, 90, 0.08);
