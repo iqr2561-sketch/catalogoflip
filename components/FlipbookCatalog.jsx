@@ -28,6 +28,8 @@ export default function FlipbookCatalog({
   const [touchEnd, setTouchEnd] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const [tipoPrecio, setTipoPrecio] = useState(tipoPrecioDefault); // Estado local para el tipo de precio
+  const [showMayoristaModal, setShowMayoristaModal] = useState(false);
   const flipbookContainerRef = useRef(null);
   
   // Estados para PDF y renderizado
@@ -1103,7 +1105,7 @@ export default function FlipbookCatalog({
         }}
         whatsappNumber={whatsappNumber}
         cotizacionDolar={cotizacionDolar}
-        tipoPrecioDefault={tipoPrecioDefault}
+        tipoPrecioDefault={tipoPrecio}
         mostrarPreciosEnPesos={mostrarPreciosEnPesos}
         imagenGeneralProductos={imagenGeneralProductos}
       />
