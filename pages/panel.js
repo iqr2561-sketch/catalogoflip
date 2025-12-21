@@ -110,12 +110,27 @@ export default function PanelDeControl() {
     try {
       setOrdersLoading(true);
       const res = await fetch('/api/orders');
+      
+      // Verificar que la respuesta sea válida
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`);
+      }
+      
+      // Verificar que el contenido sea JSON
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('La respuesta no es JSON válido');
+      }
+      
       const data = await res.json();
       setOrders(data.orders || []);
       setOrdersStats(data.stats || null);
     } catch (err) {
       console.error('Error al cargar órdenes:', err);
-      setMessage({ type: 'error', text: 'No se pudieron cargar las ventas' });
+      setMessage('No se pudieron cargar las ventas. Verifica que la API esté funcionando.');
+      // Inicializar con arrays vacíos para evitar errores
+      setOrders([]);
+      setOrdersStats(null);
     } finally {
       setOrdersLoading(false);
     }
