@@ -94,15 +94,33 @@ export default function LandingPage() {
     };
   }, []);
 
+  // Control de scroll: navbar fijo que se desliza hacia abajo
   useEffect(() => {
+    let lastScrollY = 0;
+    let ticking = false;
+    
     const onScroll = () => {
-      // Activa el modo “menu flotante” apenas el usuario empieza a scrollear
-      const y = typeof window !== 'undefined' ? window.scrollY : 0;
-      setScrolled(y > 12);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY || window.pageYOffset;
+          // Activa el estado "scrolled" cuando se scrollea más de 12px
+          setScrolled(currentScrollY > 12);
+          lastScrollY = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+    
+    // Ejecutar una vez al montar
     onScroll();
+    
+    // Escuchar eventos de scroll
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -530,13 +548,18 @@ export default function LandingPage() {
         }
 
         /* TOP BAR - Fijo, semitransparente y elegante */
+        /* Navbar fijo: altura fija, z-index alto, sin empujar contenido */
         .lp-topbar {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
-          z-index: 50;
+          z-index: 1000;
+          width: 100%;
+          height: var(--lp-topbar-h);
+          max-height: var(--lp-topbar-h);
           overflow: hidden;
+          box-sizing: border-box;
           /* Fondo semitransparente con blur elegante */
           background: rgba(42, 23, 90, 0.75);
           backdrop-filter: blur(20px);
@@ -544,21 +567,24 @@ export default function LandingPage() {
           border-bottom: 1px solid rgba(255,255,255,0.08);
           color: var(--lp-nav-text);
           box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-          transition: background 320ms ease, backdrop-filter 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
+          transition: background 320ms ease, backdrop-filter 320ms ease, box-shadow 320ms ease, border-color 320ms ease, transform 320ms ease;
+          transform: translateY(0);
         }
+        /* Contenedor interno: flexbox, sin crecimiento */
         .lp-topbarInner {
           width: 100%;
-          max-width: none;
+          max-width: 100%;
+          height: 100%;
           margin: 0;
           padding: 12px 20px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
+          box-sizing: border-box;
+          overflow: hidden;
         }
-        /* Evita "saltos" por altura del navbar en diferentes fuentes/escala */
-        .lp-topbarInner { min-height: var(--lp-topbar-h); }
-        /* Al scrollear: se vuelve más transparente y elegante */
+        /* Al scrollear: fondo más opaco y sombra más pronunciada */
         .lp-topbarScrolled {
           background: rgba(42, 23, 90, 0.85);
           backdrop-filter: blur(24px);
@@ -566,23 +592,29 @@ export default function LandingPage() {
           border-bottom: 1px solid rgba(255,255,255,0.12);
           box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
-        .lp-topbarScrolled .lp-topbarInner {
-          padding: 12px 20px;
-        }
         .lp-topbarScrolled .lp-topbarWave {
           opacity: 0.2;
         }
+        /* Wave decorativo: posicionado absolutamente, sin afectar layout */
         .lp-topbarWave {
           position: absolute;
           left: 0;
           right: 0;
           bottom: -1px;
           height: 8px;
+          max-height: 8px;
           opacity: 0.3;
           pointer-events: none;
           transition: opacity 320ms ease;
+          overflow: hidden;
+          z-index: 1;
         }
-        .lp-topbarWave svg { width: 100%; height: 100%; display: block; }
+        .lp-topbarWave svg { 
+          width: 100%; 
+          height: 100%; 
+          display: block;
+          max-height: 8px;
+        }
 
         .lp-logo {
           display: flex;
