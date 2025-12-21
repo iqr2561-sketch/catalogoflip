@@ -102,6 +102,7 @@ async function getFromMongoDB() {
       tipoPrecioDefault: catalog.tipoPrecioDefault || 'minorista', // Tipo de precio por defecto
       mostrarPreciosEnPesos: catalog.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
       imagenGeneralProductos: catalog.imagenGeneralProductos || '', // Imagen general para productos sin imagen
+      minProductosMayorista: catalog.minProductosMayorista || 50, // Mínimo de productos para compra mayorista
       landingPage: catalog.landingPage || null,
       productos: productos.map(p => ({
         id: p._id.toString(),

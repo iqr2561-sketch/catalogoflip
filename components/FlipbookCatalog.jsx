@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Hotspot from './Hotspot';
 import ProductModal from './ProductModal';
+import useCartStore from '../store/cartStore';
 
 export default function FlipbookCatalog({
   pdfUrl,
@@ -30,7 +31,13 @@ export default function FlipbookCatalog({
   const [showSwipeHint, setShowSwipeHint] = useState(true);
   const [tipoPrecio, setTipoPrecio] = useState(tipoPrecioDefault); // Estado local para el tipo de precio
   const [showMayoristaModal, setShowMayoristaModal] = useState(false);
+  const setTipoPrecioStore = useCartStore((state) => state.setTipoPrecio);
   const flipbookContainerRef = useRef(null);
+  
+  // Sincronizar tipo de precio con el store
+  useEffect(() => {
+    setTipoPrecioStore(tipoPrecio);
+  }, [tipoPrecio, setTipoPrecioStore]);
   
   // Estados para PDF y renderizado
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -570,6 +577,7 @@ export default function FlipbookCatalog({
                 setShowMayoristaModal(true);
               } else {
                 setTipoPrecio('minorista');
+                setTipoPrecioStore('minorista');
               }
             }}
             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
@@ -610,6 +618,7 @@ export default function FlipbookCatalog({
                     <button
                       onClick={() => {
                         setTipoPrecio('mayorista');
+                        setTipoPrecioStore('mayorista');
                         setShowMayoristaModal(false);
                       }}
                       className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"

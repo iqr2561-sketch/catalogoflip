@@ -7,9 +7,15 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
   const actualizarCantidad = useCartStore((state) => state.actualizarCantidad);
   const limpiarCarrito = useCartStore((state) => state.limpiarCarrito);
   const getTotal = useCartStore((state) => state.getTotal);
+  const tipoPrecio = useCartStore((state) => state.tipoPrecio);
   const [isOpen, setIsOpen] = useState(false);
   const [whatsappNum, setWhatsappNum] = useState(whatsappNumber);
-  const [config, setConfig] = useState({ cotizacionDolar: 1, mostrarPreciosEnPesos: false, imagenGeneralProductos: '' });
+  const [config, setConfig] = useState({ 
+    cotizacionDolar: 1, 
+    mostrarPreciosEnPesos: false, 
+    imagenGeneralProductos: '',
+    minProductosMayorista: 50 
+  });
   const [swipedKey, setSwipedKey] = useState(null);
   const [touchStartX, setTouchStartX] = useState(null);
 
@@ -24,7 +30,8 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
         setConfig({
           cotizacionDolar: data.cotizacionDolar || cotizacionDolar || 1,
           mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || mostrarPreciosEnPesos || false,
-          imagenGeneralProductos: data.imagenGeneralProductos || imagenGeneralProductos || ''
+          imagenGeneralProductos: data.imagenGeneralProductos || imagenGeneralProductos || '',
+          minProductosMayorista: data.minProductosMayorista || 50
         });
       })
       .catch(err => console.error('Error al cargar configuración:', err));
@@ -32,6 +39,12 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
 
   const total = getTotal();
   const itemCount = productos.reduce((sum, p) => sum + (p.cantidad || 1), 0);
+  const minProductosMayorista = config.minProductosMayorista || 50;
+  const productosFaltantes = Math.max(0, minProductosMayorista - itemCount);
+  const puedeFinalizar = tipoPrecio === 'minorista' || itemCount >= minProductosMayorista;
+  const porcentajeProgreso = tipoPrecio === 'mayorista' 
+    ? Math.min(100, (itemCount / minProductosMayorista) * 100)
+    : 100;
 
   // Función helper para formatear precios
   const formatearPrecio = (precio) => {
@@ -92,6 +105,12 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
   const handleCheckout = () => {
     if (!whatsappNum) {
       alert('No se ha configurado un número de WhatsApp. Por favor, configúralo en el panel de control.');
+      return;
+    }
+    
+    // Validar mínimo de productos para lista mayorista
+    if (tipoPrecio === 'mayorista' && itemCount < minProductosMayorista) {
+      alert(`Para finalizar una compra mayorista necesitas al menos ${minProductosMayorista} productos. Actualmente tienes ${itemCount} productos. Te faltan ${productosFaltantes} productos.`);
       return;
     }
 
@@ -392,6 +411,40 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
             {/* Footer */}
             {productos.length > 0 && (
               <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
+                {/* Barra de progreso para lista mayorista */}
+                {tipoPrecio === 'mayorista' && (
+                  <div className="mb-4 p-4 bg-primary-50 border border-primary-200 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-primary-700">
+                        Progreso para compra mayorista
+                      </span>
+                      <span className="text-sm font-bold text-primary-600">
+                        {itemCount} / {minProductosMayorista} productos
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          puedeFinalizar 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                            : 'bg-gradient-to-r from-primary-500 to-primary-600'
+                        }`}
+                        style={{ width: `${porcentajeProgreso}%` }}
+                      />
+                    </div>
+                    {!puedeFinalizar && (
+                      <p className="text-xs text-primary-600 font-medium">
+                        Te faltan <strong>{productosFaltantes} productos</strong> para alcanzar el mínimo de {minProductosMayorista} productos variados
+                      </p>
+                    )}
+                    {puedeFinalizar && (
+                      <p className="text-xs text-green-600 font-medium">
+                        ✓ Has alcanzado el mínimo requerido para compra mayorista
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-semibold text-gray-700">Total:</span>
                   <span className="text-2xl font-bold text-primary-600">
@@ -407,7 +460,12 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                   </button>
                   <button
                     onClick={handleCheckout}
-                    className="flex-1 py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                    disabled={!puedeFinalizar}
+                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      puedeFinalizar
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />

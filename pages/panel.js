@@ -58,6 +58,7 @@ export default function PanelDeControl() {
         tipoPrecioDefault: data.tipoPrecioDefault || 'minorista', // 'mayorista' | 'minorista'
         mostrarPreciosEnPesos: data.mostrarPreciosEnPesos || false, // Mostrar precios en pesos colombianos
         imagenGeneralProductos: data.imagenGeneralProductos || '', // Imagen general para productos sin imagen
+        minProductosMayorista: data.minProductosMayorista || 50, // Mínimo de productos para compra mayorista
         landingPage: data.landingPage || {
           brandName: 'CUCHILLOS GALUCHO',
           tagline: 'Argentina',
@@ -4389,6 +4390,50 @@ export default function PanelDeControl() {
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
                         Esta cotización se usa para convertir precios de USD a Pesos en el catálogo
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Mínimo productos mayorista
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={config.minProductosMayorista || 50}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 50;
+                          setConfig((prev) => ({
+                            ...prev,
+                            minProductosMayorista: value
+                          }));
+                          // Guardar automáticamente
+                          setTimeout(async () => {
+                            try {
+                              setSaving(true);
+                              const res = await fetch('/api/catalog-config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  ...config,
+                                  minProductosMayorista: value
+                                }, null, 2),
+                              });
+                              if (res.ok) {
+                                console.log('[panel] Mínimo productos mayorista guardado');
+                              }
+                            } catch (err) {
+                              console.error('[panel] Error al guardar mínimo productos mayorista:', err);
+                            } finally {
+                              setSaving(false);
+                            }
+                          }, 1000);
+                        }}
+                        placeholder="50"
+                        className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white font-medium"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Cantidad mínima de productos variados requerida para compra mayorista
                       </p>
                     </div>
                     <div>

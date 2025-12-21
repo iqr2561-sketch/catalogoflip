@@ -2,6 +2,9 @@ import { create } from 'zustand';
 
 const useCartStore = create((set) => ({
   productos: [],
+  tipoPrecio: 'minorista', // 'minorista' | 'mayorista'
+  
+  setTipoPrecio: (tipo) => set({ tipoPrecio: tipo }),
   
   agregarProducto: (producto, cantidad = 1) => {
     set((state) => {
