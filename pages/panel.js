@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Toast from '../components/Toast';
@@ -16,6 +16,8 @@ export default function PanelDeControl() {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersStats, setOrdersStats] = useState(null);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const lastOrdersCountRef = useRef(0);
   const [bulkCount, setBulkCount] = useState(1);
   const [productosPage, setProductosPage] = useState(1);
   const [hotspotsPage, setHotspotsPage] = useState(1);
@@ -107,10 +109,12 @@ export default function PanelDeControl() {
   }, []);
 
   // Cargar órdenes cuando se activa el tab de ventas
-  const loadOrders = async () => {
+  const loadOrders = async (silent = false) => {
     try {
-      setOrdersLoading(true);
-      const res = await fetch('/api/orders');
+      if (!silent) {
+        setOrdersLoading(true);
+      }
+      const res = await fetch('/api/orders', { cache: 'no-store' });
       
       // Verificar que la respuesta sea válida
       if (!res.ok) {
@@ -124,22 +128,57 @@ export default function PanelDeControl() {
       }
       
       const data = await res.json();
-      setOrders(data.orders || []);
+      const newOrders = data.orders || [];
+      const newCount = newOrders.length;
+      
+      // Detectar nuevas ventas (solo si estamos en modo polling silencioso)
+      if (silent && lastOrdersCountRef.current > 0 && newCount > lastOrdersCountRef.current) {
+        const newSales = newCount - lastOrdersCountRef.current;
+        setNewOrdersCount(prev => prev + newSales);
+      }
+      
+      setOrders(newOrders);
       setOrdersStats(data.stats || null);
+      lastOrdersCountRef.current = newCount;
     } catch (err) {
       console.error('Error al cargar órdenes:', err);
-      setMessage('No se pudieron cargar las ventas. Verifica que la API esté funcionando.');
+      if (!silent) {
+        setMessage('No se pudieron cargar las ventas. Verifica que la API esté funcionando.');
+      }
       // Inicializar con arrays vacíos para evitar errores
       setOrders([]);
       setOrdersStats(null);
     } finally {
-      setOrdersLoading(false);
+      if (!silent) {
+        setOrdersLoading(false);
+      }
     }
   };
 
+  // Cargar órdenes cuando se activa el tab
   useEffect(() => {
     if (activeTab === 'ventas') {
-      loadOrders();
+      loadOrders(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Polling para detectar nuevas ventas cada 30 segundos (solo cuando no estamos en el tab de ventas)
+  useEffect(() => {
+    if (activeTab === 'ventas') return; // No hacer polling si ya estamos viendo ventas
+    
+    const interval = setInterval(() => {
+      loadOrders(true); // Carga silenciosa para detectar nuevas ventas
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Limpiar notificación cuando se ve el tab de ventas
+  useEffect(() => {
+    if (activeTab === 'ventas') {
+      setNewOrdersCount(0);
     }
   }, [activeTab]);
 
@@ -2605,13 +2644,18 @@ export default function PanelDeControl() {
             <button
               type="button"
               onClick={() => setActiveTab('ventas')}
-              className={`px-4 py-2 rounded-xl transition-colors ${
+              className={`px-4 py-2 rounded-xl transition-colors relative ${
                 activeTab === 'ventas'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'bg-transparent text-gray-600 hover:bg-gray-100'
               }`}
             >
               Ventas
+              {newOrdersCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse shadow-lg">
+                  {newOrdersCount > 9 ? '9+' : newOrdersCount}
+                </span>
+              )}
             </button>
           </div>
 
