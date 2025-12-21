@@ -519,7 +519,7 @@ export default function LandingPage() {
           --lp-logo-size: 44px;
         }
 
-        /* TOP BAR (template violeta) */
+        /* TOP BAR - Fijo, semitransparente y elegante */
         .lp-topbar {
           position: fixed;
           top: 0;
@@ -527,49 +527,50 @@ export default function LandingPage() {
           right: 0;
           z-index: 50;
           overflow: hidden;
-          background: radial-gradient(1200px 520px at 15% 10%, rgba(255,255,255,0.10), transparent 60%),
-                      radial-gradient(900px 520px at 85% 40%, rgba(0,0,0,0.18), transparent 60%),
-                      linear-gradient(90deg, var(--lp-nav-from), var(--lp-nav-mid) 45%, var(--lp-nav-to));
+          /* Fondo semitransparente con blur elegante */
+          background: rgba(42, 23, 90, 0.75);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
           color: var(--lp-nav-text);
-          transition: transform 320ms ease, background-color 320ms ease, box-shadow 320ms ease, border-color 320ms ease, backdrop-filter 320ms ease;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+          transition: background 320ms ease, backdrop-filter 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
         }
         .lp-topbarInner {
           width: 100%;
           max-width: none;
           margin: 0;
-          padding: 10px 16px;
+          padding: 12px 20px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
         }
-        /* Evita “saltos” por altura del navbar en diferentes fuentes/escala */
+        /* Evita "saltos" por altura del navbar en diferentes fuentes/escala */
         .lp-topbarInner { min-height: var(--lp-topbar-h); }
-        /* Al scrollear: baja un poco y se vuelve semitransparente (flotante) */
+        /* Al scrollear: se vuelve más transparente y elegante */
         .lp-topbarScrolled {
-          /* Mantiene el mismo “modo” (sticky), solo se vuelve más flotante y delicado */
-          transform: none;
-          background: rgba(42, 23, 90, 0.42);
-          border-bottom: 1px solid rgba(255,255,255,0.10);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          box-shadow: 0 18px 45px rgba(18, 10, 48, 0.14);
+          background: rgba(42, 23, 90, 0.85);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-bottom: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
         .lp-topbarScrolled .lp-topbarInner {
-          padding: 10px 16px;
+          padding: 12px 20px;
         }
         .lp-topbarScrolled .lp-topbarWave {
-          /* no lo escondemos: que siga el estilo sin “cambio de modo” */
-          opacity: 0.35;
+          opacity: 0.2;
         }
         .lp-topbarWave {
           position: absolute;
           left: 0;
           right: 0;
           bottom: -1px;
-          height: 12px;
-          opacity: 0.65;
+          height: 8px;
+          opacity: 0.3;
           pointer-events: none;
+          transition: opacity 320ms ease;
         }
         .lp-topbarWave svg { width: 100%; height: 100%; display: block; }
 
@@ -649,26 +650,28 @@ export default function LandingPage() {
         }
         .lp-menu {
           display: none;
-          gap: 18px;
+          gap: 8px;
           align-items: center;
-          padding: 6px 8px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(0,0,0,0.10);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          padding: 4px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.08);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
         }
-        /* Ajuste fino: evitar “aire” extra arriba del menú y alinear visualmente con el logo */
-        .lp-menu { padding-top: 4px; padding-bottom: 4px; }
         .lp-menuBtn {
           display: inline-flex;
           flex-direction: column;
           gap: 5px;
           padding: 10px;
-          border-radius: 12px;
-          background: rgba(0,0,0,0.12);
-          border: 1px solid rgba(255,255,255,0.16);
+          border-radius: 10px;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.15);
           color: var(--lp-nav-text);
+          transition: all 200ms ease;
+        }
+        .lp-menuBtn:hover {
+          background: rgba(255,255,255,0.15);
         }
         .lp-menuBtnBar {
           width: 18px;
@@ -687,16 +690,20 @@ export default function LandingPage() {
           background: rgba(0,0,0,0.10);
         }
         .lp-installBtn {
-          margin-left: 8px;
-          padding: 8px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.16);
-          background: rgba(0,0,0,0.12);
+          margin-left: 4px;
+          padding: 8px 16px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.12);
           color: var(--lp-nav-text);
-          font-weight: 900;
+          font-weight: 700;
           font-size: 12px;
-          letter-spacing: 0.4px;
-          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          transition: all 200ms ease;
+        }
+        .lp-installBtn:hover {
+          background: rgba(255,255,255,0.2);
+          transform: translateY(-1px);
         }
 
         /* Drawer (menú móvil) */
@@ -856,17 +863,16 @@ export default function LandingPage() {
           color: var(--lp-nav-text);
           text-decoration: none;
           font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.4px;
-          text-transform: uppercase;
-          opacity: 0.9;
-          padding: 8px 10px;
-          border-radius: 999px;
-          transition: opacity 140ms ease, background 140ms ease, transform 140ms ease;
+          font-weight: 600;
+          letter-spacing: 0.2px;
+          opacity: 0.85;
+          padding: 8px 14px;
+          border-radius: 8px;
+          transition: all 200ms ease;
         }
         .lp-menuLink:hover {
           opacity: 1;
-          background: rgba(255,255,255,0.10);
+          background: rgba(255,255,255,0.15);
           transform: translateY(-1px);
         }
 
