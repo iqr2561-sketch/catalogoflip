@@ -296,7 +296,10 @@ export default function FlipbookCatalog({
     
     try {
       if (!document.fullscreenElement) {
-        await flipbookContainerRef.current.requestFullscreen();
+        // Solicitar fullscreen con opciones para ocultar la UI del navegador
+        await flipbookContainerRef.current.requestFullscreen({
+          navigationUI: 'hide'
+        });
         setIsFullscreen(true);
       } else {
         await document.exitFullscreen();
