@@ -698,6 +698,8 @@ export default function LandingPage() {
           border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.12);
           background: rgba(0,0,0,0.10);
+          flex-shrink: 0;
+          box-sizing: border-box;
         }
         .lp-installBtn {
           margin-left: 4px;
@@ -733,7 +735,7 @@ export default function LandingPage() {
           pointer-events: none;
         }
         .lp-drawer {
-          position: absolute;
+          position: fixed;
           top: 12px;
           right: 12px;
           bottom: 12px;
@@ -752,6 +754,7 @@ export default function LandingPage() {
           overflow: hidden;
           display: flex;
           flex-direction: column;
+          box-sizing: border-box;
         }
         .lp-drawerHead {
           display: flex;
@@ -774,12 +777,16 @@ export default function LandingPage() {
         }
         .lp-drawerBody {
           padding: 12px;
-          display: grid;
+          display: flex;
+          flex-direction: column;
           gap: 10px;
           flex: 1;
           overflow-y: auto;
           overflow-x: hidden;
           min-height: 0;
+          max-height: 100%;
+          box-sizing: border-box;
+          contain: layout style;
         }
         .lp-mobileInstall {
           margin-top: 6px;
@@ -789,6 +796,8 @@ export default function LandingPage() {
           background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.12));
           color: var(--lp-nav-text);
           font-weight: 950;
+          flex-shrink: 0;
+          box-sizing: border-box;
         }
         .lp-drawerRoot.is-open { pointer-events: auto; }
         .lp-drawerRoot.is-open .lp-drawerOverlay { opacity: 1; pointer-events: auto; }
