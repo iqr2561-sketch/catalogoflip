@@ -43,7 +43,8 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     (producto.variaciones || []).forEach((variacion) => {
       const qty = variacionesCantidades[variacion.nombre] || 0;
       if (qty > 0) {
-        const precioUnitario = (producto.precio || 0) + getPrecioVariacion(variacion);
+        // El precio de la variación es el precio FINAL, no un incremento
+        const precioUnitario = getPrecioVariacion(variacion) || producto.precio || 0;
         total += precioUnitario * qty;
       }
     });
@@ -55,17 +56,18 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
   const totalDetalle = calcularTotalDetalle();
 
   const handleAgregar = () => {
-    // Si no hay variaciones, agregar el producto base
-    if (!producto.variaciones || producto.variaciones.length === 0) {
-      const productoBase = {
-        ...producto,
-        precio: producto.precio || 0,
-        variacionesSeleccionadas: {},
-      };
-      agregarProducto(productoBase, 1);
-      onClose();
-      return;
-    }
+      // Si no hay variaciones, agregar el producto base
+      if (!producto.variaciones || producto.variaciones.length === 0) {
+        const productoBase = {
+          ...producto,
+          precio: producto.precio || 0,
+          precioBase: producto.precio || 0, // Guardar precio base
+          variacionesSeleccionadas: {},
+        };
+        agregarProducto(productoBase, 1);
+        onClose();
+        return;
+      }
 
     const variacionesActivas = Object.entries(variacionesCantidades)
       .filter(([, qty]) => (qty || 0) > 0)
@@ -76,6 +78,7 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
       const productoBase = {
         ...producto,
         precio: producto.precio || 0,
+        precioBase: producto.precio || 0, // Guardar precio base
         variacionesSeleccionadas: {},
       };
       agregarProducto(productoBase, 1);
@@ -85,14 +88,14 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
         const variacion = producto.variaciones.find(v => v.nombre === nombreVariacion);
         if (variacion) {
           const qty = Math.max(1, variacionesCantidades[nombreVariacion] || 1);
-          const precioVariacion = getPrecioVariacion(variacion);
-          
-          const precioTotal = (producto.precio || 0) + precioVariacion;
+          // El precio de la variación es el precio FINAL, no un incremento
+          const precioFinal = getPrecioVariacion(variacion) || producto.precio || 0;
           
           const productoConVariacion = {
             ...producto,
             nombre: `${producto.nombre} – ${nombreVariacion}`,
-            precio: precioTotal,
+            precio: precioFinal,
+            precioBase: producto.precio || 0, // Guardar precio base para mostrar en carrito
             variacionesSeleccionadas: { [nombreVariacion]: nombreVariacion },
           };
           

@@ -258,9 +258,201 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                   <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {productos.map((producto) => (
-                    <div key={producto.cartKey || producto.id} className="relative overflow-hidden rounded-xl">
+                <div className="space-y-4">
+                  {/* Agrupar productos por nombre base */}
+                  {(() => {
+                    // Agrupar productos por nombre base (sin variaciones)
+                    const grupos = productos.reduce((acc, producto) => {
+                      // Extraer nombre base (antes del "–")
+                      const nombreBase = producto.nombre.split(' – ')[0];
+                      if (!acc[nombreBase]) {
+                        acc[nombreBase] = [];
+                      }
+                      acc[nombreBase].push(producto);
+                      return acc;
+                    }, {});
+
+                    return Object.entries(grupos).map(([nombreBase, productosGrupo]) => (
+                      <div key={nombreBase} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        {/* Encabezado del grupo si hay más de un producto o variaciones */}
+                        {productosGrupo.length > 1 && (
+                          <div className="px-4 py-2 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200">
+                            <h4 className="font-semibold text-primary-700 text-sm">{nombreBase}</h4>
+                            <p className="text-xs text-primary-600 mt-0.5">
+                              {productosGrupo.length} {productosGrupo.length === 1 ? 'variante' : 'variantes'}
+                            </p>
+                          </div>
+                        )}
+                        <div className="divide-y divide-gray-100">
+                          {productosGrupo.map((producto) => (
+                            <div key={producto.cartKey || producto.id} className="relative overflow-hidden">
+                              {/* Acción de borrar (visible al hacer swipe) */}
+                              <div className="absolute inset-y-0 right-0 w-20 bg-red-600 flex items-center justify-center z-10">
+                                <button
+                                  onClick={() => eliminarProducto(producto.cartKey || producto.id)}
+                                  className="text-white font-bold text-sm"
+                                  aria-label="Eliminar"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+
+                              <div
+                                className="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors"
+                                style={{
+                                  transform: swipedKey === (producto.cartKey || producto.id) ? 'translateX(-80px)' : 'translateX(0px)',
+                                  transition: touchStartX === null ? 'transform 180ms ease' : 'none',
+                                }}
+                                onTouchStart={(e) => {
+                                  const x = e.touches?.[0]?.clientX;
+                                  setTouchStartX(typeof x === 'number' ? x : null);
+                                }}
+                                onTouchMove={(e) => {
+                                  if (touchStartX === null) return;
+                                  const x = e.touches?.[0]?.clientX;
+                                  if (typeof x !== 'number') return;
+                                  const delta = x - touchStartX;
+                                  if (delta < -40) setSwipedKey(producto.cartKey || producto.id);
+                                  if (delta > 30) setSwipedKey(null);
+                                }}
+                                onTouchEnd={() => {
+                                  setTouchStartX(null);
+                                }}
+                              >
+                                {/* Imagen */}
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {(producto.imagen || config.imagenGeneralProductos) ? (
+                                    <img
+                                      src={producto.imagen || config.imagenGeneralProductos}
+                                      alt={producto.nombre}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xl md:text-2xl">📦</span>
+                                  )}
+                                </div>
+
+                                {/* Información del producto */}
+                                <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                                  {/* Nombre completo solo si hay variaciones o si es único */}
+                                  {productosGrupo.length === 1 ? (
+                                    <h3 className="font-semibold text-gray-900 text-sm md:text-base line-clamp-2">
+                                      {producto.nombre}
+                                    </h3>
+                                  ) : (
+                                    <h3 className="font-semibold text-gray-900 text-sm md:text-base line-clamp-2">
+                                      {producto.nombre.split(' – ').slice(1).join(' – ') || producto.nombre}
+                                    </h3>
+                                  )}
+                                  
+                                  {/* Detalle de variación si existe */}
+                                  {producto.variacionesSeleccionadas && Object.keys(producto.variacionesSeleccionadas).length > 0 && (
+                                    <p className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded inline-block w-fit">
+                                      {Object.values(producto.variacionesSeleccionadas).join(', ')}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="flex items-center justify-between gap-2 flex-wrap mt-1">
+                                    <div className="flex flex-col gap-0.5">
+                                      <p className="text-primary-600 font-bold text-sm md:text-base">
+                                        {formatearPrecio(producto.precio || 0)}
+                                      </p>
+                                      {producto.precioBase !== undefined && producto.precioBase !== producto.precio && (
+                                        <p className="text-xs text-gray-400 line-through">
+                                          Base: {formatearPrecio(producto.precioBase || 0)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {/* Cantidad */}
+                                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-gray-200">
+                                      <button
+                                        onClick={() =>
+                                          actualizarCantidad(
+                                            producto.cartKey || producto.id,
+                                            Math.max(1, (producto.cantidad || 1) - 1)
+                                          )
+                                        }
+                                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                      >
+                                        <svg
+                                          className="w-3 h-3 md:w-4 md:h-4"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M20 12H4"
+                                          />
+                                        </svg>
+                                      </button>
+                                      <span className="w-6 text-center font-semibold text-sm md:text-base">
+                                        {producto.cantidad || 1}
+                                      </span>
+                                      <button
+                                        onClick={() =>
+                                          actualizarCantidad(
+                                            producto.cartKey || producto.id,
+                                            (producto.cantidad || 1) + 1
+                                          )
+                                        }
+                                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                      >
+                                        <svg
+                                          className="w-3 h-3 md:w-4 md:h-4"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 4v16m8-8H4"
+                                          />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Subtotal */}
+                                  <p className="text-xs text-gray-500 font-medium">
+                                    Subtotal: {formatearPrecio((producto.precio || 0) * (producto.cantidad || 1))}
+                                  </p>
+                                </div>
+
+                                {/* Botón eliminar (desktop) */}
+                                <button
+                                  onClick={() => eliminarProducto(producto.cartKey || producto.id)}
+                                  className="hidden md:flex w-8 h-8 md:w-10 md:h-10 items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                  aria-label="Eliminar producto"
+                                >
+                                  <svg
+                                    className="w-4 h-4 md:w-5 md:h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
                       {/* Acción de borrar (visible al hacer swipe) */}
                       <div className="absolute inset-y-0 right-0 w-20 bg-red-600 flex items-center justify-center">
                         <button
@@ -319,9 +511,16 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                           </p>
                         )}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <p className="text-primary-600 font-bold text-sm md:text-base">
-                            {formatearPrecio(producto.precio || 0)}
-                          </p>
+                          <div className="flex flex-col gap-1">
+                            <p className="text-primary-600 font-bold text-sm md:text-base">
+                              {formatearPrecio(producto.precio || 0)}
+                            </p>
+                            {producto.precioBase !== undefined && producto.precioBase !== producto.precio && (
+                              <p className="text-xs text-gray-400 line-through">
+                                Base: {formatearPrecio(producto.precioBase || 0)}
+                              </p>
+                            )}
+                          </div>
                           {/* Cantidad visible y separada del nombre */}
                           <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-gray-200">
                             <button
