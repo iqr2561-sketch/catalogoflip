@@ -186,10 +186,10 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                         )}
                         {mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
                           <span className="text-xs text-gray-500 ml-2">
-                            (≈ USD ${((tipoPrecioDefault === 'mayorista' 
+                            (≈ USD ${(((tipoPrecioDefault === 'mayorista' 
                               ? (variacion.precioMayorista || 0)
                               : (variacion.precioMinorista || 0)
-                            )).toLocaleString()})
+                            ) * cotizacionDolar) / cotizacionDolar).toLocaleString()})
                           </span>
                         )}
                       </p>
