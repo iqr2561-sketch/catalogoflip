@@ -728,6 +728,7 @@ export default function LandingPage() {
           right: 12px;
           bottom: 12px;
           width: min(360px, calc(100vw - 24px));
+          max-height: calc(100vh - 24px);
           border-radius: 22px;
           background: rgba(42, 23, 90, 0.58);
           border: 1px solid rgba(255,255,255,0.14);
@@ -739,6 +740,8 @@ export default function LandingPage() {
           transition: transform 240ms ease, opacity 240ms ease;
           pointer-events: none;
           overflow: hidden;
+          display: flex;
+          flex-direction: column;
         }
         .lp-drawerHead {
           display: flex;
@@ -747,6 +750,7 @@ export default function LandingPage() {
           padding: 14px 14px 10px;
           border-bottom: 1px solid rgba(255,255,255,0.10);
           color: var(--lp-nav-text);
+          flex-shrink: 0;
         }
         .lp-drawerTitle { font-weight: 950; letter-spacing: 0.2px; }
         .lp-drawerClose {
@@ -762,6 +766,10 @@ export default function LandingPage() {
           padding: 12px;
           display: grid;
           gap: 10px;
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          min-height: 0;
         }
         .lp-mobileInstall {
           margin-top: 6px;
