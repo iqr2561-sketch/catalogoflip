@@ -56,8 +56,6 @@ export default function LandingPage() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [logoSize, setLogoSize] = useState(44); // Tamaño base del logo
-  const [navbarHeight, setNavbarHeight] = useState(null); // Altura del navbar (null = automática)
   const topbarRef = useRef(null);
 
   useEffect(() => {
@@ -75,36 +73,25 @@ export default function LandingPage() {
     load();
   }, []);
 
-  // Control de altura del navbar: manual o automática
+  // Calcular altura del navbar automáticamente
   useEffect(() => {
     const el = topbarRef.current;
     if (!el) return;
 
     const update = () => {
-      // Si hay altura manual, usarla; si no, calcular automáticamente
-      if (navbarHeight !== null) {
-        document.documentElement.style.setProperty('--lp-topbar-h', `${navbarHeight}px`);
-        el.style.height = `${navbarHeight}px`;
-      } else {
-        const h = Math.ceil(el.getBoundingClientRect().height || 0);
-        document.documentElement.style.setProperty('--lp-topbar-h', `${h}px`);
-        el.style.height = 'auto';
-      }
+      const h = Math.ceil(el.getBoundingClientRect().height || 0);
+      document.documentElement.style.setProperty('--lp-topbar-h', `${h}px`);
     };
 
     update();
-    
-    // Solo observar cambios si no hay altura manual
-    if (navbarHeight === null) {
-      const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
-      ro?.observe(el);
-      window.addEventListener('resize', update, { passive: true });
-      return () => {
-        window.removeEventListener('resize', update);
-        ro?.disconnect();
-      };
-    }
-  }, [navbarHeight]);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', update, { passive: true });
+    return () => {
+      window.removeEventListener('resize', update);
+      ro?.disconnect();
+    };
+  }, []);
 
   // Control de scroll: navbar fijo que se desliza hacia abajo
   useEffect(() => {
@@ -233,75 +220,13 @@ export default function LandingPage() {
         {/* Navbar estilo template (violeta + ondas) */}
         <header ref={topbarRef} className={cx('lp-topbar', scrolled && 'lp-topbarScrolled')} role="banner">
           <div className="lp-topbarInner">
-            <div className="lp-logo" aria-label={landing.brandName} style={{ '--lp-logo-size': `${logoSize}px` }}>
+            <div className="lp-logo" aria-label={landing.brandName}>
               {landing.ui.logoUrl ? (
                 <img className="lp-logoImg" src={landing.ui.logoUrl} alt={`${landing.brandName} logo`} />
               ) : (
                 <span className="lp-logoMark" aria-hidden="true" />
               )}
               <span className="lp-logoText">{landing.brandName}</span>
-            </div>
-            
-            {/* Control sutil de tamaño del logo - Solo desktop */}
-            <div className="lp-logoSizeControl">
-              <button
-                type="button"
-                onClick={() => setLogoSize(Math.max(32, logoSize - 4))}
-                className="lp-logoSizeBtn"
-                aria-label="Reducir logo"
-                title="Reducir logo"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <span className="lp-logoSizeValue">{logoSize}px</span>
-              <button
-                type="button"
-                onClick={() => setLogoSize(Math.min(64, logoSize + 4))}
-                className="lp-logoSizeBtn"
-                aria-label="Aumentar logo"
-                title="Aumentar logo"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Control de altura del navbar */}
-            <div className="lp-navbarHeightControl">
-              <button
-                type="button"
-                onClick={() => {
-                  const current = navbarHeight || (topbarRef.current?.getBoundingClientRect().height || 64);
-                  setNavbarHeight(Math.max(48, current - 4));
-                }}
-                className="lp-logoSizeBtn"
-                aria-label="Reducir altura navbar"
-                title="Reducir altura navbar"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <span className="lp-logoSizeValue">
-                {navbarHeight !== null ? `${navbarHeight}px` : 'auto'}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const current = navbarHeight || (topbarRef.current?.getBoundingClientRect().height || 64);
-                  setNavbarHeight(Math.min(120, current + 4));
-                }}
-                className="lp-logoSizeBtn"
-                aria-label="Aumentar altura navbar"
-                title="Aumentar altura navbar"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
             </div>
             <nav className="lp-menu" aria-label="Navegación">
               <a className="lp-menuLink" href="#home">Inicio</a>
@@ -1672,8 +1597,6 @@ export default function LandingPage() {
           :root { --lp-logo-size: 48px; }
           .lp-menu { display: flex; }
           .lp-menuBtn, .lp-drawerRoot { display: none; }
-          .lp-logoSizeControl,
-          .lp-navbarHeightControl { display: flex; }
           .lp-intro { padding: 44px 0 16px; }
           .lp-introGrid { grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
           .lp-contactGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
