@@ -27,6 +27,7 @@ export default function FlipbookCatalog({
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
   const flipbookContainerRef = useRef(null);
   
   // Estados para PDF y renderizado
@@ -235,6 +236,9 @@ export default function FlipbookCatalog({
     
     if (newPage === currentPage) return;
     
+    // Ocultar hint después de la primera interacción
+    if (showSwipeHint) setShowSwipeHint(false);
+    
     setFlipDirection('prev');
     setIsTransitioning(true);
     
@@ -260,6 +264,9 @@ export default function FlipbookCatalog({
     })();
     
     if (newPage === currentPage) return;
+    
+    // Ocultar hint después de la primera interacción
+    if (showSwipeHint) setShowSwipeHint(false);
     
     setFlipDirection('next');
     setIsTransitioning(true);
@@ -343,6 +350,11 @@ export default function FlipbookCatalog({
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
+
+    // Ocultar hint después de la primera interacción
+    if ((isLeftSwipe || isRightSwipe) && showSwipeHint) {
+      setShowSwipeHint(false);
+    }
 
     if (isLeftSwipe && currentPage < numPages - 1) {
       handleNextPage();
@@ -618,6 +630,32 @@ export default function FlipbookCatalog({
 
       {/* Contenedor del flipbook con zoom controlado */}
       <div ref={flipbookContainerRef} className="relative flex justify-center" style={{ perspective: '1200px' }}>
+        {/* Flecha sutil de deslizar - Solo mobile */}
+        {isMobile && showSwipeHint && numPages > 1 && (
+          <>
+            {/* Flecha izquierda (página anterior) - Solo si no es la primera página */}
+            {currentPage > 0 && (
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none md:hidden">
+                <div className="flex flex-col items-center gap-1 bg-black/20 backdrop-blur-sm rounded-full px-3 py-2 animate-pulse">
+                  <svg className="w-5 h-5 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </div>
+              </div>
+            )}
+            {/* Flecha derecha (página siguiente) - Solo si no es la última página */}
+            {currentPage < numPages - 1 && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none md:hidden">
+                <div className="flex flex-col items-center gap-1 bg-black/20 backdrop-blur-sm rounded-full px-3 py-2 animate-pulse">
+                  <svg className="w-5 h-5 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <div 
           className="relative bg-gray-300/60 rounded-2xl p-4 shadow-inner overflow-hidden"
           style={{
