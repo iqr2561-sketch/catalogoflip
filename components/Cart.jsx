@@ -176,7 +176,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
       {/* Botón flotante del carrito */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-16 h-16 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-110 group"
+        className="fixed bottom-6 right-6 z-[9999] w-16 h-16 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-110 group"
       >
         <svg
           className="w-7 h-7"
@@ -201,7 +201,7 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
       {/* Modal del carrito */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
           onClick={() => setIsOpen(false)}
         >
           <div

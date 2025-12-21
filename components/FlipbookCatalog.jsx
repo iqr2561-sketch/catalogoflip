@@ -629,7 +629,15 @@ export default function FlipbookCatalog({
       </div>
 
       {/* Contenedor del flipbook con zoom controlado */}
-      <div ref={flipbookContainerRef} className="relative flex justify-center" style={{ perspective: '1200px' }}>
+      <div 
+        ref={flipbookContainerRef} 
+        className="relative flex justify-center" 
+        style={{ 
+          perspective: '1200px',
+          width: isFullscreen ? '100vw' : 'auto',
+          height: isFullscreen ? '100vh' : 'auto',
+        }}
+      >
         {/* Flecha sutil de deslizar - Solo mobile */}
         {isMobile && showSwipeHint && numPages > 1 && (
           <>
@@ -659,8 +667,8 @@ export default function FlipbookCatalog({
         <div 
           className="relative bg-gray-300/60 rounded-2xl p-4 shadow-inner overflow-hidden"
           style={{
-            width: `${containerSize.width * zoomLevel}px`,
-            height: `${containerSize.height * zoomLevel}px`,
+            width: isFullscreen ? '100vw' : `${containerSize.width * zoomLevel}px`,
+            height: isFullscreen ? '100vh' : `${containerSize.height * zoomLevel}px`,
             maxWidth: isFullscreen ? '100vw' : '90vw',
             maxHeight: isFullscreen ? '100vh' : '80vh',
             transition: 'width 0.3s ease, height 0.3s ease',
