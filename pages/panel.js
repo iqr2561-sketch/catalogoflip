@@ -25,6 +25,7 @@ export default function PanelDeControl() {
   const [pdfPageCount, setPdfPageCount] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [zipUploading, setZipUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [dbTesting, setDbTesting] = useState(false);
   const [thumbnails, setThumbnails] = useState([]);
   const [loadingThumbnails, setLoadingThumbnails] = useState(false);
@@ -1995,8 +1996,7 @@ export default function PanelDeControl() {
     }, 3000);
   };
 
-  const handleZipUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const processZipFile = async (file) => {
     if (!file) return;
 
     // Validaciones del archivo
@@ -2128,14 +2128,48 @@ export default function PanelDeControl() {
         }
       }
 
-      await handleZipResponse(res);
-
     } catch (err) {
       console.error('[panel] Error al subir ZIP:', err);
       setError(`Error al subir el archivo ZIP: ${err.message || 'Error desconocido'}`);
       setMessage(null);
     } finally {
       setZipUploading(false);
+    }
+  };
+
+  // Handler para input file
+  const handleZipUpload = async (e) => {
+    const file = e.target.files?.[0];
+    await processZipFile(file);
+  };
+
+  // Handlers para drag and drop
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      await processZipFile(file);
     }
   };
 
@@ -3452,7 +3486,17 @@ export default function PanelDeControl() {
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     Cargar Catálogo desde ZIP (Imágenes JPG)
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors bg-white">
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                      isDragging
+                        ? 'border-primary-500 bg-primary-50 scale-[1.02]'
+                        : 'border-gray-300 hover:border-primary-400 bg-white'
+                    }`}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <input
                       type="file"
                       accept=".zip,application/zip,application/x-zip-compressed"
@@ -3465,14 +3509,28 @@ export default function PanelDeControl() {
                       htmlFor="zip-upload"
                       className="cursor-pointer flex flex-col items-center gap-3"
                     >
-                      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                        isDragging ? 'bg-primary-200' : 'bg-green-100'
+                      }`}>
+                        {isDragging ? (
+                          <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                        ) : (
+                          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        )}
                       </div>
                       <div>
-                        <span className="text-sm font-semibold text-gray-700 block">
-                          {zipFile ? zipFile.name : 'Haz clic para seleccionar ZIP'}
+                        <span className={`text-sm font-semibold block transition-colors ${
+                          isDragging ? 'text-primary-700' : 'text-gray-700'
+                        }`}>
+                          {isDragging
+                            ? 'Suelta el archivo aquí'
+                            : zipFile
+                            ? zipFile.name
+                            : 'Arrastra y suelta un ZIP o haz clic para seleccionar'}
                         </span>
                         <span className="text-xs text-gray-500 block mt-1">
                           {zipUploading ? 'Procesando...' : 'ZIP con imágenes JPG (jpg, jpeg). Las imágenes se ordenarán por nombre.'}
