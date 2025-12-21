@@ -143,16 +143,23 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderData),
     })
-      .then(res => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.ok) {
-          console.log('[Cart] Orden guardada correctamente:', data);
+          console.log('[Cart] ✅ Orden guardada correctamente:', data);
         } else {
-          console.warn('[Cart] No se pudo guardar la orden:', data);
+          console.warn('[Cart] ⚠️ No se pudo guardar la orden:', data);
         }
       })
       .catch(err => {
-        console.error('[Cart] Error al guardar orden:', err);
+        console.error('[Cart] ❌ Error al guardar orden:', err);
+        // No bloqueamos el flujo, pero registramos el error
       });
 
     // Abrir WhatsApp Web/App
