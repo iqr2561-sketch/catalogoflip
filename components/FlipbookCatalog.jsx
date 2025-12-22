@@ -419,7 +419,7 @@ export default function FlipbookCatalog({
   }).filter(Boolean); // Eliminar productos no encontrados
 
   return (
-    <div className="relative w-full flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+    <div className="relative w-full flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8" style={{ zIndex: isFullscreen ? 1 : 'auto' }}>
       {/* Controles de navegación */}
       <div className="mb-4 md:mb-6 w-full max-w-4xl mx-auto px-4">
         {/* Controles principales - Desktop */}
@@ -722,6 +722,7 @@ export default function FlipbookCatalog({
           perspective: '1200px',
           width: isFullscreen ? '100vw' : 'auto',
           height: isFullscreen ? '100vh' : 'auto',
+          zIndex: isFullscreen ? 1 : 'auto',
         }}
       >
         {/* Flecha sutil de deslizar - Solo mobile */}
