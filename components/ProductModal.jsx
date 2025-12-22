@@ -43,8 +43,8 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
     (producto.variaciones || []).forEach((variacion) => {
       const qty = variacionesCantidades[variacion.nombre] || 0;
       if (qty > 0) {
-        // El precio de la variación es el precio FINAL, no un incremento
-        const precioUnitario = getPrecioVariacion(variacion) || producto.precio || 0;
+        // El precio de la variación es el precio FINAL, no un incremental
+        const precioUnitario = getPrecioVariacion(variacion) || (producto.precio || 0);
         total += precioUnitario * qty;
       }
     });
@@ -56,18 +56,17 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
   const totalDetalle = calcularTotalDetalle();
 
   const handleAgregar = () => {
-      // Si no hay variaciones, agregar el producto base
-      if (!producto.variaciones || producto.variaciones.length === 0) {
-        const productoBase = {
-          ...producto,
-          precio: producto.precio || 0,
-          precioBase: producto.precio || 0, // Guardar precio base
-          variacionesSeleccionadas: {},
-        };
-        agregarProducto(productoBase, 1);
-        onClose();
-        return;
-      }
+    // Si no hay variaciones, agregar el producto base
+    if (!producto.variaciones || producto.variaciones.length === 0) {
+      const productoBase = {
+        ...producto,
+        precio: producto.precio || 0,
+        variacionesSeleccionadas: {},
+      };
+      agregarProducto(productoBase, 1);
+      onClose();
+      return;
+    }
 
     const variacionesActivas = Object.entries(variacionesCantidades)
       .filter(([, qty]) => (qty || 0) > 0)
@@ -78,7 +77,6 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
       const productoBase = {
         ...producto,
         precio: producto.precio || 0,
-        precioBase: producto.precio || 0, // Guardar precio base
         variacionesSeleccionadas: {},
       };
       agregarProducto(productoBase, 1);
@@ -88,8 +86,11 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
         const variacion = producto.variaciones.find(v => v.nombre === nombreVariacion);
         if (variacion) {
           const qty = Math.max(1, variacionesCantidades[nombreVariacion] || 1);
-          // El precio de la variación es el precio FINAL, no un incremento
-          const precioFinal = getPrecioVariacion(variacion) || producto.precio || 0;
+          const precioVariacion = getPrecioVariacion(variacion);
+          
+          // El precio de la variación es el precio FINAL, no un incremental
+          // Guardamos el precio base para mostrarlo en el carrito
+          const precioFinal = precioVariacion || (producto.precio || 0);
           
           const productoConVariacion = {
             ...producto,
@@ -178,32 +179,32 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                         {variacion.nombre}
                       </label>
                       <p className="text-sm text-gray-600">
-                        Precio adicional: <span className="font-semibold text-primary-600">
+                        Precio: <span className="font-semibold text-primary-600">
                           {mostrarPreciosEnPesos ? (
-                            <>+${((tipoPrecioDefault === 'mayorista' 
-                              ? (variacion.precioMayorista || 0)
-                              : (variacion.precioMinorista || 0)
+                            <>${((tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || producto.precio || 0)
+                              : (variacion.precioMinorista || producto.precio || 0)
                             ) * cotizacionDolar).toLocaleString()} Pesos</>
                           ) : (
-                            <>+USD ${(tipoPrecioDefault === 'mayorista' 
-                              ? (variacion.precioMayorista || 0)
-                              : (variacion.precioMinorista || 0)
+                            <>USD ${(tipoPrecioDefault === 'mayorista' 
+                              ? (variacion.precioMayorista || producto.precio || 0)
+                              : (variacion.precioMinorista || producto.precio || 0)
                             ).toLocaleString()}</>
                           )}
                         </span>
                         {!mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
                           <span className="text-xs text-gray-500 ml-2">
                             (≈ ${((tipoPrecioDefault === 'mayorista' 
-                              ? (variacion.precioMayorista || 0)
-                              : (variacion.precioMinorista || 0)
+                              ? (variacion.precioMayorista || producto.precio || 0)
+                              : (variacion.precioMinorista || producto.precio || 0)
                             ) * cotizacionDolar).toLocaleString()} Pesos)
                           </span>
                         )}
                         {mostrarPreciosEnPesos && cotizacionDolar && cotizacionDolar !== 1 && (
                           <span className="text-xs text-gray-500 ml-2">
                             (≈ USD ${(((tipoPrecioDefault === 'mayorista' 
-                              ? (variacion.precioMayorista || 0)
-                              : (variacion.precioMinorista || 0)
+                              ? (variacion.precioMayorista || producto.precio || 0)
+                              : (variacion.precioMinorista || producto.precio || 0)
                             ) * cotizacionDolar) / cotizacionDolar).toLocaleString()})
                           </span>
                         )}
@@ -301,7 +302,8 @@ export default function ProductModal({ producto, isOpen, onClose, whatsappNumber
                     .filter(([, qty]) => (qty || 0) > 0)
                     .map(([nombre, qty]) => {
                       const variacion = (producto.variaciones || []).find((v) => v.nombre === nombre);
-                      const unit = (producto.precio || 0) + (variacion ? getPrecioVariacion(variacion) : 0);
+                      // El precio de la variación es el precio FINAL, no un incremental
+                      const unit = variacion ? (getPrecioVariacion(variacion) || producto.precio || 0) : (producto.precio || 0);
                       const sub = unit * qty;
                       return (
                         <div key={nombre} className="flex items-center justify-between text-xs text-gray-700">
