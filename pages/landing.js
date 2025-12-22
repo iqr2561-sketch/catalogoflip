@@ -1585,24 +1585,19 @@ export default function LandingPage() {
         }
 
         /* Responsive */
-        /* En mobile, mejoramos el video para que se vea mejor. */
-        @media (max-width: 860px) {
+        /* En mobile, priorizamos ver el video completo (sin recorte). */
+        @media (max-width: 520px) {
           .lp-heroVideoEl {
+            object-fit: cover;
+            object-position: center center;
+            width: 100%;
+            height: 100%;
+            transform: none;
+          }
+          .lp-heroVideo {
             height: 60vh;
             min-height: 400px;
             max-height: 500px;
-            object-fit: cover;
-            object-position: center center;
-            transform: none;
-          }
-        }
-        @media (max-width: 520px) {
-          .lp-heroVideoEl {
-            height: 50vh;
-            min-height: 350px;
-            max-height: 450px;
-            object-fit: cover;
-            object-position: center center;
           }
         }
         @media (min-width: 860px) {

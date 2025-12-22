@@ -541,8 +541,14 @@ export default function FlipbookCatalog({
 
           <button
             onClick={handleNextPage}
-            className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 bg-primary-600 hover:bg-primary-700 text-white shadow-lg active:scale-95"
+            disabled={currentPage >= (numPages - 1)}
+            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+              currentPage >= (numPages - 1)
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg active:scale-95'
+            }`}
             aria-label="Página siguiente"
+            style={{ visibility: 'visible' }}
           >
             <svg
               className="w-6 h-6"
