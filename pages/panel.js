@@ -5112,7 +5112,7 @@ export default function PanelDeControl() {
                   <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Galería</h3>
-                    <p className="text-sm text-gray-600">Agrega imágenes por URL (por ahora).</p>
+                    <p className="text-sm text-gray-600">Agrega imágenes por URL o arrastrando y soltando.</p>
                   </div>
                   <button
                     type="button"
@@ -5124,6 +5124,80 @@ export default function PanelDeControl() {
                   >
                     + Agregar Imagen
                   </button>
+                </div>
+                {/* Área de drag and drop para agregar imágenes */}
+                <div
+                  className="mb-4 p-6 border-2 border-dashed border-primary-300 rounded-xl bg-primary-50/50 hover:bg-primary-50 transition-colors cursor-pointer"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.add('border-primary-500', 'bg-primary-100');
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove('border-primary-500', 'bg-primary-100');
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove('border-primary-500', 'bg-primary-100');
+                    const files = Array.from(e.dataTransfer?.files || []);
+                    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+                    if (imageFiles.length === 0) {
+                      setError('Solo se pueden agregar archivos de imagen.');
+                      setTimeout(() => setError(null), 5000);
+                      return;
+                    }
+                    try {
+                      for (const file of imageFiles) {
+                        const dataUrl = await readAsDataUrl(file);
+                        const next = [...(config.landingPage?.galeria || []), { url: dataUrl, alt: file.name }];
+                        updateLanding({ galeria: next });
+                      }
+                      setMessage(`Se agregaron ${imageFiles.length} imagen${imageFiles.length > 1 ? 'es' : ''} a la galería.`);
+                      setTimeout(() => setMessage(null), 3000);
+                    } catch (err) {
+                      setError(err?.message || 'No se pudo cargar la imagen');
+                      setTimeout(() => setError(null), 5000);
+                    }
+                  }}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.multiple = true;
+                    input.onchange = async (e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length === 0) return;
+                      try {
+                        for (const file of files) {
+                          const dataUrl = await readAsDataUrl(file);
+                          const next = [...(config.landingPage?.galeria || []), { url: dataUrl, alt: file.name }];
+                          updateLanding({ galeria: next });
+                        }
+                        setMessage(`Se agregaron ${files.length} imagen${files.length > 1 ? 'es' : ''} a la galería.`);
+                        setTimeout(() => setMessage(null), 3000);
+                      } catch (err) {
+                        setError(err?.message || 'No se pudo cargar la imagen');
+                        setTimeout(() => setError(null), 5000);
+                      }
+                    };
+                    input.click();
+                  }}
+                  title="Arrastra imágenes aquí o haz clic para seleccionar"
+                >
+                  <div className="text-center">
+                    <svg className="w-12 h-12 mx-auto text-primary-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-sm font-semibold text-primary-700 mb-1">Arrastra imágenes aquí</p>
+                    <p className="text-xs text-primary-600">o haz clic para seleccionar</p>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {(config.landingPage?.galeria || []).map((img, idx) => (

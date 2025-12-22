@@ -792,13 +792,13 @@ export default function LandingPage() {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          flex: 1;
+          flex: 1 1 0;
           overflow-y: auto;
           overflow-x: hidden;
           min-height: 0;
           max-height: 100%;
           box-sizing: border-box;
-          contain: layout style;
+          -webkit-overflow-scrolling: touch;
         }
         .lp-mobileInstall {
           margin-top: 6px;
@@ -931,12 +931,11 @@ export default function LandingPage() {
           overflow: hidden;
           background: #0b0a1a;
         }
-        /* En móvil: reducir altura del hero para que se vea más profesional */
+        /* En móvil: video ocupa todo el marco */
         @media (max-width: 860px) {
           .lp-heroVideo {
-            height: 60vh;
-            min-height: 400px;
-            max-height: 500px;
+            height: 100dvh;
+            min-height: 100svh;
           }
         }
         .lp-heroVideoEl {
@@ -1586,11 +1585,24 @@ export default function LandingPage() {
         }
 
         /* Responsive */
-        /* En mobile, priorizamos ver el video completo (sin recorte). */
+        /* En mobile, mejoramos el video para que se vea mejor. */
+        @media (max-width: 860px) {
+          .lp-heroVideoEl {
+            height: 60vh;
+            min-height: 400px;
+            max-height: 500px;
+            object-fit: cover;
+            object-position: center center;
+            transform: none;
+          }
+        }
         @media (max-width: 520px) {
           .lp-heroVideoEl {
-            object-fit: contain;
-            transform: none;
+            height: 50vh;
+            min-height: 350px;
+            max-height: 450px;
+            object-fit: cover;
+            object-position: center center;
           }
         }
         @media (min-width: 860px) {
