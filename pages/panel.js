@@ -5066,13 +5066,96 @@ export default function PanelDeControl() {
                 <div className="px-5 pb-5">
                   <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Imagen (URL)</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Imagen (URL o arrastra y suelta)</label>
+                    <div
+                      className="mb-2 p-4 border-2 border-dashed border-emerald-300 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 transition-colors cursor-pointer"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.currentTarget.classList.add('border-emerald-500', 'bg-emerald-100');
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-100');
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-100');
+                        const f = e.dataTransfer?.files?.[0];
+                        if (!f) return;
+                        if (!f.type.startsWith('image/')) {
+                          setError('La imagen debe ser un archivo de imagen (PNG/JPG/SVG/WEBP).');
+                          setTimeout(() => setError(null), 5000);
+                          return;
+                        }
+                        try {
+                          const dataUrl = await readAsDataUrl(f);
+                          updateLandingNested('quienesSomos', { imageUrl: dataUrl });
+                          setMessage('Imagen cargada (arrastrar y soltar)');
+                          setTimeout(() => setMessage(null), 2500);
+                        } catch (err) {
+                          setError(err?.message || 'No se pudo cargar la imagen');
+                          setTimeout(() => setError(null), 5000);
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          try {
+                            const dataUrl = await readAsDataUrl(f);
+                            updateLandingNested('quienesSomos', { imageUrl: dataUrl });
+                            setMessage('Imagen cargada');
+                            setTimeout(() => setMessage(null), 2500);
+                          } catch (err) {
+                            setError(err?.message || 'No se pudo cargar la imagen');
+                            setTimeout(() => setError(null), 5000);
+                          }
+                        };
+                        input.click();
+                      }}
+                      title="Arrastra una imagen aquí o haz clic para seleccionar"
+                    >
+                      <div className="text-center">
+                        <svg className="w-10 h-10 mx-auto text-emerald-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p className="text-xs font-semibold text-emerald-700 mb-1">Arrastra una imagen aquí</p>
+                        <p className="text-xs text-emerald-600">o haz clic para seleccionar</p>
+                      </div>
+                    </div>
                     <input
                       value={config.landingPage?.quienesSomos?.imageUrl || ''}
                       onChange={(e) => updateLandingNested('quienesSomos', { imageUrl: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                       placeholder="https://.../foto.jpg (opcional)"
                     />
+                    {config.landingPage?.quienesSomos?.imageUrl && (
+                      <div className="mt-2 relative">
+                        <img
+                          src={config.landingPage.quienesSomos.imageUrl}
+                          alt="Vista previa"
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateLandingNested('quienesSomos', { imageUrl: '' })}
+                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          title="Eliminar imagen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
                     <p className="mt-2 text-xs text-gray-500">
                       Sugerido: imagen horizontal o cuadrada, optimizada para web.
                     </p>
