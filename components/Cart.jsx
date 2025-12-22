@@ -259,8 +259,32 @@ export default function Cart({ whatsappNumber = null, cotizacionDolar = 1, mostr
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {productos.map((producto) => (
-                    <div key={producto.cartKey || producto.id} className="relative overflow-hidden rounded-xl">
+                  {(() => {
+                    // Agrupar productos por nombre base (sin variaciones)
+                    const grupos = productos.reduce((acc, producto) => {
+                      // Extraer nombre base (antes del "–")
+                      const nombreBase = producto.nombre.split(' – ')[0];
+                      if (!acc[nombreBase]) {
+                        acc[nombreBase] = [];
+                      }
+                      acc[nombreBase].push(producto);
+                      return acc;
+                    }, {});
+
+                    return Object.entries(grupos).map(([nombreBase, productosGrupo]) => (
+                      <div key={nombreBase} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        {/* Encabezado del grupo si hay más de un producto o variaciones */}
+                        {productosGrupo.length > 1 && (
+                          <div className="px-4 py-2 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200">
+                            <h4 className="font-semibold text-primary-700 text-sm">{nombreBase}</h4>
+                            <p className="text-xs text-primary-600 mt-0.5">
+                              {productosGrupo.length} {productosGrupo.length === 1 ? 'variante' : 'variantes'}
+                            </p>
+                          </div>
+                        )}
+                        <div className="divide-y divide-gray-100">
+                          {productosGrupo.map((producto) => (
+                    <div key={producto.cartKey || producto.id} className="relative overflow-hidden">
                       {/* Acción de borrar (visible al hacer swipe) */}
                       <div className="absolute inset-y-0 right-0 w-20 bg-red-600 flex items-center justify-center">
                         <button
